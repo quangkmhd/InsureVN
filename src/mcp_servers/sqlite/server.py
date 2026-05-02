@@ -1,6 +1,14 @@
 from mcp.server.fastmcp import FastMCP
 from src.core.database import get_db_connection
 
+try:
+    from langfuse import observe
+except ImportError:
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
 # Initialize FastMCP server
 mcp = FastMCP("insurevn-db")
 
@@ -22,6 +30,7 @@ def _placeholders(values: list[str]) -> str:
     return ", ".join("?" for _ in values)
 
 @mcp.tool()
+@observe()
 def list_tables() -> list[str]:
     """Return a list of all tables in the insurevn.db database."""
     with get_db_connection() as conn:
@@ -30,6 +39,7 @@ def list_tables() -> list[str]:
         return [row["name"] for row in rows]
 
 @mcp.tool()
+@observe()
 def get_schema(table_names: list[str]) -> list[str]:
     """Return the DDL CREATE TABLE statements for the requested tables."""
     schemas = []
@@ -47,6 +57,7 @@ def get_schema(table_names: list[str]) -> list[str]:
     return schemas
 
 @mcp.tool()
+@observe()
 def execute_query(query: str) -> list[dict]:
     """Execute a read-only SQL query against the database and return results as a list of dictionaries."""
     query_upper = query.strip().upper()
@@ -64,6 +75,7 @@ def execute_query(query: str) -> list[dict]:
         return []
 
 @mcp.tool()
+@observe()
 def database_summary() -> list[dict]:
     """Return row counts for the main insurance-domain tables."""
     query = """
@@ -83,6 +95,7 @@ def database_summary() -> list[dict]:
         return _rows_to_dicts(conn.execute(query))
 
 @mcp.tool()
+@observe()
 def list_companies() -> list[dict]:
     """Return insurers available in the database with document and plan counts."""
     query = """
@@ -102,6 +115,7 @@ def list_companies() -> list[dict]:
         return _rows_to_dicts(conn.execute(query))
 
 @mcp.tool()
+@observe()
 def list_documents(
     company_code: str | None = None,
     document_type: str | None = None,
@@ -149,6 +163,7 @@ def list_documents(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def list_source_tables(
     company_code: str | None = None,
     document_id: int | None = None,
@@ -201,6 +216,7 @@ def list_source_tables(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def list_benefit_categories() -> list[dict]:
     """Return benefit category taxonomy."""
     query = """
@@ -219,6 +235,7 @@ def list_benefit_categories() -> list[dict]:
         return _rows_to_dicts(conn.execute(query))
 
 @mcp.tool()
+@observe()
 def search_plans(
     keyword: str | None = None,
     company_code: str | None = None,
@@ -261,6 +278,7 @@ def search_plans(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def list_plans(company_code: str | None = None, limit: int = 100) -> list[dict]:
     """Return plan types, optionally filtered by insurer code."""
     params = []
@@ -291,6 +309,7 @@ def list_plans(company_code: str | None = None, limit: int = 100) -> list[dict]:
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def get_premium_quotes(
     age: int | None = None,
     company_code: str | None = None,
@@ -345,6 +364,7 @@ def get_premium_quotes(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def search_benefits(
     keyword: str,
     company_code: str | None = None,
@@ -396,6 +416,7 @@ def search_benefits(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def search_hospitals(
     keyword: str | None = None,
     city: str | None = None,
@@ -456,6 +477,7 @@ def search_hospitals(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def search_waiting_periods(
     keyword: str | None = None,
     company_code: str | None = None,
@@ -500,6 +522,7 @@ def search_waiting_periods(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def search_claim_payouts(
     keyword: str | None = None,
     company_code: str | None = None,
@@ -539,6 +562,7 @@ def search_claim_payouts(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def search_glossary_terms(
     keyword: str,
     company_code: str | None = None,
@@ -575,6 +599,7 @@ def search_glossary_terms(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def get_benefit_matrix(
     document_id: int | None = None,
     company_code: str | None = None,
@@ -642,6 +667,7 @@ def get_benefit_matrix(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def get_short_term_premiums(
     company_code: str | None = None,
     duration_days: int | None = None,
@@ -681,6 +707,7 @@ def get_short_term_premiums(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def get_raw_source(source_table_id: int) -> dict:
     """Return the raw extracted JSON and metadata for a source table id."""
     query = """
@@ -710,6 +737,7 @@ def get_raw_source(source_table_id: int) -> dict:
         return rows[0] if rows else {}
 
 @mcp.tool()
+@observe()
 def compare_benefits(
     keyword: str,
     company_codes: list[str],
@@ -765,6 +793,7 @@ def compare_benefits(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+@observe()
 def search_exclusions(
     keyword: str | None = None,
     company_code: str | None = None,

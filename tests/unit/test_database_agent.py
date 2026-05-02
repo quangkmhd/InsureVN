@@ -33,19 +33,23 @@ async def test_database_agent_invoke(mock_get_tools, mock_tools):
     assert "Tables are" in result
 
 @pytest.mark.asyncio
-async def test_database_agent_invoke_with_config():
+async def test_database_agent_invoke_with_langfuse_callback():
     # Setup mock graph
     mock_graph = AsyncMock()
     mock_graph.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
     
     agent = DatabaseAgent(graph=mock_graph)
     
-    # Test invoke with config
-    config = {"tags": ["test_tag"], "run_name": "test_run"}
-    result = await agent.invoke("Hello", config=config)
+    # Test invoke without passing explicit config, should inject callbacks
+    result = await agent.invoke("Hello")
     
     assert result == "Answer"
-    # Ensure graph.ainvoke was called with the config
+    
+    # Ensure graph.ainvoke was called with the config containing callbacks
     mock_graph.ainvoke.assert_called_once()
     call_args = mock_graph.ainvoke.call_args[1]
-    assert call_args.get("config") == config
+    
+    config_arg = call_args.get("config")
+    assert config_arg is not None
+    assert "callbacks" in config_arg
+    assert isinstance(config_arg["callbacks"], list)

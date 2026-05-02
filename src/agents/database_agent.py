@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from src.core.logger import get_logger
+from langfuse.langchain import CallbackHandler
 
 # Load environment variables from .env
 load_dotenv()
@@ -56,8 +57,14 @@ class DatabaseAgent:
         
         inputs = {"messages": [("user", query)]}
         
-        # Define default tracing config if none provided
-        run_config = config or {"tags": ["database_agent"], "run_name": "Database_MCP_Execution"}
+        # Initialize Langfuse CallbackHandler for tracing
+        langfuse_handler = CallbackHandler()
+        
+        run_config = config or {}
+        if "callbacks" not in run_config:
+            run_config["callbacks"] = []
+            
+        run_config["callbacks"].append(langfuse_handler)
         
         try:
             result = await self.graph.ainvoke(inputs, config=run_config)

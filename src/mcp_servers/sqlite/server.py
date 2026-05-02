@@ -78,9 +78,9 @@ def mcp_observe(name: str):
         @wraps(func)
         def wrapper(*args, **kwargs):
             metadata = {
-                "tool": name,
-                "args": _truncate(args),
-                "kwargs": _truncate(kwargs),
+                "tool_name": name,
+                "tool_args": _truncate(args),
+                "tool_kwargs": _truncate(kwargs),
             }
             logger.info(f"MCP tool started: {name}", extra=metadata)
 
@@ -97,17 +97,16 @@ def mcp_observe(name: str):
                 }
                 
                 # Log the error for production monitoring
-                logger.error(f"MCP tool failed: {name}", extra=error_payload, exc_info=True)
+                logger.error(f"MCP tool failed: {name}", extra={**metadata, **error_payload}, exc_info=True)
                 
                 # Update Langfuse span
                 _update_current_span(
                     level="ERROR",
                     status_message=f"{type(exc).__name__}: {exc}",
-                    metadata=error_payload,
+                    metadata={**metadata, **error_payload},
                 )
                 
                 # IMPORTANT: Return JSON string instead of raising.
-                # This allows the Agent to see the structured error in its observation.
                 import json
                 return json.dumps(error_payload, ensure_ascii=False)
 
@@ -121,7 +120,6 @@ def mcp_observe(name: str):
                     status_message="MCP tool returned no results",
                     metadata={**completion_data, "result_empty": True},
                 )
-                # Optionally return a structured "no results" message
                 return []
             else:
                 logger.info(f"MCP tool completed: {name}", extra=completion_data)

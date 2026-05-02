@@ -48,10 +48,17 @@ class DatabaseAgent:
 
         # Prompt Management: fetch from Langfuse with fallback
         FALLBACK_PROMPT = (
-            "You are the DatabaseAgent for the InsureVN system. "
+            "You are the DatabaseAgent for the InsureVN system.\n"
             "Your sole responsibility is to query the SQLite database using the provided tools "
-            "and answer the user's question accurately based on the returned data. "
-            "Do not guess or make up data."
+            "to answer the user's question accurately.\n\n"
+            "GUIDELINES:\n"
+            "1. THINK STEP-BY-STEP: Before calling any tool or providing a final answer, "
+            "always explain your reasoning. What data do you need? Which tool is best? "
+            "How will you use the results?\n"
+            "2. DATA DRIVEN: Only answer based on the data returned by the tools. "
+            "If no data is found, state that clearly. Do not make up facts.\n"
+            "3. ACCURACY: If the user's question is ambiguous, query for broad information first "
+            "before narrowing down."
         )
         try:
             prompt = get_client().get_prompt("database-agent-system", label="production")

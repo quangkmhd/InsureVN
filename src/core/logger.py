@@ -8,18 +8,29 @@ from datetime import datetime
 class JsonFormatter(logging.Formatter):
     """Production-grade JSON formatter for logs."""
     def format(self, record):
+        # Standard attributes to exclude from metadata
+        standard_attrs = {
+            "args", "asctime", "created", "exc_info", "exc_text", "filename",
+            "funcName", "levelname", "levelno", "lineno", "module", "msecs",
+            "msg", "name", "pathname", "process", "processName",
+            "relativeCreated", "stack_info", "thread", "threadName", "message"
+        }
+        
         log_record = {
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
         }
+        
+        # Add exception info if present
         if record.exc_info:
             log_record["exception"] = self.formatException(record.exc_info)
         
-        # Add any extra attributes passed in the 'extra' dict
-        if hasattr(record, "extra"):
-            log_record.update(record.extra)
+        # Automatically add all "extra" attributes
+        for key, value in record.__dict__.items():
+            if key not in standard_attrs and not key.startswith("_"):
+                log_record[key] = value
             
         return json.dumps(log_record, ensure_ascii=False)
 

@@ -1,5 +1,5 @@
 from langchain.agents import create_agent
-from langchain_google_vertexai import ChatVertexAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from src.tools.mcp_client import get_sqlite_mcp_tools
 
 class DatabaseAgent:
@@ -21,7 +21,7 @@ class DatabaseAgent:
         if os.path.exists(credentials_path):
             credentials = service_account.Credentials.from_service_account_file(credentials_path)
             
-        llm = ChatVertexAI(
+        llm = ChatGoogleGenerativeAI(
             model="gemini-3-flash-preview",
             credentials=credentials
         )

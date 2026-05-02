@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from src.agents.database_agent import DatabaseAgent
 
 @pytest.fixture
@@ -31,3 +31,21 @@ async def test_database_agent_invoke(mock_get_tools, mock_tools):
     
     result = await agent.invoke("What tables are in the database?")
     assert "Tables are" in result
+
+@pytest.mark.asyncio
+async def test_database_agent_invoke_with_config():
+    # Setup mock graph
+    mock_graph = AsyncMock()
+    mock_graph.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
+    
+    agent = DatabaseAgent(graph=mock_graph)
+    
+    # Test invoke with config
+    config = {"tags": ["test_tag"], "run_name": "test_run"}
+    result = await agent.invoke("Hello", config=config)
+    
+    assert result == "Answer"
+    # Ensure graph.ainvoke was called with the config
+    mock_graph.ainvoke.assert_called_once()
+    call_args = mock_graph.ainvoke.call_args[1]
+    assert call_args.get("config") == config

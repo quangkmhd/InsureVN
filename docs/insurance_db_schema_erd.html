@@ -1,0 +1,196 @@
+
+<div id="erd" style="padding: 8px 0;"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '12px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+const diagram = `erDiagram
+  companies {
+    serial id PK
+    varchar code
+    varchar name
+    varchar website
+  }
+
+  documents {
+    serial id PK
+    int company_id FK
+    varchar source_path
+    varchar document_name
+    varchar document_type
+    varchar language
+    varchar description
+    date effective_date
+    varchar version
+    timestamp created_at
+  }
+
+  source_tables {
+    serial id PK
+    int document_id FK
+    varchar file_path
+    varchar table_type
+    int page_number
+    int table_index
+    jsonb raw_json
+    text_array keys
+    boolean processed
+  }
+
+  plan_types {
+    serial id PK
+    int company_id FK
+    int document_id FK
+    varchar raw_name
+    varchar normalized_code
+    int plan_level
+    varchar product_line
+  }
+
+  benefit_items {
+    serial id PK
+    int source_table_id FK
+    int document_id FK
+    int category_id FK
+    varchar raw_name
+    varchar normalized_name
+    int display_order
+    text note
+  }
+
+  benefit_values {
+    serial id PK
+    int benefit_item_id FK
+    int plan_type_id FK
+    text value
+    numeric value_numeric
+    varchar unit
+    boolean is_covered
+    text note
+  }
+
+  benefit_categories {
+    serial id PK
+    varchar code
+    varchar name_vi
+    varchar name_en
+    int parent_id FK
+  }
+
+  premium_entries {
+    serial id PK
+    int source_table_id FK
+    int document_id FK
+    int plan_type_id FK
+    int age_min
+    int age_max
+    varchar age_label
+    numeric premium_amount
+    varchar currency
+    varchar period
+    varchar year_label
+  }
+
+  hospitals {
+    serial id PK
+    int source_table_id FK
+    int document_id FK
+    varchar name_vi
+    varchar name_en
+    text address
+    varchar city
+    varchar country
+    varchar phone
+    varchar hospital_type
+    boolean gop_supported
+    varchar gop_time
+    varchar external_id
+    text note
+  }
+
+  glossary_terms {
+    serial id PK
+    int source_table_id FK
+    int document_id FK
+    varchar term
+    text definition
+    varchar language
+  }
+
+  waiting_periods {
+    serial id PK
+    int source_table_id FK
+    int document_id FK
+    varchar condition_group
+    text condition_detail
+    int waiting_days
+    varchar waiting_text
+  }
+
+  claim_payouts {
+    serial id PK
+    int source_table_id FK
+    int document_id FK
+    varchar event
+    numeric payout_rate
+    varchar payout_text
+  }
+
+  companies ||--o{ documents : has
+  companies ||--o{ plan_types : defines
+  documents ||--o{ source_tables : contains
+  documents ||--o{ plan_types : from
+  documents ||--o{ premium_entries : has
+  documents ||--o{ hospitals : has
+  documents ||--o{ glossary_terms : has
+  documents ||--o{ waiting_periods : has
+  documents ||--o{ claim_payouts : has
+  source_tables ||--o{ benefit_items : produces
+  source_tables ||--o{ premium_entries : produces
+  source_tables ||--o{ hospitals : produces
+  source_tables ||--o{ glossary_terms : produces
+  source_tables ||--o{ waiting_periods : produces
+  source_tables ||--o{ claim_payouts : produces
+  benefit_categories ||--o{ benefit_items : classifies
+  benefit_categories ||--o{ benefit_categories : parent
+  benefit_items ||--o{ benefit_values : valued_by
+  plan_types ||--o{ benefit_values : applied_to
+  plan_types ||--o{ premium_entries : priced_in
+`;
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>

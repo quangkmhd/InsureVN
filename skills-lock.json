@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "fine-tuning-expert": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/fine-tuning-expert/SKILL.md",
+      "computedHash": "8e70137cf3de9a6edba12d3f523c087c0407002f1206b0981b767323e0f5a54e"
+    },
+    "ml-model-training": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/ml-model-training/skills/ml-model-training/SKILL.md",
+      "computedHash": "7ec25d4cbe57adc5c616a5710fc53581f0d56b2a3efdbb11c25b5b72fa97fd76"
+    },
+    "pytorch-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/pytorch-patterns/SKILL.md",
+      "computedHash": "05b98870477148924e3d5478d94acd61a246587eabf4a884aa2af8816ffbc5c2"
+    }
+  }
+}

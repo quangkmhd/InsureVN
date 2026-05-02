@@ -1,5 +1,4 @@
 from langchain.agents import create_agent
-from langchain_ollama import ChatOllama
 from src.tools.mcp_client import get_sqlite_mcp_tools
 
 class DatabaseAgent:
@@ -12,26 +11,28 @@ class DatabaseAgent:
         # 1. Get MCP Tools
         tools = await get_sqlite_mcp_tools()
         
-        # 2. Initialize LLM
+        # 2. Initialize LLM Dynamically
         import os
         from dotenv import load_dotenv
+        from langchain.chat_models import init_chat_model
         
         # Load environment variables from .env
         load_dotenv()
         
-        # Ollama cloud configuration
-        ollama_url = os.environ.get("OLLAMA_API_URL", "https://ollama.com")
-        ollama_api_key = os.environ.get("OLLAMA_API_KEY", "")
+        # Read the preferred model from the environment (defaulting to ollama if not specified)
+        # Examples: "ollama:gemma4:31b-cloud", "openai:gpt-4o", "google_genai:gemini-3-flash-preview"
+        model_name = os.environ.get("LLM_MODEL", "ollama:gemma4:31b-cloud")
         
-        headers = {}
-        if ollama_api_key:
-            headers["Authorization"] = f"Bearer {ollama_api_key}"
+        # Dynamic kwargs for specific providers
+        kwargs = {}
+        if model_name.startswith("ollama:"):
+            ollama_url = os.environ.get("OLLAMA_API_URL", "https://ollama.com")
+            ollama_api_key = os.environ.get("OLLAMA_API_KEY", "")
+            if ollama_api_key:
+                kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {ollama_api_key}"}}
+            kwargs["base_url"] = ollama_url
             
-        llm = ChatOllama(
-            model="gemma4:31b-cloud",
-            base_url=ollama_url,
-            client_kwargs={"headers": headers}
-        )
+        llm = init_chat_model(model_name, **kwargs)
         
         # 3. System Prompt
         system_prompt = (

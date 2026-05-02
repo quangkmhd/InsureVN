@@ -29,6 +29,8 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+# Tắt log HTTP chi tiết từ thư viện httpx
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class ApiWorker:
     def __init__(self, provider, api_key, model, endpoint):
@@ -54,7 +56,7 @@ class ApiWorker:
                     "temperature": 0.0
                 }
             }
-            with httpx.Client(timeout=120.0) as client:
+            with httpx.Client(timeout=1000.0) as client:
                 response = client.post(self.endpoint, headers=headers, json=data)
                 response.raise_for_status()
                 result = response.json()
@@ -74,7 +76,7 @@ class ApiWorker:
                 "temperature": 0.0,
                 "max_tokens": 4096
             }
-            with httpx.Client(timeout=120.0) as client:
+            with httpx.Client(timeout=1000.0) as client:
                 response = client.post(self.endpoint, headers=headers, json=data)
                 response.raise_for_status()
                 result = response.json()
@@ -126,8 +128,6 @@ def load_workers():
             ))
             
     logging.info(f"✅ Đã tải thành công {len(workers_list)} API Keys (Workers).")
-    for w in workers_list:
-        logging.info(f"  - {w.id}")
     return workers_list
 
 def strip_previous_interpretations(content: str) -> str:
@@ -201,13 +201,20 @@ def process_file(input_path: Path, output_path: Path, worker_queue: queue.Queue,
     content = strip_previous_interpretations(content)
 
     table_matches = extract_markdown_tables(content)
+    
+    with lock:
+        # progress['files_done'] bây giờ sẽ được dùng để đếm số file đã HOÀN THÀNH
+        total_files = progress['total_files']
+
     if not table_matches:
         if not output_path.exists():
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(content, encoding="utf-8")
         with lock:
             progress['files_done'] += 1
-        logging.info(f"⏭️  Bỏ qua file: {input_path.name} (Không có bảng dữ liệu)")
+            progress['files_skipped'] += 1
+            current_progress = progress['files_done']
+        logging.info(f"[{current_progress}/{total_files}] ⏭️  Bỏ qua: {input_path.name} (Không có bảng)")
         return "SKIPPED_NO_TABLE", str(input_path)
 
     # Đọc nội dung file output cũ để thực hiện granular resume
@@ -219,14 +226,17 @@ def process_file(input_path: Path, output_path: Path, worker_queue: queue.Queue,
         if marker_count >= len(table_matches):
             with lock:
                 progress['files_done'] += 1
+                progress['files_skipped'] += 1
                 progress['tables_done'] += len(table_matches)
-            logging.info(f"⏭️  Bỏ qua file: {input_path.name} (Đã hoàn thành toàn bộ)")
+                current_progress = progress['files_done']
+            logging.info(f"[{current_progress}/{total_files}] ⏭️  Bỏ qua: {input_path.name} (Đã hoàn thành)")
             return "SKIPPED_ALREADY_DONE", str(input_path)
 
     new_content_parts = []
     current_pos = 0
     last_output_pos = 0
-    modified = False
+    new_tables_count = 0
+    skipped_tables_count = 0
 
     for idx, (start, end, table) in enumerate(table_matches):
         # Thêm đoạn văn bản từ vị trí hiện tại đến hết bảng này
@@ -255,10 +265,17 @@ def process_file(input_path: Path, output_path: Path, worker_queue: queue.Queue,
                             last_output_pos = desc_start + end_match.start()
 
         if existing_desc:
-            logging.info(f"⏭️  Bỏ qua bảng {idx + 1}/{len(table_matches)} trong {input_path.name} (Đã có diễn giải)")
+            logging.info(f"  └─ ⏭️  Bỏ qua bảng {idx + 1}/{len(table_matches)} trong {input_path.name} (Đã có)")
             new_content_parts.append(f"\n\n{MARKER}\n{existing_desc}\n")
             with lock:
                 progress['tables_done'] += 1
+            skipped_tables_count += 1
+            
+            # Cập nhật file output ngay cả khi skip bảng (để đảm bảo cấu trúc file đồng nhất)
+            final_content = "".join(new_content_parts) + content[current_pos:]
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(final_content, encoding="utf-8")
+            
             continue
 
         # Nếu không có diễn giải cũ, gọi AI
@@ -281,7 +298,7 @@ Hãy viết đoạn diễn giải:"""
         for attempt in range(1, MAX_RETRIES + 1):
             worker = worker_queue.get()
             try:
-                logging.info(f"⏳ Đang xử lý bảng {idx + 1}/{len(table_matches)} trong {input_path.name} (Lần thử {attempt}/{MAX_RETRIES})")
+                logging.info(f"  └─ ⏳ Đang dịch bảng {idx + 1}/{len(table_matches)} trong {input_path.name} (Lần {attempt})")
                 description = worker.process(prompt)
 
                 if not description or len(description.strip()) < 10:
@@ -290,12 +307,17 @@ Hãy viết đoạn diễn giải:"""
                 description = description.strip()
                 new_content_parts.append(f"\n\n{MARKER}\n{description}\n")
 
-                modified = True
+                new_tables_count += 1
                 success = True
 
                 with lock:
                     progress['tables_done'] += 1
-                logging.info(f"✅ Thành công bảng {idx + 1}/{len(table_matches)} -> {output_path.name}")
+                logging.info(f"  └─ ✅ Xong bảng {idx + 1}/{len(table_matches)} của {input_path.name}")
+
+                # Lưu tiến độ ngay lập tức sau mỗi bảng thành công
+                final_content = "".join(new_content_parts) + content[current_pos:]
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(final_content, encoding="utf-8")
 
                 worker_queue.put(worker)
                 break
@@ -311,15 +333,21 @@ Hãy viết đoạn diễn giải:"""
                 progress['tables_failed'] += 1
 
     # Ghi kết quả vào output directory
+    final_content = "".join(new_content_parts) + content[current_pos:]
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(content, encoding="utf-8")
+    output_path.write_text(final_content, encoding="utf-8")
 
     with lock:
         progress['files_done'] += 1
-        if modified:
-            logging.info(f"💾 Đã hoàn tất: {output_path} ({progress['files_done']}/{progress['total_files']} files)")
+        current_progress = progress['files_done']
+        if new_tables_count > 0:
+            progress['files_success'] += 1
+            logging.info(f"[{current_progress}/{total_files}] ✅ Thành công: {input_path.name} ({new_tables_count} bảng mới, {skipped_tables_count} cũ)")
+        else:
+            progress['files_skipped'] += 1
+            logging.info(f"[{current_progress}/{total_files}] ⏭️  Bỏ qua: {input_path.name} (Không có bảng mới)")
 
-    return "SUCCESS" if modified else "SKIPPED_ALREADY_DONE", str(input_path)
+    return "SUCCESS" if new_tables_count > 0 else "SKIPPED_ALREADY_DONE", str(input_path)
 
 def main():
     logging.info("=== BẮT ĐẦU CHUYỂN ĐỔI BẢNG (LƯU VÀO THƯ MỤC RIÊNG) ===")
@@ -350,6 +378,8 @@ def main():
     progress = {
         'total_files': len(md_files),
         'files_done': 0,
+        'files_success': 0,
+        'files_skipped': 0,
         'tables_done': 0,
         'tables_failed': 0
     }
@@ -381,13 +411,14 @@ def main():
 
     logging.info("="*50)
     logging.info("=== HOÀN TẤT QUÁ TRÌNH CHUYỂN ĐỔI ===")
-    logging.info(f"⏱️ Tổng thời gian: {duration:.2f} giây")
+    logging.info(f"⏱️  Tổng thời gian: {duration:.2f} giây")
     logging.info(f"📁 Kết quả được lưu tại: {OUTPUT_DIR}")
     logging.info(f"📄 Tổng số file đã quét: {progress['total_files']}")
-    logging.info(f"📄 Số file đã xử lý xong: {progress['files_done']}")
+    logging.info(f"✅ Số file thành công: {progress['files_success']}")
+    logging.info(f"⏭️  Số file bỏ qua: {progress['files_skipped']}")
     logging.info(f"📊 Tổng số bảng đã diễn giải: {progress['tables_done']}")
     if progress['tables_failed'] > 0:
-        logging.warning(f"⚠️ Số bảng bị lỗi: {progress['tables_failed']}")
+        logging.warning(f"⚠️  Số bảng bị lỗi: {progress['tables_failed']}")
     logging.info("="*50)
 
 if __name__ == "__main__":

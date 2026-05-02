@@ -1,11 +1,16 @@
 import os
 from src.core.config import settings
 
-def test_langsmith_settings_loaded(monkeypatch):
+def test_langfuse_settings_loaded(monkeypatch):
     # Mock environment variables
-    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
-    monkeypatch.setenv("LANGCHAIN_PROJECT", "TestProject")
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-lf-test")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-lf-test")
+    monkeypatch.setenv("LANGFUSE_HOST", "http://localhost:3000")
     
     # Re-evaluate the properties or ensure they are present
-    assert hasattr(settings, "LANGCHAIN_TRACING_V2")
-    assert hasattr(settings, "LANGCHAIN_PROJECT")
+    assert hasattr(settings, "LANGFUSE_PUBLIC_KEY")
+    assert hasattr(settings, "LANGFUSE_SECRET_KEY")
+    assert hasattr(settings, "LANGFUSE_HOST")
+    
+    # Ensure LangSmith variables are removed
+    assert not hasattr(settings, "LANGCHAIN_TRACING_V2")

@@ -14,16 +14,29 @@ class DatabaseAgent:
         
         # 2. Initialize LLM
         import os
+        import json
         from google.oauth2 import service_account
         
         credentials_path = "/home/quangnhvn34/service-account.json"
         credentials = None
+        project_id = None
+        
         if os.path.exists(credentials_path):
-            credentials = service_account.Credentials.from_service_account_file(credentials_path)
+            with open(credentials_path, "r") as f:
+                sa_info = json.load(f)
+                project_id = sa_info.get("project_id")
+                
+            credentials = service_account.Credentials.from_service_account_file(
+                credentials_path, 
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
             
         llm = ChatGoogleGenerativeAI(
             model="gemini-3-flash-preview",
-            credentials=credentials
+            credentials=credentials,
+            project=project_id,
+            location="global",
+            vertexai=True
         )
         
         # 3. System Prompt

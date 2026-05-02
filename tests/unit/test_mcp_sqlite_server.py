@@ -66,6 +66,7 @@ def test_execute_query_valid(mock_get_db):
     result = execute_query("SELECT * FROM users LIMIT 2")
     
     assert result == [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
+    mock_get_db.assert_called_once_with(read_only=True)
     mock_conn.execute.assert_called_once_with("SELECT * FROM users LIMIT 2")
 
 def test_execute_query_invalid():
@@ -79,6 +80,9 @@ def test_execute_query_invalid():
     
     with pytest.raises(ValueError, match="Only SELECT queries are allowed"):
         execute_query("INSERT INTO users VALUES (1)")
+
+    with pytest.raises(ValueError, match="Only SELECT queries are allowed"):
+        execute_query("PRAGMA user_version = 123")
 
 @patch("src.mcp_servers.sqlite.server.get_db_connection")
 def test_database_summary(mock_get_db):

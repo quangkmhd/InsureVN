@@ -6,11 +6,13 @@ import os
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from src.core.logger import get_logger
+from src.core.config import settings
 from langfuse import propagate_attributes, get_client
 from langfuse.langchain import CallbackHandler
 
 # Load environment variables from .env
 load_dotenv()
+os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_HOST)
 
 logger = get_logger(__name__)
 
@@ -65,25 +67,31 @@ class DatabaseAgent:
         
     async def invoke(self, query: str, config: Optional[dict] = None) -> str:
         """Invoke the agent with a query."""
-        logger.info(f"Invoking DatabaseAgent with query: {query}")
+        run_config = dict(config or {})
+        user_id = run_config.pop("user_id", "unknown")
+        session_id = run_config.pop("session_id", "unknown")
+        
+        metadata = {
+            "query": query,
+            "user_id": user_id,
+            "session_id": session_id,
+            "agent_type": "DatabaseAgent"
+        }
+
+        logger.info(f"Invoking DatabaseAgent", extra=metadata)
 
         inputs = {"messages": [("user", query)]}
-        run_config = config or {}
-
-        # Extract trace attributes from config (SDK v4 pattern)
-        user_id = run_config.pop("user_id", None)
-        session_id = run_config.pop("session_id", None)
-
         langfuse_handler = CallbackHandler()
+        callbacks = list(run_config.pop("callbacks", []))
+        callbacks.append(langfuse_handler)
 
         invoke_config = {
-            "callbacks": [langfuse_handler],
+            "callbacks": callbacks,
             "run_name": run_config.pop("run_name", "database-agent-execution"),
             **run_config,
         }
 
         try:
-            # SDK v4: use propagate_attributes() to set trace-level attributes
             with propagate_attributes(
                 trace_name="database-agent-execution",
                 user_id=user_id,
@@ -92,12 +100,14 @@ class DatabaseAgent:
             ):
                 result = await self.graph.ainvoke(inputs, config=invoke_config)
 
-            logger.info("DatabaseAgent invocation successful")
+            logger.info("DatabaseAgent invocation successful", extra={**metadata, "status": "success"})
             return result["messages"][-1].content
         except Exception as e:
-            logger.error(f"Error during DatabaseAgent invocation: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error during DatabaseAgent invocation: {str(e)}", 
+                extra={**metadata, "status": "error", "error_type": type(e).__name__},
+                exc_info=True
+            )
             raise
         finally:
-            # SDK v4: flush via global client to ensure traces are sent
             get_client().flush()
-

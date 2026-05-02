@@ -53,3 +53,33 @@ async def test_database_agent_invoke_with_langfuse_callback():
     assert config_arg is not None
     assert "callbacks" in config_arg
     assert isinstance(config_arg["callbacks"], list)
+
+@pytest.mark.asyncio
+async def test_database_agent_invoke_preserves_caller_config():
+    mock_graph = AsyncMock()
+    mock_graph.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
+    agent = DatabaseAgent(graph=mock_graph)
+    caller_callback = MagicMock()
+    caller_config = {
+        "callbacks": [caller_callback],
+        "run_name": "custom-run",
+        "user_id": "user-1",
+        "session_id": "session-1",
+        "configurable": {"thread_id": "thread-1"},
+    }
+
+    result = await agent.invoke("Hello", config=caller_config)
+
+    assert result == "Answer"
+    assert caller_config == {
+        "callbacks": [caller_callback],
+        "run_name": "custom-run",
+        "user_id": "user-1",
+        "session_id": "session-1",
+        "configurable": {"thread_id": "thread-1"},
+    }
+    invoke_config = mock_graph.ainvoke.call_args.kwargs["config"]
+    assert invoke_config["callbacks"][0] is caller_callback
+    assert len(invoke_config["callbacks"]) == 2
+    assert invoke_config["run_name"] == "custom-run"
+    assert invoke_config["configurable"] == {"thread_id": "thread-1"}

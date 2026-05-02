@@ -1,266 +1,192 @@
-# I. TOÀN BỘ VẤN ĐỀ THEO VÒNG ĐỜI BẢO HIỂM
+# InsureVN 🛡️ — AI-Powered Multi-Agent Insurance Ecosystem
 
-## 1. Trước khi mua (Awareness)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![LangChain](https://img.shields.io/badge/Framework-LangChain/LangGraph-green.svg)](https://python.langchain.com/)
+[![Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![Qdrant](https://img.shields.io/badge/VectorDB-Qdrant-red.svg)](https://qdrant.tech/)
 
-* Không hiểu bảo hiểm
-* Không biết chọn gói
-* Điều khoản khó đọc
-* Sợ bị lừa
-
-👉 AI làm:
-
-* Advisor (tư vấn gói)
-* Explain policy (dịch PDF → dễ hiểu)
-* So sánh các công ty
+**InsureVN** is a production-grade, multi-agent AI system designed to automate and optimize the full insurance lifecycle for the Vietnamese market. By transforming complex, unstructured policy documents into actionable intelligence, InsureVN bridges the gap between insurance providers and customers.
 
 ---
 
-## 2. Khi mua (Purchase)
+## 🚀 Core Mission
 
-* Form dài, dễ sai
-* Không hiểu quyền lợi thật
-* Không biết điều khoản loại trừ
+Insurance in Vietnam faces three critical challenges:
 
-👉 AI làm:
+1. **Impenetrable Legal Language**: Policy documents are often 50+ pages of complex jargon.
+2. **Fragmented Processes**: Claiming is manual, slow, and prone to error or fraud.
+3. **Unstructured Data**: 90% of insurance intelligence is trapped in PDFs and images.
 
-* Auto-fill form
-* Policy simulator (giả lập quyền lợi)
-* Risk highlight
+**InsureVN solves this by:**
 
----
-
-## 3. Sau khi mua (Onboarding)
-
-* Không nhớ đã mua gì
-* Không biết dùng
-
-👉 AI làm:
-
-* Personal insurance assistant
-* Reminder (đóng phí, quyền lợi)
+- 🧠 **Simplifying**: Explaining complex clauses in plain Vietnamese.
+- ⚡ **Automating**: Extracting structured data from medical bills and IDs in seconds.
+- 🛡️ **Protecting**: Detecting fraud and identifying "gotcha" clauses before they affect users.
 
 ---
 
-## 4. Khi sử dụng (Usage)
+## 🏗️ System Architecture
 
-* Không biết khi nào được claim
-* Không biết quy trình
+InsureVN utilizes a **Hierarchical Swarm Architecture** powered by **LangGraph**. A central Orchestrator delegates tasks to specialized expert agents.
 
-👉 AI làm:
+```mermaid
+graph TD
+    User([User Request]) --> Orchestrator{Orchestrator Agent}
+  
+    subgraph "Knowledge & Search"
+        Orchestrator --> GraphRAG[GraphRAG Agent]
+        Orchestrator --> SQLAgent[SQL Agent]
+        Orchestrator --> WebSearch[Web Search Agent]
+    end
+  
+    subgraph "Logic & Execution"
+        Orchestrator --> Calculator[Calculator Agent]
+        Orchestrator --> VisionOCR[Vision & OCR Agent]
+        Orchestrator --> RuleEngine[Rule & Eligibility Agent]
+    end
+  
+    subgraph "Specialized Experts"
+        Orchestrator --> FraudAgent[Fraud Agent]
+        Orchestrator --> Underwriter[Underwriting Assistant]
+        Orchestrator --> Comparison[Comparison Engine]
+    end
+  
+    GraphRAG -.-> Qdrant[(Qdrant)]
+    SQLAgent -.-> SQLite[(SQLite)]
+    VisionOCR -.-> Gemini[Gemini Vision]
+  
+    Orchestrator --> Output([Empathetic Response])
+```
 
-* Eligibility checker
-* Hướng dẫn claim
-* Tìm bệnh viện liên kết
+### Key Agents
 
----
-
-## 5. Khi claim (QUAN TRỌNG NHẤT)
-
-* Khó làm hồ sơ
-* Thiếu giấy tờ
-* Bị từ chối không hiểu lý do
-
-👉 AI làm:
-
-* Claim assistant (step-by-step)
-* OCR + extract document
-* Claim validation
-* Fraud detection
-
----
-
-## 6. Sau khi claim (Payout)
-
-* Không minh bạch
-* Không hiểu tiền nhận
-
-👉 AI làm:
-
-* Status tracking
-* Explain payout
-
----
-
-## 7. Tái tục (Renewal)
-
-* Không biết có nên tiếp tục
-* Quên đóng phí
-
-👉 AI làm:
-
-* Renewal advisor
-* Phân tích lịch sử claim
+- **Orchestrator**: The central brain that routes queries and synthesizes final answers.
+- **PolicyAgent**: Uses RAG over Qdrant to explain specific policy clauses.
+- **ClaimAgent**: Evaluates eligibility and guides users through the submission process.
+- **DocumentAgent**: High-fidelity OCR and structured data extraction (PII-aware).
+- **FraudAgent**: Detects suspicious patterns in claim history and documents.
 
 ---
 
-# II. VẤN ĐỀ NÂNG CAO (ÍT NGƯỜI LÀM)
+## 🛠️ Technology Stack
 
-## 1. Điều khoản “bẫy”
-
-* Không hiểu exclusion
-
-👉 AI:
-
-* Risk scanner
-* Highlight điều khoản nguy hiểm
-
----
-
-## 2. Mua sai mức (under/over insured)
-
-👉 AI:
-
-* Coverage optimizer
+| Layer                   | Technology                                         |
+| :---------------------- | :------------------------------------------------- |
+| **Language**      | Python 3.12.3                                      |
+| **Orchestration** | LangChain, LangGraph                               |
+| **LLM Models**    | Google Gemini (Pro/Flash/Vision), Gemma-4          |
+| **Vector DB**     | Qdrant (Knowledge Base)                            |
+| **Relational DB** | SQLite (User Profiles, Payouts, Hospital Networks) |
+| **Extraction**    | Firecrawl (Acquisition), Vision LLMs (OCR)         |
+| **API**           | FastAPI                                            |
 
 ---
 
-## 3. So sánh nhiều công ty
+## 📊 Data Pipeline (ETL)
 
-👉 AI:
+InsureVN features a robust pipeline that converts raw insurance documents into a queryable relational database.
 
-* Multi-insurance comparison engine
-
----
-
-## 4. Dự đoán khả năng claim
-
-👉 AI:
-
-* Claim success predictor
+1. **Acquisition**: `scripts/01_acquisition/` — Scraping and collection via Firecrawl.
+2. **Extraction**: `scripts/04_extraction/` — OCR and Vision-to-JSON extraction using LLMs.
+3. **Classification**: `scripts/04_extraction/11_llm_schema_mapping.py` — Dynamic key-set classification.
+4. **Ingestion**: `scripts/06_db_ingestion/02_ingest_with_mapping.py` — Normalizing and loading into SQLite.
 
 ---
 
-## 5. Cho bệnh viện (B2B)
+## 🗺️ Project Roadmap & Current Progress
 
-👉 AI:
+### Phase 1: Data Acquisition (Done ✅)
 
-* Insurance checker cho bệnh viện
+- [X] Multi-site PDF scrapers (AIA, Pacific Cross, BIC, etc.)
+- [X] **Firecrawl** integration for deep web crawling.
+- [X] Automated document download and tracking.
 
----
+### Phase 2: Preprocessing & Organization (Done ✅)
 
-## 6. Gian lận (Fraud)
+- [X] **Ollama-based** PDF classification (Policy vs. Brochure vs. Pricing).
+- [X] Automated folder hierarchy organization.
+- [X] PDF-to-Markdown conversion using **Marker** and **Datalab**.
 
-👉 AI:
+### Phase 3: AI Extraction Engine (In Progress 🚧)
 
-* Fraud detection
-* Detect giấy tờ giả
+- [X] Vision LLM table extraction (Gemma-4).
+- [X] **LLM Schema Mapping**: Handling heterogeneous JSON keys across 6 companies.
+- [X] "Good vs. Trash" content classifier to filter OCR noise.
+- [X] **Gemma-4 Fine-tuning**: Custom VLM training for Vietnamese insurance tables.
 
----
+### Phase 4: Structured Knowledge Base (Done ✅)
 
-## 7. Behavioral AI
+- [X] **SQLite Design**: Normalized schema for benefits, premiums, and networks.
+- [X] **Relational Ingestion**: Automated mapping of 600+ JSON tables to SQLite.
+- [X] Data lineage tracking from DB back to original JSON/PDF.
 
-👉 AI:
+### Phase 5: Multi-Agent Intelligence (Next Steps 🚀)
 
-* Phân tích hành vi → tối ưu bảo hiểm
-
----
-
-## 8. Giải thích bị từ chối
-
-👉 AI:
-
-* Claim rejection explainer
-
----
-
-## 9. Sales nội bộ
-
-👉 AI:
-
-* Sales copilot
-* Gợi ý tư vấn realtime
+- [ ] **Orchestrator**: LangGraph-based central router.
+- [ ] **PolicyAgent**: RAG-based explanation engine.
+- [ ] **ClaimAgent**: Eligibility and payout calculation logic.
+- [ ] **FraudAgent**: Pattern-based fraud detection.
 
 ---
 
-## 10. Tạo sản phẩm bảo hiểm
+## 📁 Project Structure
 
-👉 AI:
-
-* Product generator
-
----
-
-# III. PHÂN LOẠI THEO ĐỘ KHÓ & GIÁ TRỊ
-
-## Level 1 (cơ bản – dễ làm)
-
-* Policy Q&A
-* Chatbot
-* Explain PDF
-
----
-
-## Level 2 (thực tế – nên làm)
-
-* Claim assistant
-* Document extraction
-* Eligibility checker
+```text
+InsureVN/
+├── src/                  # Core Source Code
+│   ├── agents/           # Specialized LangGraph agents
+│   ├── tools/            # Reusable tools (OCR, DB, Search)
+│   ├── api/              # FastAPI endpoints
+│   ├── models/           # Pydantic & DB schemas
+│   └── core/             # Configuration & LLM setup
+├── scripts/              # ETL Pipeline & Research
+│   ├── 01_acquisition/   # Scraping
+│   ├── 04_extraction/    # OCR & Data Extraction
+│   └── 06_db_ingestion/  # SQLite Loading
+├── docs/                 # Extensive Technical Documentation
+├── database/             # SQLite database files
+└── data/                 # Raw/Processed JSON/PDF data
+```
 
 ---
 
-## Level 3 (xịn – khác biệt)
+## 🚦 Getting Started
 
-* Fraud detection
-* Claim prediction
-* Multi-company comparison
+### 1. Prerequisites
 
----
+- Python 3.12+
+- `pip install -r requirements.txt` (Coming soon)
+- Environment variables in `.env` (Gemini API Key, Qdrant URL)
 
-# IV. CÁC MODULE AI AGENT CÓ THỂ XÂY
+### 2. Running the Pipeline
 
-## Core agents
+```bash
+# Extract data from PDFs
+python scripts/04_extraction/01_extract_doc_structures.py
 
-* Policy Agent (RAG)
-* Claim Agent
-* Document Agent
-* Advisor Agent
+# Map and Ingest to Database
+python scripts/06_db_ingestion/02_ingest_with_mapping.py
+```
 
-## Advanced agents
+### 3. Starting the API
 
-* Fraud Agent
-* Comparison Agent
-* Prediction Agent
-
----
-
-# V. USE CASE NÊN CHỌN LÀM (QUAN TRỌNG)
-
-## 1. Dễ + nhanh demo
-
-👉 Policy Q&A + Explain + Highlight risk
+```bash
+uvicorn src.main:app --reload
+```
 
 ---
 
-## 2. Thực tế + có giá trị
+## 📖 Documentation Index
 
-👉 Claim Assistant + Document AI
+For deeper technical insights, please refer to the `docs/` directory:
 
----
-
-## 3. Khác biệt mạnh
-
-👉 Multi-agent system:
-
-* Advisor
-* Claim
-* Fraud
-* Comparison
+- [Architecture Design](docs/multi_agent_system_architecture_design.md)
+- [Database Schema Specification](docs/sqlite_database_schema_specification.md)
+- [Insurance Lifecycle Solutions](docs/insurance_lifecycle_ai_solutions_mapping.md)
+- [100 Customer Intent Scenarios](docs/customer_intent_scenarios_100_questions.md)
 
 ---
 
-# VI. CORE INSIGHT (CHỐT LẠI)
+## 🛡️ License
 
-Ngành bảo hiểm có 3 vấn đề lớn:
-
-1. Ngôn ngữ pháp lý khó
-2. Quy trình claim phức tạp
-3. Data nằm trong PDF (unstructured)
-
-👉 AI mạnh nhất ở:
-
-* hiểu text
-* trích xuất data
-* reasoning theo rule
-
----
-
+© 2026 InsureVN Team. All rights reserved. Built with ❤️ for the Vietnamese Insurance Community.

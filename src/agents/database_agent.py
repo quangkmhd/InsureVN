@@ -61,6 +61,25 @@ class DatabaseAgent:
         langfuse_handler = CallbackHandler()
         
         run_config = config or {}
+        
+        # Best practice: use a descriptive run name
+        if "run_name" not in run_config:
+            run_config["run_name"] = "database_agent_execution"
+        
+        # Best practice: use metadata for dynamic tracing attributes
+        if "metadata" not in run_config:
+            run_config["metadata"] = {}
+            
+        # Best practice: add tags to traces
+        if "langfuse_tags" not in run_config["metadata"]:
+            run_config["metadata"]["langfuse_tags"] = ["database_agent"]
+            
+        # Map user_id or session_id to langfuse keys if passed in run_config
+        if "user_id" in run_config:
+            run_config["metadata"]["langfuse_user_id"] = run_config.pop("user_id")
+        if "session_id" in run_config:
+            run_config["metadata"]["langfuse_session_id"] = run_config.pop("session_id")
+            
         if "callbacks" not in run_config:
             run_config["callbacks"] = []
             
@@ -73,3 +92,13 @@ class DatabaseAgent:
         except Exception as e:
             logger.error(f"Error during DatabaseAgent invocation: {str(e)}", exc_info=True)
             raise
+        finally:
+            # Best practice: flush traces to avoid losing data in scripts/serverless
+            if hasattr(langfuse_handler, 'flush'):
+                langfuse_handler.flush()
+            elif hasattr(langfuse_handler, 'langfuse'):
+                langfuse_handler.langfuse.flush()
+            elif hasattr(langfuse_handler, 'auth_check'):
+                langfuse_handler.auth_check() # fallback if flush not explicitly needed here
+            elif hasattr(langfuse_handler, 'client'):
+                langfuse_handler.client.flush()

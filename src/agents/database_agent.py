@@ -1,5 +1,5 @@
 from langchain.agents import create_agent
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from src.tools.mcp_client import get_sqlite_mcp_tools
 
 class DatabaseAgent:
@@ -14,29 +14,23 @@ class DatabaseAgent:
         
         # 2. Initialize LLM
         import os
-        import json
-        from google.oauth2 import service_account
+        from dotenv import load_dotenv
         
-        credentials_path = "/home/quangnhvn34/service-account.json"
-        credentials = None
-        project_id = None
+        # Load environment variables from .env
+        load_dotenv()
         
-        if os.path.exists(credentials_path):
-            with open(credentials_path, "r") as f:
-                sa_info = json.load(f)
-                project_id = sa_info.get("project_id")
-                
-            credentials = service_account.Credentials.from_service_account_file(
-                credentials_path, 
-                scopes=["https://www.googleapis.com/auth/cloud-platform"]
-            )
+        # Ollama cloud configuration
+        ollama_url = os.environ.get("OLLAMA_API_URL", "https://ollama.com")
+        ollama_api_key = os.environ.get("OLLAMA_API_KEY", "")
+        
+        headers = {}
+        if ollama_api_key:
+            headers["Authorization"] = f"Bearer {ollama_api_key}"
             
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-3-flash-preview",
-            credentials=credentials,
-            project=project_id,
-            location="global",
-            vertexai=True
+        llm = ChatOllama(
+            model="gemma4:31b-cloud",
+            base_url=ollama_url,
+            client_kwargs={"headers": headers}
         )
         
         # 3. System Prompt

@@ -15,11 +15,13 @@ It automates the full insurance lifecycle: policy explanation, claim processing,
 | :------------------ | :----------------------------------------------------- |
 | Language            | Python 3.12.3                                          |
 | Agent Framework     | LangChain, LangGraph                                   |
-| LLM Provider        | Google Gemini via Vertex AI (called through LangChain) |
+| LLM Provider        | Ollama cloud (called through LangChain)                |
 | Web Framework       | FastAPI                                                |
 | Vector Database     | Qdrant                                                 |
 | Relational Database | SQLite                                                 |
+| Observability       | Langfuse (Tracing, Prompt Mgmt, Evaluation)            |
 | PDF/OCR             |                                                        |
+
 
 ---
 
@@ -44,89 +46,73 @@ InsureVN/
 ├── .gitignore               # Git ignore rules
 │
 ├── CICD/                    # CI/CD configurations
-│   └── docker-compose.yml    # Local dev services (Qdrant, etc.)
+│   ├── docker-compose.yml    # Local dev services (Qdrant, etc.)
+│   └── langfuse-compose.yml  # Langfuse observability stack
 │
 ├── src/                     # Core source code
-│   ├── __init__.py
 │   ├── main.py               # FastAPI app entry point
 │   │
 │   ├── agents/               # LangGraph agent definitions
-│   │   ├── __init__.py
-│   │   ├── orchestrator.py   # Central controller / router
-│   │   ├── policy_agent.py   # Query & explain policy (RAG)
-│   │   ├── claim_agent.py    # Evaluate claim eligibility
-│   │   ├── document_agent.py # OCR + extract structured data
-│   │   ├── validation_agent.py
-│   │   ├── calculation_agent.py
-│   │   ├── fraud_agent.py
-│   │   ├── advisor_agent.py
-│   │   └── explanation_agent.py
+│   │   ├── database_agent.py # DB interaction via MCP tools
+│   │   └── ...               # (Planned) orchestrator, policy, claim agents
 │   │
-│   ├── tools/                # LangChain tools (functions agents can call)
-│   │   ├── __init__.py
-│   │   ├── ocr.py
-│   │   ├── vector_search.py
-│   │   ├── db_queries.py
-│   │   ├── calculator.py
-│   │   └── rule_engine.py
+│   ├── mcp_servers/          # Custom MCP server implementations
+│   │   └── sqlite/           # SQLite MCP server
+│   │
+│   ├── tools/                # LangChain tools & clients
+│   │   ├── mcp_client.py     # Generic MCP client for tool binding
+│   │   └── ...
 │   │
 │   ├── api/                  # FastAPI routes
-│   │   ├── __init__.py
-│   │   ├── routes/
-│   │   └── dependencies.py
+│   │   ├── routes/           # Endpoint definitions
+│   │   └── dependencies.py   # DI containers
 │   │
-│   ├── models/               # Pydantic models & SQL schemas
-│   │   ├── __init__.py
-│   │   ├── schemas.py        # Pydantic request/response models
-│   │   └── db_models.py      # SQLAlchemy / ORM models
-│   │
-│   ├── services/             # Business logic layer
-│   │   └── __init__.py
+│   ├── models/               # Data models & schemas
+│   │   ├── schemas.py        # Pydantic models
+│   │   └── schema.sql        # SQLite schema definition
 │   │
 │   ├── core/                 # Config, settings, shared utilities
-│   │   ├── __init__.py
 │   │   ├── config.py         # Environment-based settings
-│   │   ├── llm.py            # LLM client setup (Gemini via LangChain)
-│   │   ├── vectorstore.py    # Qdrant client setup
-│   │   └── database.py       # PostgreSQL connection
+│   │   ├── logger.py         # Structured JSON logging
+│   │   └── database.py       # DB connection utilities
 │   │
 │   └── prompts/              # System prompts for agents
-│       └── *.md
 │
 ├── tests/                   # Test suite
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
+│   ├── unit/                # Component-level tests
+│   ├── integration/         # Multi-component/Tool tests
+│   └── e2e/                  # Full agentic flow tests
 │
-├── scripts/                 # Task-specific scripts
-│   ├── 01_acquisition/      # Data scraping
-│   ├── 02_preprocessing/    # Classification
-│   ├── 03_conversion/       # PDF to Markdown
-│   ├── 04_extraction/       # OCR & Data extraction
-│   ├── 05_training_eval/    # Model fine-tuning
+├── scripts/                 # Data pipeline & utility scripts
+│   ├── 01_acquisition/      # Scraping (Firecrawl, Deep search)
+│   ├── 02_preprocessing/    # PDF classification & organization
+│   ├── 03_conversion/       # PDF to Markdown (Marker, Datalab)
+│   ├── 04_extraction/       # OCR & structured data extraction
+│   ├── 05_training_eval/    # VLM fine-tuning (Oumi, Gemma4)
 │   ├── 06_db_ingestion/     # Data ingestion to SQLite
-│   └── 06_ipynb/            # Research notebooks
+│   └── 06_ipynb/            # Research & training notebooks
 │
 ├── database/                # SQLite database files
 │   └── insurevn.db
 │
 ├── data/                    # Data storage (gitignored)
-│   ├── raw/
-│   ├── processed/
-│   ├── health_insurance/    # Domain-specific data
-│   ├── qdrant/              # Vector store data
-│   └── postgres/            # Legacy or external DB data
+│   ├── raw/                 # Original scraped files
+│   ├── processed/           # Intermediate conversion results
+│   ├── health_insurance/    # Domain-specific extracted data
+│   └── qdrant/              # Vector store data
 │
 ├── config/                  # Configuration files
-│   └── finetune/            # Fine-tuning configs
+│   └── finetune/            # Fine-tuning dataset configs (JSONL)
 │
-├── log/                     # Application logs
-└── docs/                    # Documentation and reports
-    ├── 
-    ├── insurance_lifecycle_ai_solutions_mapping.md # Insurance lifecycle & AI solutions
-    ├── multi_agent_system_architecture_design.md
-    ├── sqlite_database_schema_specification.md
-    └── customer_intent_scenarios_100_questions.md
+├── log/                     # Application logs (e.g., mcp_database.log)
+├── docs/                    # Documentation and reports
+│   ├── mcp_insurevn_db_reference.md
+│   ├── database_agent.md
+│   ├── database_observability.md
+│   ├── langfuse_integration.md
+│   └── ...
+└── gemma4-e2b-finetuned-lora/ # Local finetuned model weights
+
 ```
 
 When creating new files, always place them in the correct directory per this structure. Use descriptive, lowercase filenames with underscores.
@@ -139,10 +125,12 @@ When creating new files, always place them in the correct directory per this str
 
 - **Orchestrator** → central controller, routes to specialized agents
 - **PolicyAgent** → query & explain policy via RAG over Qdrant
+- **DatabaseAgent** → execute complex queries and data retrieval via SQLite MCP tools
 - **ClaimAgent** → evaluate claim eligibility (rules + LLM reasoning)
 - **DocumentAgent** → OCR + extract structured data from PDFs
 - **ValidationAgent** → check missing/invalid documents
 - **CalculationAgent** → compute payout/premium (deterministic, no LLM)
+
 
 ### Advanced Agents
 
@@ -155,6 +143,13 @@ When creating new files, always place them in the correct directory per this str
 - **Short-term**: conversation context (per session)
 - **Long-term**: user profile, claim history (SQLite)
 - **State**: workflow step tracking (e.g., upload → validate → evaluate)
+
+### Observability
+
+- **Tracing**: Langfuse for end-to-end tracing of agent reasoning and tool calls
+- **Prompt Management**: Remote management and versioning of system prompts
+- **Metrics**: Latency, cost, and quality tracking per agent interaction
+
 
 ---
 

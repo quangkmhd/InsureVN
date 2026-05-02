@@ -11,17 +11,16 @@ It automates the full insurance lifecycle: policy explanation, claim processing,
 
 ## 2. Tech Stack
 
-| Layer               | Technology                                             |
-| :------------------ | :----------------------------------------------------- |
-| Language            | Python 3.12.3                                          |
-| Agent Framework     | LangChain, LangGraph                                   |
-| LLM Provider        | Ollama cloud (called through LangChain)                |
-| Web Framework       | FastAPI                                                |
-| Vector Database     | Qdrant                                                 |
-| Relational Database | SQLite                                                 |
-| Observability       | Langfuse (Tracing, Prompt Mgmt, Evaluation)            |
-| PDF/OCR             |                                                        |
-
+| Layer               | Technology                                   |
+| :------------------ | :------------------------------------------- |
+| Language            | Python 3.12.3                                |
+| Agent Framework     | LangChain, LangGraph                         |
+| LLM Provider        | Ollama, Nvida,... (called through LangChain) |
+| Web Framework       | FastAPI                                      |
+| Vector Database     | Qdrant                                       |
+| Relational Database | SQLite                                       |
+| Observability       | Langfuse (Tracing, Prompt Mgmt, Evaluation)  |
+| PDF/OCR             |                                              |
 
 ---
 
@@ -108,8 +107,6 @@ InsureVN/
 ├── docs/                    # Documentation and reports
 │   ├── mcp_insurevn_db_reference.md
 │   ├── database_agent.md
-│   ├── database_observability.md
-│   ├── langfuse_integration.md
 │   └── ...
 └── gemma4-e2b-finetuned-lora/ # Local finetuned model weights
 
@@ -131,7 +128,6 @@ When creating new files, always place them in the correct directory per this str
 - **ValidationAgent** → check missing/invalid documents
 - **CalculationAgent** → compute payout/premium (deterministic, no LLM)
 
-
 ### Advanced Agents
 
 - **FraudAgent** → detect abnormal patterns
@@ -149,7 +145,6 @@ When creating new files, always place them in the correct directory per this str
 - **Tracing**: Langfuse for end-to-end tracing of agent reasoning and tool calls
 - **Prompt Management**: Remote management and versioning of system prompts
 - **Metrics**: Latency, cost, and quality tracking per agent interaction
-
 
 ---
 
@@ -203,7 +198,7 @@ The use of skills is mandatory for all tasks. You MUST select the appropriate sk
 - No speculative "flexibility" or "configurability".
 - No error handling for impossible scenarios.
 - If 200 lines can be 50, rewrite it.
-- Ask yourself: *"Would a senior engineer say this is overcomplicated?"* If yes, simplify.
+- Ask yourself: _"Would a senior engineer say this is overcomplicated?"_ If yes, simplify.
 
 ### 7.3 Surgical Changes
 
@@ -225,9 +220,9 @@ When your changes create orphans:
 
 Transform tasks into verifiable goals:
 
-- *"Add validation"* → write tests for invalid inputs, then make them pass
-- *"Fix the bug"* → write a test that reproduces it, then make it pass
-- *"Refactor X"* → ensure tests pass before and after
+- _"Add validation"_ → write tests for invalid inputs, then make them pass
+- _"Fix the bug"_ → write a test that reproduces it, then make it pass
+- _"Refactor X"_ → ensure tests pass before and after
 
 For multi-step tasks, state a brief plan:
 

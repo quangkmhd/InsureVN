@@ -15,7 +15,7 @@ class Settings:
     # Langfuse Tracing
     LANGFUSE_PUBLIC_KEY: str = os.getenv("LANGFUSE_PUBLIC_KEY", "")
     LANGFUSE_SECRET_KEY: str = os.getenv("LANGFUSE_SECRET_KEY", "")
-    LANGFUSE_HOST: str = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
+    LANGFUSE_BASE_URL: str = os.getenv("LANGFUSE_BASE_URL", "http://localhost:3000")
     
     @property
     def DATABASE_URL(self) -> str:

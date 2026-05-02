@@ -35,7 +35,7 @@ graph TD
   
     subgraph "Knowledge & Search"
         Orchestrator --> GraphRAG[GraphRAG Agent]
-        Orchestrator --> SQLAgent[SQL Agent]
+        Orchestrator --> DatabaseAgent[Database Agent]
         Orchestrator --> WebSearch[Web Search Agent]
     end
   
@@ -52,7 +52,7 @@ graph TD
     end
   
     GraphRAG -.-> Qdrant[(Qdrant)]
-    SQLAgent -.-> SQLite[(SQLite)]
+    DatabaseAgent -.-> SQLite[(SQLite MCP)]
     VisionOCR -.-> Gemini[Gemini Vision]
   
     Orchestrator --> Output([Empathetic Response])
@@ -61,6 +61,7 @@ graph TD
 ### Key Agents
 
 - **Orchestrator**: The central brain that routes queries and synthesizes final answers.
+- **DatabaseAgent**: A specialized agent that translates natural language into complex SQLite queries via **MCP tools**.
 - **PolicyAgent**: Uses RAG over Qdrant to explain specific policy clauses.
 - **ClaimAgent**: Evaluates eligibility and guides users through the submission process.
 - **DocumentAgent**: High-fidelity OCR and structured data extraction (PII-aware).
@@ -77,8 +78,20 @@ graph TD
 | **LLM Models**    | Google Gemini (Pro/Flash/Vision), Gemma-4          |
 | **Vector DB**     | Qdrant (Knowledge Base)                            |
 | **Relational DB** | SQLite (User Profiles, Payouts, Hospital Networks) |
+| **Observability** | Langfuse (Tracing, Prompt Mgmt, Evaluation)        |
 | **Extraction**    | Firecrawl (Acquisition), Vision LLMs (OCR)         |
 | **API**           | FastAPI                                            |
+
+---
+
+## 🏗️ Infrastructure & Observability
+
+InsureVN is built for production reliability with a comprehensive observability and operations stack:
+
+- **Database MCP**: A dedicated Model Context Protocol server for **SQLite**, providing secure, schema-aware tools for agents.
+- **Observability (Langfuse)**: Full-lifecycle tracing of agent chains, remote prompt versioning, and user feedback collection.
+- **AI Review Tool**: A custom FastAPI dashboard (`scripts/review_tool.py`) for human-in-the-loop validation of AI extraction results.
+- **Structured Logging**: Centralized JSON-based logging with rotation, ensuring all agent actions and errors are traceable.
 
 ---
 
@@ -90,6 +103,7 @@ InsureVN features a robust pipeline that converts raw insurance documents into a
 2. **Extraction**: `scripts/04_extraction/` — OCR and Vision-to-JSON extraction using LLMs.
 3. **Classification**: `scripts/04_extraction/11_llm_schema_mapping.py` — Dynamic key-set classification.
 4. **Ingestion**: `scripts/06_db_ingestion/02_ingest_with_mapping.py` — Normalizing and loading into SQLite.
+5. **Review**: `scripts/review_tool.py` — Human-in-the-loop verification of extraction quality.
 
 ---
 
@@ -107,12 +121,13 @@ InsureVN features a robust pipeline that converts raw insurance documents into a
 - [X] Automated folder hierarchy organization.
 - [X] PDF-to-Markdown conversion using **Marker** and **Datalab**.
 
-### Phase 3: AI Extraction Engine (In Progress 🚧)
+### Phase 3: AI Extraction Engine (Done ✅)
 
 - [X] Vision LLM table extraction (Gemma-4).
 - [X] **LLM Schema Mapping**: Handling heterogeneous JSON keys across 6 companies.
 - [X] "Good vs. Trash" content classifier to filter OCR noise.
-- [X] **Gemma-4 Fine-tuning**: Custom VLM training for Vietnamese insurance tables.
+- [X] **Gemma-4 Fine-tuning**: Custom VLM finetune for Vietnamese insurance tables.
+- [X] **Human-in-the-loop Review Tool**: UI for verifying extraction pdf accuracy,
 
 ### Phase 4: Structured Knowledge Base (Done ✅)
 
@@ -120,10 +135,13 @@ InsureVN features a robust pipeline that converts raw insurance documents into a
 - [X] **Relational Ingestion**: Automated mapping of 600+ JSON tables to SQLite.
 - [X] Data lineage tracking from DB back to original JSON/PDF.
 
-### Phase 5: Multi-Agent Intelligence (Next Steps 🚀)
+### Phase 5: Multi-Agent Intelligence (In Progress 🚧)
 
+- [X] **DatabaseAgent**: Complex SQLite query execution via custom MCP tools.
+- [X] **Observability Stack**: Langfuse integration for tracing, prompt management, and evaluation.
+- [X] **SQLite MCP Server**: Dedicated MCP server for secure and structured database interaction.
 - [ ] **Orchestrator**: LangGraph-based central router.
-- [ ] **PolicyAgent**: RAG-based explanation engine.
+- [ ] **PolicyAgent**: RAG-based explanation engine over Qdrant.
 - [ ] **ClaimAgent**: Eligibility and payout calculation logic.
 - [ ] **FraudAgent**: Pattern-based fraud detection.
 
@@ -133,46 +151,26 @@ InsureVN features a robust pipeline that converts raw insurance documents into a
 
 ```text
 InsureVN/
-├── src/                  # Core Source Code
-│   ├── agents/           # Specialized LangGraph agents
-│   ├── tools/            # Reusable tools (OCR, DB, Search)
-│   ├── api/              # FastAPI endpoints
-│   ├── models/           # Pydantic & DB schemas
-│   └── core/             # Configuration & LLM setup
-├── scripts/              # ETL Pipeline & Research
-│   ├── 01_acquisition/   # Scraping
-│   ├── 04_extraction/    # OCR & Data Extraction
-│   └── 06_db_ingestion/  # SQLite Loading
-├── docs/                 # Extensive Technical Documentation
-├── database/             # SQLite database files
-└── data/                 # Raw/Processed JSON/PDF data
+├── src/                     # Core Source Code
+│   ├── agents/               # LangGraph agent definitions (DatabaseAgent, etc.)
+│   ├── mcp_servers/          # Custom MCP server implementations (SQLite)
+│   ├── tools/                # Reusable tools & MCP clients
+│   ├── api/                  # FastAPI routes & dependencies
+│   ├── models/               # Pydantic models & SQL schemas
+│   ├── core/                 # Configuration, logging, & database utilities
+│   └── prompts/              # System prompts (managed via Langfuse)
+├── scripts/                 # ETL Pipeline, Research & Tools
+│   ├── 01_acquisition/      # Scraping (Firecrawl)
+│   ├── 04_extraction/       # OCR & Data Extraction
+│   ├── 06_db_ingestion/     # SQLite Loading
+│   └── review_tool.py       # AI Extraction Reviewer UI
+├── docs/                    # Technical Documentation & Reports
+├── database/                # SQLite database files
+├── data/                    # Raw/Processed JSON/PDF data
+└── tests/                   # Unit, Integration, and E2E tests
 ```
 
 ---
-
-## 🚦 Getting Started
-
-### 1. Prerequisites
-
-- Python 3.12+
-- `pip install -r requirements.txt` (Coming soon)
-- Environment variables in `.env` (Gemini API Key, Qdrant URL)
-
-### 2. Running the Pipeline
-
-```bash
-# Extract data from PDFs
-python scripts/04_extraction/01_extract_doc_structures.py
-
-# Map and Ingest to Database
-python scripts/06_db_ingestion/02_ingest_with_mapping.py
-```
-
-### 3. Starting the API
-
-```bash
-uvicorn src.main:app --reload
-```
 
 ---
 

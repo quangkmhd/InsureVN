@@ -28,3 +28,21 @@ def get_schema(table_names: list[str]) -> list[str]:
             else:
                 schemas.append(f"-- Schema not found for table: {table}")
     return schemas
+
+@mcp.tool()
+def execute_query(query: str) -> list[dict]:
+    """Execute a read-only SQL query against the database and return results as a list of dictionaries."""
+    query_upper = query.strip().upper()
+    # Basic security check for read-only operations
+    if not any(query_upper.startswith(prefix) for prefix in ["SELECT", "PRAGMA", "EXPLAIN"]):
+        raise ValueError("Security Error: Only SELECT queries are allowed.")
+    
+    with get_db_connection() as conn:
+        cursor = conn.execute(query)
+        rows = cursor.fetchall()
+        
+        # Convert sqlite3.Row objects to standard dicts based on cursor description
+        if cursor.description:
+            columns = [col[0] for col in cursor.description]
+            return [dict(zip(columns, row)) for row in rows]
+        return []

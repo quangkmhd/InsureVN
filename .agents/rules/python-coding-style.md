@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Python-specific standards following PEP 8, type hints, and ruff formatting.
 ---
 

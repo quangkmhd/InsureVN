@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Mandatory standards and checklists for code quality, security, and maintainability reviews.
 ---
 

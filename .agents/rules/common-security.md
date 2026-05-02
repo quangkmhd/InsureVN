@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Critical security guidelines, mandatory checks, and protocols for secret management.
 ---
 

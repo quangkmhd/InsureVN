@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: General testing requirements, TDD workflows, and minimum coverage standards.
 ---
 

@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Python testing guidelines focusing on pytest, coverage, and test organization.
 ---
 

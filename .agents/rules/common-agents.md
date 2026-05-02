@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Standards for agent orchestration, parallel execution, and multi-perspective analysis.
 ---
 

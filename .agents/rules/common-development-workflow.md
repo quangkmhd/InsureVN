@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: End-to-end feature development lifecycle from planning and TDD to code review.
 ---
 

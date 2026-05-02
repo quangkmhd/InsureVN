@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Standards for git commit messages, pull request workflows, and branch management.
 ---
 

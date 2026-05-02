@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: always_on
 description: Core coding principles including immutability, KISS, DRY, and general file organization standards.
 ---
 

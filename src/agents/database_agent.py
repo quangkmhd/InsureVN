@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from typing import Any, Optional
 from langchain.agents import create_agent
 from src.tools.mcp_client import get_sqlite_mcp_tools
@@ -33,7 +34,11 @@ class DatabaseAgent:
         api_key = os.getenv("LLM_API_KEY")
         base_url = os.getenv("LLM_BASE_URL")
         
-        init_kwargs: dict[str, Any] = {"temperature": 0}
+        init_kwargs: dict[str, Any] = {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
+        }
         
         if api_key:
             init_kwargs["api_key"] = api_key
@@ -67,6 +72,10 @@ class DatabaseAgent:
         except Exception as e:
             logger.warning(f"Failed to fetch prompt from Langfuse, using fallback: {e}")
             system_prompt = FALLBACK_PROMPT
+
+        # Trigger Thinking: Include <|think|> token at the start of the system prompt
+        if not system_prompt.startswith("<|think|>"):
+            system_prompt = f"<|think|>\n{system_prompt}"
 
         graph = create_agent(llm, tools=tools, system_prompt=system_prompt)
         logger.info("DatabaseAgent initialized successfully")
@@ -107,8 +116,15 @@ class DatabaseAgent:
             ):
                 result = await self.graph.ainvoke(inputs, config=invoke_config)
 
+            content = result["messages"][-1].content
+            # No Thinking Content in History: Strip thought blocks from the response
+            # Pattern: <|channel>thought\n[Internal reasoning]<channel|>
+            content = re.sub(
+                r"<\|channel>thought\n.*?<channel\|>", "", content, flags=re.DOTALL
+            )
+            
             logger.info("DatabaseAgent invocation successful", extra={**metadata, "status": "success"})
-            return result["messages"][-1].content
+            return content.strip()
         except Exception as e:
             logger.error(
                 f"Error during DatabaseAgent invocation: {str(e)}", 

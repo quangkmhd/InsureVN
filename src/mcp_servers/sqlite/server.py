@@ -102,6 +102,165 @@ def list_companies() -> list[dict]:
         return _rows_to_dicts(conn.execute(query))
 
 @mcp.tool()
+def list_documents(
+    company_code: str | None = None,
+    document_type: str | None = None,
+    keyword: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """Return source PDF documents with optional insurer, document type, and keyword filters."""
+    params = []
+    where = []
+    if company_code:
+        where.append("c.code = ?")
+        params.append(company_code)
+    if document_type:
+        where.append("d.document_type = ?")
+        params.append(document_type)
+    if keyword:
+        where.append("(d.document_name LIKE ? OR d.source_path LIKE ? OR d.description LIKE ?)")
+        params.extend([_like(keyword), _like(keyword), _like(keyword)])
+
+    query = f"""
+    SELECT
+        d.id AS document_id,
+        c.code AS company_code,
+        c.name AS company_name,
+        d.source_path,
+        d.document_name,
+        d.document_type,
+        d.language,
+        d.description,
+        d.effective_date,
+        d.version,
+        COUNT(DISTINCT st.id) AS source_table_count,
+        COUNT(DISTINCT pt.id) AS plan_count
+    FROM documents d
+    JOIN companies c ON c.id = d.company_id
+    LEFT JOIN source_tables st ON st.document_id = d.id
+    LEFT JOIN plan_types pt ON pt.document_id = d.id
+    {'WHERE ' + ' AND '.join(where) if where else ''}
+    GROUP BY d.id
+    ORDER BY c.code, d.document_name
+    LIMIT ?
+    """
+    params.append(_limit(limit, default=100))
+    with get_db_connection() as conn:
+        return _rows_to_dicts(conn.execute(query, params))
+
+@mcp.tool()
+def list_source_tables(
+    company_code: str | None = None,
+    document_id: int | None = None,
+    table_type: str | None = None,
+    processed: bool | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """Return extracted JSON table metadata without raw_json payload."""
+    params = []
+    where = []
+    if company_code:
+        where.append("c.code = ?")
+        params.append(company_code)
+    if document_id is not None:
+        where.append("d.id = ?")
+        params.append(document_id)
+    if table_type:
+        where.append("st.table_type = ?")
+        params.append(table_type)
+    if processed is not None:
+        where.append("st.processed = ?")
+        params.append(1 if processed else 0)
+
+    query = f"""
+    SELECT
+        st.id AS source_table_id,
+        d.id AS document_id,
+        c.code AS company_code,
+        c.name AS company_name,
+        d.document_name,
+        st.file_path,
+        st.table_type,
+        st.classification_reason,
+        st.classification_confidence,
+        st.page_number,
+        st.table_index,
+        st.keys,
+        st.content_type,
+        st.processed,
+        st.error_reason
+    FROM source_tables st
+    JOIN documents d ON d.id = st.document_id
+    JOIN companies c ON c.id = d.company_id
+    {'WHERE ' + ' AND '.join(where) if where else ''}
+    ORDER BY c.code, d.document_name, st.page_number, st.table_index
+    LIMIT ?
+    """
+    params.append(_limit(limit, default=100))
+    with get_db_connection() as conn:
+        return _rows_to_dicts(conn.execute(query, params))
+
+@mcp.tool()
+def list_benefit_categories() -> list[dict]:
+    """Return benefit category taxonomy."""
+    query = """
+    SELECT
+        bc.id AS category_id,
+        bc.code,
+        bc.name_vi,
+        bc.name_en,
+        parent.code AS parent_code,
+        parent.name_vi AS parent_name_vi
+    FROM benefit_categories bc
+    LEFT JOIN benefit_categories parent ON parent.id = bc.parent_id
+    ORDER BY COALESCE(parent.code, bc.code), bc.code
+    """
+    with get_db_connection() as conn:
+        return _rows_to_dicts(conn.execute(query))
+
+@mcp.tool()
+def search_plans(
+    keyword: str | None = None,
+    company_code: str | None = None,
+    normalized_code: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """Search plan aliases/raw names and normalized plan codes."""
+    params = []
+    where = []
+    if keyword:
+        where.append("(pt.raw_name LIKE ? OR pt.normalized_code LIKE ? OR pt.product_line LIKE ?)")
+        params.extend([_like(keyword), _like(keyword), _like(keyword)])
+    if company_code:
+        where.append("c.code = ?")
+        params.append(company_code)
+    if normalized_code:
+        where.append("pt.normalized_code = ?")
+        params.append(normalized_code)
+
+    query = f"""
+    SELECT
+        pt.id AS plan_type_id,
+        c.code AS company_code,
+        c.name AS company_name,
+        d.id AS document_id,
+        d.document_name,
+        pt.raw_name AS plan_name,
+        pt.normalized_code AS plan_code,
+        pt.plan_level,
+        pt.product_line
+    FROM plan_types pt
+    LEFT JOIN companies c ON c.id = pt.company_id
+    LEFT JOIN documents d ON d.id = pt.document_id
+    {'WHERE ' + ' AND '.join(where) if where else ''}
+    ORDER BY c.code, pt.product_line, pt.plan_level, pt.raw_name
+    LIMIT ?
+    """
+    params.append(_limit(limit, default=100))
+    with get_db_connection() as conn:
+        return _rows_to_dicts(conn.execute(query, params))
+
+@mcp.tool()
 def list_plans(company_code: str | None = None, limit: int = 100) -> list[dict]:
     """Return plan types, optionally filtered by insurer code."""
     params = []
@@ -217,6 +376,7 @@ def search_benefits(
         pt.normalized_code AS plan_code,
         bv.value,
         bv.value_numeric,
+        bv.value_context,
         bv.unit,
         bv.limit_type,
         bv.is_covered,
@@ -281,6 +441,7 @@ def search_hospitals(
         h.gop_supported,
         h.gop_time,
         h.working_hours,
+        h.external_id,
         h.note
     FROM hospitals h
     JOIN documents d ON d.id = h.document_id
@@ -414,6 +575,112 @@ def search_glossary_terms(
         return _rows_to_dicts(conn.execute(query, params))
 
 @mcp.tool()
+def get_benefit_matrix(
+    document_id: int | None = None,
+    company_code: str | None = None,
+    keyword: str | None = None,
+    category_code: str | None = None,
+    plan_code: str | None = None,
+    limit: int = 150,
+) -> list[dict]:
+    """Return benefit items and plan-specific values for a document/company/category filter."""
+    params = []
+    where = []
+    if document_id is not None:
+        where.append("d.id = ?")
+        params.append(document_id)
+    if company_code:
+        where.append("c.code = ?")
+        params.append(company_code)
+    if keyword:
+        where.append("(bi.raw_name LIKE ? OR bi.normalized_name LIKE ? OR bi.note LIKE ? OR bv.value LIKE ?)")
+        params.extend([_like(keyword), _like(keyword), _like(keyword), _like(keyword)])
+    if category_code:
+        where.append("bc.code = ?")
+        params.append(category_code)
+    if plan_code:
+        where.append("pt.normalized_code = ?")
+        params.append(plan_code)
+
+    query = f"""
+    SELECT
+        bi.source_table_id,
+        d.id AS document_id,
+        st.file_path AS source_file_path,
+        c.code AS company_code,
+        c.name AS company_name,
+        d.document_name,
+        bc.code AS category_code,
+        bc.name_vi AS category_name_vi,
+        bi.raw_name AS benefit_name,
+        bi.normalized_name,
+        bi.applicable_to,
+        bi.note AS benefit_note,
+        pt.raw_name AS plan_name,
+        pt.normalized_code AS plan_code,
+        pt.plan_level,
+        bv.value,
+        bv.value_numeric,
+        bv.value_context,
+        bv.limit_type,
+        bv.unit,
+        bv.is_covered,
+        bv.note AS value_note
+    FROM benefit_items bi
+    JOIN documents d ON d.id = bi.document_id
+    JOIN companies c ON c.id = d.company_id
+    JOIN source_tables st ON st.id = bi.source_table_id
+    LEFT JOIN benefit_categories bc ON bc.id = bi.category_id
+    LEFT JOIN benefit_values bv ON bv.benefit_item_id = bi.id
+    LEFT JOIN plan_types pt ON pt.id = bv.plan_type_id
+    {'WHERE ' + ' AND '.join(where) if where else ''}
+    ORDER BY c.code, d.document_name, bi.display_order, pt.plan_level
+    LIMIT ?
+    """
+    params.append(_limit(limit, default=150, maximum=300))
+    with get_db_connection() as conn:
+        return _rows_to_dicts(conn.execute(query, params))
+
+@mcp.tool()
+def get_short_term_premiums(
+    company_code: str | None = None,
+    duration_days: int | None = None,
+    limit: int = 50,
+) -> list[dict]:
+    """Return short-term premium rates, optionally filtered by insurer and duration."""
+    params = []
+    where = []
+    if company_code:
+        where.append("c.code = ?")
+        params.append(company_code)
+    if duration_days is not None:
+        where.append("(stp.duration_days IS NULL OR stp.duration_days >= ?)")
+        params.append(duration_days)
+
+    query = f"""
+    SELECT
+        stp.source_table_id,
+        d.id AS document_id,
+        st.file_path AS source_file_path,
+        c.code AS company_code,
+        c.name AS company_name,
+        d.document_name,
+        stp.duration_text,
+        stp.duration_days,
+        stp.premium_rate
+    FROM short_term_premiums stp
+    JOIN documents d ON d.id = stp.document_id
+    JOIN companies c ON c.id = d.company_id
+    JOIN source_tables st ON st.id = stp.source_table_id
+    {'WHERE ' + ' AND '.join(where) if where else ''}
+    ORDER BY c.code, stp.duration_days, stp.duration_text
+    LIMIT ?
+    """
+    params.append(_limit(limit))
+    with get_db_connection() as conn:
+        return _rows_to_dicts(conn.execute(query, params))
+
+@mcp.tool()
 def get_raw_source(source_table_id: int) -> dict:
     """Return the raw extracted JSON and metadata for a source table id."""
     query = """
@@ -478,6 +745,7 @@ def compare_benefits(
         pt.plan_level,
         bv.value,
         bv.value_numeric,
+        bv.value_context,
         bv.unit,
         bv.limit_type,
         bv.is_covered,

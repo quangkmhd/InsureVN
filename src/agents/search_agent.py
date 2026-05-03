@@ -20,8 +20,9 @@ os.environ.setdefault("LANGFUSE_HOST", getattr(settings, "LANGFUSE_HOST", "https
 logger = get_logger(__name__)
 
 class SearchAgent:
-    def __init__(self, graph: Any):
+    def __init__(self, graph: Any, prompt_version: Optional[int] = None):
         self.graph = graph
+        self.prompt_version = prompt_version
         
     @classmethod
     async def create(cls) -> SearchAgent:
@@ -83,7 +84,15 @@ class SearchAgent:
         # Create the agent using the langchain-fundamentals skill approach
         graph = create_agent(llm, tools=tools, system_prompt=system_prompt)
         logger.info("SearchAgent initialized successfully")
-        return cls(graph)
+        
+        # Get version if loaded from Langfuse
+        prompt_version = None
+        try:
+            prompt_version = get_client().get_prompt("search-agent-system", label="production").version
+        except Exception:
+            pass
+
+        return cls(graph, prompt_version=prompt_version)
         
     async def invoke(self, query: str, config: Optional[dict] = None) -> str:
         """Invoke the search agent with a query."""
@@ -95,7 +104,8 @@ class SearchAgent:
             "query": query,
             "user_id": user_id,
             "session_id": session_id,
-            "agent_type": "SearchAgent"
+            "agent_type": "SearchAgent",
+            "prompt_version": self.prompt_version
         }
 
         logger.info(f"Invoking SearchAgent", extra=metadata)

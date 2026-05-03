@@ -18,8 +18,9 @@ os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_HOST)
 logger = get_logger(__name__)
 
 class DatabaseAgent:
-    def __init__(self, graph: Any):
+    def __init__(self, graph: Any, prompt_version: Optional[int] = None):
         self.graph = graph
+        self.prompt_version = prompt_version
         
     @classmethod
     async def create(cls) -> DatabaseAgent:
@@ -79,7 +80,15 @@ class DatabaseAgent:
 
         graph = create_agent(llm, tools=tools, system_prompt=system_prompt)
         logger.info("DatabaseAgent initialized successfully")
-        return cls(graph)
+        
+        # Get version if loaded from Langfuse
+        prompt_version = None
+        try:
+            prompt_version = get_client().get_prompt("database-agent-system", label="production").version
+        except Exception:
+            pass
+
+        return cls(graph, prompt_version=prompt_version)
         
     async def invoke(self, query: str, config: Optional[dict] = None) -> str:
         """Invoke the agent with a query."""
@@ -91,7 +100,8 @@ class DatabaseAgent:
             "query": query,
             "user_id": user_id,
             "session_id": session_id,
-            "agent_type": "DatabaseAgent"
+            "agent_type": "DatabaseAgent",
+            "prompt_version": self.prompt_version
         }
 
         logger.info(f"Invoking DatabaseAgent", extra=metadata)

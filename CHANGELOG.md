@@ -11,6 +11,7 @@ All notable changes to the InsureVN project will be documented in this file.
 - **AI Extraction Reviewer**: Launched a dedicated web interface (FastAPI + modern UI) for manual validation of AI-extracted data, allowing side-by-side comparison of original documents and structured markdown.
 - **Enhanced Observability Migration**: Successfully migrated from LangSmith to **Langfuse** for superior end-to-end tracing, performance monitoring, and advanced prompt management.
 - **Remote Prompt Management**: Integrated **Langfuse Prompt Management (v4)**, allowing real-time instruction updates without code changes, backed by local fallbacks for high availability.
+- **MCP Client Instrumentation**: Added Langfuse `@observe` tracing to the Model Context Protocol (MCP) client, enabling granular latency tracking for tool discovery and initialization.
 - **Flexible LLM Orchestration**: Implemented dynamic provider selection using `init_chat_model`, supporting seamless switching between **Gemini 3 Flash** (primary) and local **Gemma 4** models.
 - **Agent Skill Library**: Established a comprehensive library of reusable agent capabilities, replacing legacy `.agents` workflows with standardized, portable skill definitions.
 - **CLI Database Utility**: Introduced the `insurevn-db` CLI entrypoint for managing and querying the local SQLite insurance database.
@@ -22,6 +23,7 @@ All notable changes to the InsureVN project will be documented in this file.
 - **Optimized Data Pipeline**: Enhanced table-to-text conversion pipelines with improved timeout handling, granular logging, and specialized processing for complex insurance benefits matrices.
 - **Secure Data Handling**: Hardened database interactions with read-only enforcement at the MCP level and implemented robust error handling for common SQL failures.
 - **Observability Propagation**: Automated metadata propagation (user/session IDs) across the full stack, linking high-level agent traces to low-level tool executions in Langfuse.
+- **Prompt Version Tracing**: Enhanced `DatabaseAgent` and `SearchAgent` to automatically capture and propagate Langfuse prompt versions in trace metadata for precise performance auditing.
 
 ### 🐛 Fixes
 

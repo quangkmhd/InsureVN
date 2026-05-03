@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "architecture-diagram": {
+      "source": "cocoon-ai/architecture-diagram-generator",
+      "sourceType": "github",
+      "skillPath": "architecture-diagram/SKILL.md",
+      "computedHash": "81fb7cdf808601a1a0670f8dbedb39ad55f0372012b96d40799288e40517d897"
+    },
     "deep-agents-core": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",

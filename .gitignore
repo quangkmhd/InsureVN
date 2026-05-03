@@ -167,3 +167,6 @@ data/
 output/
 gemma4-e2b-finetuned-lora/
 unsloth_compiled_cache/
+everything-claude-code/
+.crush/
+.goose/

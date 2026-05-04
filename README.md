@@ -84,6 +84,44 @@ graph TD
 
 ---
 
+## 🚦 Getting Started
+
+### Prerequisites
+
+- Python 3.12.3
+- SQLite 3
+- [Optional] Docker (for Qdrant & Langfuse)
+
+### Installation
+
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/quangnhvn34/InsureVN.git
+    cd InsureVN
+    ```
+
+2.  **Install dependencies**:
+    ```bash
+    pip install -e ".[dev]"
+    ```
+
+3.  **Configure environment**:
+    ```bash
+    cp .env.example .env  # Update with your API keys
+    ```
+
+### Developer Commands
+
+| Task | Command |
+| :--- | :--- |
+| **Start API** | `uvicorn src.main:app --reload` |
+| **Run Tests** | `pytest` |
+| **Check Lint** | `ruff check src tests` |
+| **Auto Format** | `ruff format src tests` |
+| **Check Health** | `curl http://localhost:8000/health` |
+
+---
+
 ## 🏗️ Infrastructure & Observability
 
 InsureVN is built for production reliability with a comprehensive observability and operations stack:

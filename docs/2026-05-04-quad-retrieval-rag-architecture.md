@@ -28,7 +28,7 @@ To eliminate hallucination and ensure maximum coverage, the LangGraph Retriever 
 4. **Structured Facts (SQLite)**
    - **Purpose:** Absolute numerical facts and lineage.
    - **Mechanism:** Exact lookup for limits, premiums, and waiting periods.
-   - **Implementation:** Existing FastMCP SQLite tools invoked via LangChain Tool Nodes.
+   - Implementation: `DatabaseAgent` (wrapped as a LangGraph Node) invoking FastMCP SQLite tools.
 
 ## 3. Top-Down "Graph-Guided" Workflow (vs. LightRAG)
 
@@ -53,26 +53,48 @@ Instead of relying solely on black-box extraction, InsureVN's indexing is contro
 
 The process is orchestrated as a `StateGraph`:
 
-```text
-[ START ] 
-   |
-   v
-[ Supervisor Node ] ---> Extracts Intent & Entities
-   |
-   +---> [ Fast Lane ] (Simple Q&A) ---> (Keyword + Vector)
-   |
-   +---> [ Verified Lane ] (Comparison/Rules) 
-   |       |-- Parallel:
-   |       |   |-- SQLite Tool
-   |       |   |-- EnsembleRetriever (Vector + BM25 + Graph)
-   |       |-- Merge & Rerank Evidence
-   |
-   +---> [ High-Risk Lane ] (Claims) ---> Strict SQL + Graph Logic
-   |
-   v
-[ Synthesizer Node ] ---> Generates response with citations
-   |
-[ END ]
+```mermaid
+graph TD
+    START((START))
+
+    Supervisor[Supervisor Node<br/>Extracts Intent & Entities]
+
+    START --> Supervisor
+
+    subgraph Lanes [Retrieval Lanes]
+        Fast[Fast Lane<br/>Simple Q&A]
+        Verified[Verified Lane<br/>Comparison/Rules]
+        HighRisk[High-Risk Lane<br/>Claims]
+    end
+
+    Supervisor -- Hard Filters --> Fast
+    Supervisor -- Hard Filters --> Verified
+    Supervisor -- Hard Filters --> HighRisk
+
+    subgraph Retrievers [Quad-Retrieval Engine]
+        Ensemble[EnsembleRetriever<br/>Vector + BM25 + Graph]
+        DB[DatabaseAgent<br/>SQLite MCP]
+    end
+
+    Fast -->|Vector+BM25 only| Ensemble
+
+    Verified --> DB
+    Verified --> Ensemble
+
+    HighRisk --> Ensemble
+    HighRisk --> DB
+
+    Merge(Merge & Rerank)
+
+    DB --> Merge
+    Ensemble --> Merge
+
+    Synthesizer[Synthesizer Node<br/>Response & Citations]
+
+    Merge --> Synthesizer
+
+    END((END))
+    Synthesizer --> END
 ```
 
 ## 6. Advantages over pure LightRAG

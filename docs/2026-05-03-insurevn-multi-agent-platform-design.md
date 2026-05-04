@@ -23,7 +23,7 @@ Reviewed. All sections complete. Supersedes `docs/multi_agent_system_architectur
 | Legal/operational responsibility: advisory, decision support, or operational automation? | Operational automation that creates draft decisions/recommendations. |
 | Human review flow: employee first, customer first, or two-step? | Two-step: customer confirms input facts; employee reviews final decision/payout/recommendation. |
 | Visual companion usage? | Accepted initially, then user asked to stop updating the browser each question and continue by text. |
-| SearchAgent role? | Retained as an optional tool available to SupervisorAgent for live web queries (market data, competitor info). Not a core workflow node. |
+| SearchAgent role? | Retained as an optional tool available to ComparisonAdvisorAgent for live web queries (market data, competitor info). Not a core workflow node. |
 | Existing agent migration strategy? | Wrap `DatabaseAgent` as a LangGraph node. `SearchAgent` becomes a tool, not a node. New agents built directly on StateGraph. |
 
 ## 1. Core Architecture
@@ -32,26 +32,85 @@ InsureVN will use a **Hybrid Full Agent Swarm** with a shared evidence foundatio
 
 High-level flow:
 
-```text
-User / Synthetic Scenario
--> SupervisorAgent
-   - intent classification
-   - risk classification
-   - evidence plan
-   - workflow selection
--> Parallel Evidence Gathering
-   - Qdrant Retriever
-   - DatabaseAgent / SQLite MCP
-   - Synthetic Profile Store
-   - Document fixtures/OCR later
--> Specialist Workflow
-   - PolicyAgent
-   - ComparisonAdvisorAgent
-   - ClaimAgent + Rule/Calculator tools
--> VerifierAgent
--> Review Packet
--> Customer confirms input
--> Employee approves final decision
+```mermaid
+graph TD
+    %% 1. User Input
+    User((User / Synthetic Scenario))
+
+    %% 2. Supervisor
+    subgraph S [Supervisor Layer]
+        Supervisor[SupervisorAgent<br/>Intent Classification & Routing]
+    end
+
+    User --> Supervisor
+
+    %% 3. Routing Lanes
+    subgraph L [Routing Lanes]
+        Fast[Fast Lane<br/>Q&A]
+        Verified[Verified Lane<br/>Comparison/Rules]
+        HighRisk[High-Risk Lane<br/>Claims]
+    end
+
+    Supervisor --> Fast
+    Supervisor --> Verified
+    Supervisor --> HighRisk
+
+    %% 4. Evidence Layer (Quad-Retrieval)
+    subgraph E [Parallel Evidence Gathering]
+        Ensemble[Ensemble Retriever<br/>Vector + BM25 + Graph]
+        DB[DatabaseAgent<br/>SQLite MCP]
+        Profile[Profile Store<br/>Synthetic Data]
+        OCR[OCR DocumentAgent<br/>User Evidence]
+    end
+
+    Fast --> Ensemble
+
+    Verified --> Ensemble
+    Verified --> DB
+    Verified --> Profile
+
+    HighRisk --> OCR
+    HighRisk --> Ensemble
+    HighRisk --> DB
+    HighRisk --> Profile
+
+    %% 5. Evidence Merger
+    Merge(Merge & Rerank Evidence)
+
+    Ensemble --> Merge
+    DB --> Merge
+    Profile --> Merge
+    OCR --> Merge
+
+    %% 6. Specialists
+    subgraph SP [Specialist Synthesizers]
+        Policy[PolicyAgent<br/>Explain & Quote]
+        Advisor[ComparisonAdvisorAgent<br/>Recommend & Compare]
+        Claim[ClaimAgent<br/>Evaluate & Payout]
+    end
+
+    Merge --> Policy
+    Merge --> Advisor
+    Merge --> Claim
+
+    %% 7. Validation
+    subgraph V [Validation & Verifier]
+        Valid[Validation & Calculation]
+        Verifier[VerifierAgent<br/>Safety & Compliance]
+    end
+
+    Policy --> Valid
+    Advisor --> Valid
+    Claim --> Valid
+
+    Valid --> Verifier
+
+    %% 8. Outputs
+    Customer([Customer Confirm])
+    Employee([Employee Approve])
+
+    Verifier --> Customer
+    Verifier --> Employee
 ```
 
 The initial implementation should combine orchestrator, intent router, risk router, and evidence planner into one `SupervisorAgent` node to reduce sequential LLM calls. The boundaries still remain explicit in the structured output and tests.
@@ -66,7 +125,7 @@ Domain capabilities:
 - **ValidationAgent** (The "Judge"): A critical node inspired by *Tree of Thoughts*. It receives the proposed answer and raw evidence to perform a "blind review". It looks for missed exclusions, incorrect limit calculations, or missing citations. It can trigger a "Self-Correction" loop if inconsistencies are found.(langchain_experimental)
 - **CalculationAgent** (Deterministic): Non-LLM based node for computing premiums, payouts, and pro-rata refunds. Always uses math/Python logic, never LLM guessing.(langchain_experimental)
 - `VerifierAgent`: checks evidence sufficiency, citations, conflicts, and risk gates.
-- `DocumentAgent`: fixture-backed in the foundation release; later connected to real OCR/document extraction.
+- `OCR DocumentAgent`: Processes dynamic user-uploaded evidence (e.g., medical bills, ID cards). Fixture-backed in the foundation release; later connected to real OCR extraction.
 
 High-risk flows such as claim, payout, rejection, appeal, and fraud suspicion must be orchestrated workflows with strict evidence contracts and human review. Lower-risk explanation and research tasks may use more flexible agent behavior.
 
@@ -75,7 +134,7 @@ High-risk flows such as claim, payout, rejection, appeal, and fraud suspicion mu
 The current codebase uses `langchain.agents.create_agent` (simple ReAct loop) for `DatabaseAgent` and `SearchAgent`. The RAG platform requires a LangGraph `StateGraph` with custom nodes, edges, and reducers. Migration strategy:
 
 - `DatabaseAgent`: wrap as a LangGraph node. The existing `invoke()` method becomes the node function. MCP tool binding remains unchanged.
-- `SearchAgent`: demote to a LangChain tool (not a graph node). Available to `SupervisorAgent` or `ComparisonAdvisorAgent` when live web data is needed (market sentiment, competitor info). Not part of any core workflow lane.
+- `SearchAgent`: demote to a LangChain tool (not a graph node). Available to `ComparisonAdvisorAgent` when live web data is needed (market sentiment, competitor info). Not part of any core workflow lane.
 - New agents (`SupervisorAgent`, `PolicyAgent`, `ComparisonAdvisorAgent`, `ClaimAgent`, `VerifierAgent`) are built directly as LangGraph nodes with shared state.
 
 ### Deferred agents (post-foundation)
@@ -194,7 +253,7 @@ Retrieval lanes (utilizing LangChain `EnsembleRetriever` for Multi-Pillar Retrie
 
 - Fast Lane: glossary and simple policy Q&A. Use small `top_k`, hard filters where available. Combine Semantic (Dense Vector) and Keyword (Sparse/BM25) search.
 - Verified Lane: comparison, advisor, product recommendation. Run Qdrant (Vector + Keyword), SQLite, and Knowledge Graph retrieval in parallel, merge/deduplicate evidence, and rerank or score evidence. Graph provides relationship context (e.g., which plans share similar exclusions).
-- High-risk Lane: claim eligibility, payout, rejection, appeal, fraud suspicion. Require SQLite facts for limits, payout, waiting period, premium, or network questions. Use Knowledge Graph to traverse condition→exclusion→waiting_period chains. Use `get_raw_source` when source-table verification is needed.
+- High-risk Lane: claim eligibility, payout, rejection, appeal, fraud suspicion. Require SQLite facts for limits and payout, Knowledge Graph to traverse condition→exclusion→waiting_period chains, and Ensemble Retriever (Vector + BM25) for strict policy text citations.
 
 Evidence merge rules:
 
@@ -400,9 +459,11 @@ Fast Policy Lane:
 
 ```text
 Supervisor
--> Qdrant/MCP glossary retrieval
--> PolicyAgent
--> Citation check
+-> Fast Lane
+-> Ensemble Retriever (Vector + BM25)
+-> EvidenceMerger
+-> PolicyAgent drafts answer
+-> Validation & VerifierAgent (Citation check)
 -> Answer
 ```
 
@@ -410,10 +471,14 @@ Verified Compare/Advisor Lane:
 
 ```text
 Supervisor
--> parallel SQLite MCP + Qdrant retrieval + synthetic profile lookup
+-> Verified Lane
+-> Parallel:
+   - DatabaseAgent (SQLite MCP)
+   - Ensemble Retriever (Vector + BM25 + Graph)
+   - Profile Store
 -> EvidenceMerger
 -> ComparisonAdvisorAgent
--> VerifierAgent
+-> Validation & VerifierAgent
 -> Recommendation packet
 ```
 
@@ -421,14 +486,16 @@ High-risk Claim/Payout Lane:
 
 ```text
 Supervisor
--> profile/policy lookup
--> SQLite MCP: benefits, waiting periods, claim payouts, hospitals
--> Qdrant: clauses, exclusions, claim process
+-> High-Risk Lane
+-> OCR DocumentAgent (User Evidence)
+-> Parallel:
+   - DatabaseAgent (SQLite MCP) for Facts
+   - Ensemble Retriever (Vector + BM25 + Graph) for Citations & Logic
+   - Profile Store
 -> EvidenceMerger
--> RuleChecker
--> Calculator tools
+-> RuleChecker & Calculator tools
 -> ClaimAgent drafts decision
--> VerifierAgent
+-> ValidationAgent & VerifierAgent
 -> Customer confirms input
 -> Employee reviews final decision
 ```

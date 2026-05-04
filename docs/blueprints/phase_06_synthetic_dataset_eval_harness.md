@@ -13,8 +13,9 @@ No new external packages required. Uses existing `pydantic`, `langgraph`, `langf
 **Muc tieu cot loi:** Make system quality measurable after every prompt, retrieval, or workflow change by first providing a minimal scorer API for Phase 05, then expanding synthetic data and adding offline plus Langfuse-backed evaluation.
 
 **Definition of Done:**
-- Full synthetic tables exist for users, policies, dependents, claims, documents, and benchmark cases.
-- Generator creates valid records through Pydantic schemas and deterministic foreign-key validation.
+- Full synthetic tables exist for users, policies, dependents, claims, and documents.
+- `DatasetGeneratorAgent` successfully reads synthetic DB and dynamically generates contextualized `BenchmarkCase` scenarios mapped to core intents.
+- Generator creates valid records through Pydantic schemas and strict deterministic foreign-key validation (Grounded Generation: all synthetic policies MUST link to real product IDs existing in SQLite/Qdrant).
 - Eval runner can execute benchmark scenarios offline with fixtures where possible.
 - Langfuse scores are attached for retrieval, evidence sufficiency, citations, hallucination, workflow, and human review outcome placeholders.
 - Success metrics from the design spec are calculated and reported.
@@ -24,6 +25,7 @@ No new external packages required. Uses existing `pydantic`, `langgraph`, `langf
 
 **Can lam:**
 - Expand synthetic data from foundation fixtures to lifecycle personas.
+- Implement `DatasetGeneratorAgent` to read SQLite personas/claims and output fully contextualized benchmark questions (LLM-as-a-Data-Generator).
 - Provide a minimal scorer module early: citation, workflow, evidence sufficiency, and unsupported decision checks.
 - Build benchmark runner for the 100 customer intents.
 - Add deterministic and LLM-as-judge evaluation with safeguards.
@@ -67,7 +69,7 @@ No new external packages required. Uses existing `pydantic`, `langgraph`, `langf
 
 **Input:**
 - Existing real insurance metadata from SQLite.
-- 100 customer intent scenarios.
+- Base intent list from `docs/customer_intent_scenarios_100_questions.md` (used as seed prompts).
 - Synthetic generation seed count and deterministic random seed.
 - Workflow outputs from phases 04-05.
 
@@ -85,7 +87,8 @@ No new external packages required. Uses existing `pydantic`, `langgraph`, `langf
 3. Write failing validator tests that reject unknown `company_code`, `document_id`, `plan_type_id`, and invalid claim references.
 4. Implement `SyntheticDataValidator` against SQLite metadata.
 5. Write failing generator tests using a mocked structured-output model.
-6. Implement small-batch generation: 30-50 personas first, then configurable scale.
+6. Implement small-batch generation for 30-50 SQLite personas. (CRITICAL: Use Grounded Generation. The LLM prompt must be dynamically injected with a strict list of real `policy_id`s from the database to ensure all generated personas own real products).
+6b. Implement `DatasetGeneratorAgent` to read these personas and output 100+ contextualized `BenchmarkCase` JSON objects mapped to seed intents.
 7. Write failing scorer tests for deterministic citation, workflow, high-risk routing, and unsupported payout checks. This step may be executed before Phase 05 starts.
 8. Implement deterministic scorers as the minimal eval API consumed by Phase 05. Add LLM-as-judge only for groundedness, answer correctness, tone clarity, and missing-evidence reasoning.
 9. Write failing benchmark runner integration test with three fixture cases.
@@ -164,7 +167,8 @@ Apply `tdd-workflow`.
 
 **Files:**
 - Create: `src/models/synthetic_data.py`
-- Create: `src/services/synthetic_data_generator.py`
+- Create: `src/services/synthetic_data_generator.py` (Creates DB Personas)
+- Create: `src/services/dataset_generator_agent.py` (LLM reads DB, creates Benchmark Cases)
 - Create: `src/services/synthetic_data_validator.py`
 - Modify: `src/models/schema.sql`
 - Test: `tests/unit/test_synthetic_data_models.py`

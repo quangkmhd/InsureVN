@@ -16,8 +16,8 @@ No new external packages required. Uses existing `pydantic`, `langchain`, `langf
 - `Evidence`, `RetrievalPlan`, `Citation`, and benchmark case schemas exist with Pydantic validation.
 - Existing SQLite MCP results can be normalized into `Evidence(source_type="sqlite_row")`.
 - Minimal synthetic profile tables and seed fixtures exist in SQLite.
-- `EvidenceMerger` deduplicates, groups, detects basic conflicts, and preserves source lineage.
-- 100 benchmark cases from `docs/customer_intent_scenarios_100_questions.md` are represented as fixtures or seeded rows with expected intent, risk, workflow, and evidence types.
+- `Evidence`, `RetrievalPlan`, `Citation`, and `BenchmarkCase` schemas exist with strict Pydantic validation.
+- Minimal synthetic profile tables (users, policies) exist in SQLite to serve as the foundation for future LLM-based dataset generation.
 - Unit and integration tests pass for schemas, adapters, merger, citations, and benchmark seed validation.
 
 ## 2. Scope
@@ -26,7 +26,7 @@ No new external packages required. Uses existing `pydantic`, `langchain`, `langf
 - Create shared domain models for evidence and retrieval planning.
 - Wrap current SQLite MCP output shapes without redesigning the MCP server.
 - Add minimal synthetic profile tables: `synthetic_users`, `synthetic_policies`, and `synthetic_benchmark_cases`.
-- Add deterministic seed data for 30-50 lightweight personas and 100 benchmark cases.
+- Prepare the database schema for future generation by adding empty synthetic tables. (Note: Both the personas and benchmark questions will be generated dynamically by an LLM in Phase 06).
 - Implement pure-Python evidence merging and citation formatting.
 
 **Khong duoc lam trong phase nay:**
@@ -49,14 +49,14 @@ No new external packages required. Uses existing `pydantic`, `langchain`, `langf
 - `src/services/evidence_adapters.py`: `StructuredEvidenceAdapter` and `ProfileEvidenceAdapter`.
 - `src/services/evidence_merger.py`: deterministic dedupe, grouping, conflict detection, compact context builder.
 - `src/services/citation_formatter.py`: citation rendering and validation helpers.
-- `scripts/06_db_ingestion/03_seed_synthetic_foundation.py`: seed synthetic tables and benchmark cases.
+- `tests/fixtures/`: directory for JSON/YAML fixture data files (sample MCP results).
 - `tests/conftest.py`: shared pytest fixtures (temporary SQLite DB factory, sample MCP result dicts, benchmark case loader). All subsequent phases reuse fixtures from this file.
 - `tests/fixtures/`: directory for JSON/YAML fixture data files (sample MCP results, benchmark cases).
 - `tests/unit/test_evidence_models.py`
 - `tests/unit/test_evidence_adapters.py`
 - `tests/unit/test_evidence_merger.py`
 - `tests/unit/test_citation_formatter.py`
-- `tests/integration/test_synthetic_foundation_seed.py`
+
 
 **Files to modify:**
 - `src/models/schema.sql`: add synthetic tables only.
@@ -77,8 +77,8 @@ No new external packages required. Uses existing `pydantic`, `langchain`, `langf
 **Output:**
 - Normalized `Evidence` objects with `source_type`, `source_id`, `content`, `metadata`, `confidence`, and `retrieved_by`.
 - Citation strings containing available `company_code`, `document_id`, `document_name`, `source_file_path`, `source_table_id`, and page fields.
-- `MergedEvidencePacket` containing deduplicated evidence, conflicts, grouped sources, and compact context.
-- 100 benchmark cases with expected `intent_group`, `risk_level`, `workflow`, and `expected_evidence_types`.
+- `MergedEvidencePacket` containing all collected evidence, flagged conflicts, grouped sources, and complete context.
+- 100 benchmark cases with expected `intent_group`, `risk_level`, `workflow`, and `expected_evidence_types`. (Schema only)
 
 ## 5. Huong Dan Trien Khai
 
@@ -103,9 +103,9 @@ No new external packages required. Uses existing `pydantic`, `langchain`, `langf
 - `source_type`
 - `source_id`
 - `retrieved_by`
-- `dedupe_count`
+- `total_evidence_count`
 - `conflict_count`
-- `benchmark_case_count`
+- `conflict_count`
 
 **Langfuse tracking:** No agent trace is required yet. If integration code touches `DatabaseAgent`, preserve existing Langfuse callback behavior and add metadata only through config/callbacks, not direct global calls in service helpers.
 
@@ -123,7 +123,7 @@ Apply `tdd-workflow`:
 - `tests/unit/test_citation_formatter.py`
 
 **Integration tests:**
-- `tests/integration/test_synthetic_foundation_seed.py` against a temporary SQLite database.
+- None in this phase.
 
 **E2E tests:** None in this phase.
 
@@ -136,7 +136,7 @@ Apply `tdd-workflow`:
 
 **Verification before next phase:**
 - `pytest tests/unit/test_evidence_models.py tests/unit/test_evidence_adapters.py tests/unit/test_evidence_merger.py tests/unit/test_citation_formatter.py -v`
-- `pytest tests/integration/test_synthetic_foundation_seed.py -v`
+- `pytest tests/unit/test_evidence_models.py tests/unit/test_evidence_adapters.py tests/unit/test_evidence_merger.py tests/unit/test_citation_formatter.py -v`
 - `ruff check src tests scripts/06_db_ingestion`
 - `ruff format --check src tests scripts/06_db_ingestion`
 
@@ -166,13 +166,10 @@ Apply `tdd-workflow`:
 - [ ] Step 2: Implement adapters, dedupe/conflict logic, and citation formatting.
 - [ ] Step 3: Run all Phase 01 unit tests; expected PASS.
 
-### Task 3: Synthetic Foundation Seed
+### Task 3: Synthetic Foundation Schema
 
 **Files:**
 - Modify: `src/models/schema.sql`
-- Create: `scripts/06_db_ingestion/03_seed_synthetic_foundation.py`
-- Test: `tests/integration/test_synthetic_foundation_seed.py`
 
-- [ ] Step 1: Write failing integration test using a temporary SQLite database.
-- [ ] Step 2: Add synthetic foundation tables and idempotent seed script.
-- [ ] Step 3: Run `pytest tests/integration/test_synthetic_foundation_seed.py -v`; expected PASS.
+- [ ] Step 1: Extend `src/models/schema.sql` to include empty tables for `synthetic_users`, `synthetic_policies`, and `synthetic_benchmark_cases`.
+- [ ] Step 2: Ensure correct foreign keys are defined for these tables linking to core insurance tables.

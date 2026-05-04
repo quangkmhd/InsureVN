@@ -51,11 +51,11 @@ async def test_database_agent_config_parameters(mock_langfuse_client, mock_init_
 @pytest.mark.asyncio
 async def test_database_agent_invoke_strips_thinking():
     """Verify that invoke strips thinking tokens from the result."""
-    mock_agent = AsyncMock()
+    mock_agent_executor = AsyncMock()
     thought_content = "<|channel>thought\nI should query tables.\n<channel|>The tables are companies, documents."
-    mock_agent.ainvoke.return_value = {"messages": [MagicMock(content=thought_content)]}
+    mock_agent_executor.ainvoke.return_value = {"messages": [MagicMock(content=thought_content)]}
     
-    agent = DatabaseAgent(database_agent=mock_agent)
+    agent = DatabaseAgent(database_agent=mock_agent_executor)
     result = await agent.invoke("What tables?")
     
     assert result == "The tables are companies, documents."

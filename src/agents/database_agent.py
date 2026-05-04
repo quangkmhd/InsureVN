@@ -30,7 +30,7 @@ class DatabaseAgent:
         """Factory method to initialize the agent asynchronously."""
         logger.info("Initializing DatabaseAgent")
         
-        tools = await get_sqlite_mcp_tools()
+        sqlite_mcp_tools = await get_sqlite_mcp_tools()
         
         init_kwargs: dict[str, Any] = {
             "temperature": 1.0,
@@ -47,7 +47,7 @@ class DatabaseAgent:
         if is_ollama and api_key:
             init_kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {api_key}"}}
             
-        llm = init_chat_model(model_name, model_provider=model_provider, **init_kwargs)
+        database_agent_llm = init_chat_model(model_name, model_provider=model_provider, **init_kwargs)
 
         # Prompt Management: fetch from Langfuse with fallback
         FALLBACK_PROMPT = (
@@ -75,7 +75,7 @@ class DatabaseAgent:
         if not system_prompt.startswith("<|think|>"):
             system_prompt = f"<|think|>\n{system_prompt}"
 
-        database_agent = create_agent(llm, tools=tools, system_prompt=system_prompt)
+        database_agent = create_agent(database_agent_llm, tools=sqlite_mcp_tools, system_prompt=system_prompt)
         logger.info("DatabaseAgent initialized successfully")
         
         # Get version if loaded from Langfuse
@@ -87,14 +87,14 @@ class DatabaseAgent:
 
         return cls(database_agent, prompt_version=prompt_version)
         
-    async def invoke(self, query: str, config: Optional[dict] = None) -> str:
+    async def invoke(self, user_query: str, config: Optional[dict] = None) -> str:
         """Invoke the agent with a query."""
         run_config = dict(config or {})
         user_id = run_config.pop("user_id", "unknown")
         session_id = run_config.pop("session_id", "unknown")
         
         metadata = {
-            "query": query,
+            "query": user_query,
             "user_id": user_id,
             "session_id": session_id,
             "agent_type": "DatabaseAgent",
@@ -103,7 +103,7 @@ class DatabaseAgent:
 
         logger.info(f"Invoking DatabaseAgent", extra=metadata)
 
-        inputs = {"messages": [("user", query)]}
+        agent_execution_inputs = {"messages": [("user", user_query)]}
         langfuse_handler = CallbackHandler()
         callbacks = list(run_config.pop("callbacks", []))
         callbacks.append(langfuse_handler)
@@ -121,17 +121,17 @@ class DatabaseAgent:
                 session_id=session_id,
                 tags=["database_agent"],
             ):
-                result = await self.database_agent.ainvoke(inputs, config=invoke_config)
+                agent_execution_result = await self.database_agent.ainvoke(agent_execution_inputs, config=invoke_config)
 
-            content = result["messages"][-1].content
+            agent_response_content = agent_execution_result["messages"][-1].content
             # No Thinking Content in History: Strip thought blocks from the response
             # Pattern: <|channel>thought\n[Internal reasoning]<channel|>
-            content = re.sub(
-                r"<\|channel>thought\n.*?<channel\|>", "", content, flags=re.DOTALL
+            agent_response_content = re.sub(
+                r"<\|channel>thought\n.*?<channel\|>", "", agent_response_content, flags=re.DOTALL
             )
             
             logger.info("DatabaseAgent invocation successful", extra={**metadata, "status": "success"})
-            return content.strip()
+            return agent_response_content.strip()
         except Exception as e:
             logger.error(
                 f"Error during DatabaseAgent invocation: {str(e)}", 

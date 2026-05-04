@@ -17,19 +17,19 @@ async def test_search_agent_creation():
 
 @pytest.mark.asyncio
 async def test_search_agent_invoke():
-    mock_graph = MagicMock()
+    mock_search_agent_executor = MagicMock()
     # Mock the async invoke response structure from create_agent
     mock_message = MagicMock()
     mock_message.content = "Here is the search result based on Tavily."
     
     from unittest.mock import AsyncMock
-    mock_graph.ainvoke = AsyncMock(return_value={"messages": [mock_message]})
+    mock_search_agent_executor.ainvoke = AsyncMock(return_value={"messages": [mock_message]})
     
-    agent = SearchAgent(graph=mock_graph)
+    agent = SearchAgent(search_agent=mock_search_agent_executor)
     
     # We must patch get_client from langfuse to avoid actual network calls during flush
     with patch("src.agents.search_agent.get_client"):
         response = await agent.invoke("What are the best health insurance plans in VN?")
         
     assert response == "Here is the search result based on Tavily."
-    mock_graph.ainvoke.assert_called_once()
+    mock_search_agent_executor.ainvoke.assert_called_once()

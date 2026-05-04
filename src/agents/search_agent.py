@@ -20,8 +20,8 @@ os.environ.setdefault("LANGFUSE_HOST", getattr(settings, "LANGFUSE_HOST", "https
 logger = get_logger(__name__)
 
 class SearchAgent:
-    def __init__(self, graph: Any, prompt_version: Optional[int] = None):
-        self.graph = graph
+    def __init__(self, search_agent: Any, prompt_version: Optional[int] = None):
+        self.search_agent = search_agent
         self.prompt_version = prompt_version
         
     @classmethod
@@ -36,7 +36,7 @@ class SearchAgent:
         # Initialize the Tavily Search tool
         # max_results can be tweaked based on needs
         search_tool = TavilySearchResults(max_results=50)
-        tools = [search_tool]
+        search_tools = [search_tool]
         
         model_name = os.getenv("LLM_MODEL")
         model_provider = os.getenv("LLM_PROVIDER")
@@ -57,7 +57,7 @@ class SearchAgent:
         if is_ollama and api_key:
             init_kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {api_key}"}}
             
-        llm = init_chat_model(model_name, model_provider=model_provider, **init_kwargs)
+        search_agent_llm = init_chat_model(model_name, model_provider=model_provider, **init_kwargs)
 
         # Prompt Management: fetch from Langfuse with fallback
         FALLBACK_PROMPT = (
@@ -82,7 +82,7 @@ class SearchAgent:
             system_prompt = f"<|think|>\n{system_prompt}"
 
         # Create the agent using the langchain-fundamentals skill approach
-        graph = create_agent(llm, tools=tools, system_prompt=system_prompt)
+        search_agent = create_agent(search_agent_llm, tools=search_tools, system_prompt=system_prompt)
         logger.info("SearchAgent initialized successfully")
         
         # Get version if loaded from Langfuse
@@ -92,16 +92,16 @@ class SearchAgent:
         except Exception:
             pass
 
-        return cls(graph, prompt_version=prompt_version)
+        return cls(search_agent, prompt_version=prompt_version)
         
-    async def invoke(self, query: str, config: Optional[dict] = None) -> str:
+    async def invoke(self, user_query: str, config: Optional[dict] = None) -> str:
         """Invoke the search agent with a query."""
         run_config = dict(config or {})
         user_id = run_config.pop("user_id", "unknown")
         session_id = run_config.pop("session_id", "unknown")
         
         metadata = {
-            "query": query,
+            "query": user_query,
             "user_id": user_id,
             "session_id": session_id,
             "agent_type": "SearchAgent",
@@ -110,7 +110,7 @@ class SearchAgent:
 
         logger.info(f"Invoking SearchAgent", extra=metadata)
 
-        inputs = {"messages": [("user", query)]}
+        agent_execution_inputs = {"messages": [("user", user_query)]}
         langfuse_handler = CallbackHandler()
         callbacks = list(run_config.pop("callbacks", []))
         callbacks.append(langfuse_handler)
@@ -128,17 +128,17 @@ class SearchAgent:
                 session_id=session_id,
                 tags=["search_agent"],
             ):
-                result = await self.graph.ainvoke(inputs, config=invoke_config)
+                agent_execution_result = await self.search_agent.ainvoke(agent_execution_inputs, config=invoke_config)
 
-            content = result["messages"][-1].content
+            agent_response_content = agent_execution_result["messages"][-1].content
             
             # Remove thinking blocks if present
-            content = re.sub(
-                r"<\|channel>thought\n.*?<channel\|>", "", content, flags=re.DOTALL
+            agent_response_content = re.sub(
+                r"<\|channel>thought\n.*?<channel\|>", "", agent_response_content, flags=re.DOTALL
             )
             
             logger.info("SearchAgent invocation successful", extra={**metadata, "status": "success"})
-            return content.strip()
+            return agent_response_content.strip()
         except Exception as e:
             logger.error(
                 f"Error during SearchAgent invocation: {str(e)}", 

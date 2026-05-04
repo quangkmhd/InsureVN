@@ -3,7 +3,6 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
-
 REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "company_code",
     "document_id",
@@ -136,7 +135,9 @@ class DocumentChunker:
         metadata: dict[str, Any],
     ) -> list[ParentSection]:
         sections: list[ParentSection] = []
-        heading_matches = list(re.finditer(r"^(#{1,6})\s+(.+?)\s*$", markdown_text, re.M))
+        heading_matches = list(
+            re.finditer(r"^(#{1,6})\s+(.+?)\s*$", markdown_text, re.M)
+        )
 
         if not heading_matches:
             section_text = markdown_text.strip()

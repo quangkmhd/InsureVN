@@ -51,7 +51,9 @@ Benh dac biet co thoi gian cho 90 ngay.
 
 
 def test_document_chunker_normalizes_unicode_to_nfc() -> None:
-    decomposed_text = "## Ba\u0309o hie\u0302\u0309m\n\nQuyen loi ba\u0309o hie\u0302\u0309m."
+    decomposed_text = (
+        "## Ba\u0309o hie\u0302\u0309m\n\nQuyen loi ba\u0309o hie\u0302\u0309m."
+    )
     chunker = DocumentChunker(child_chunk_chars=120, child_chunk_overlap=10)
 
     document_chunks = chunker.chunk_markdown(

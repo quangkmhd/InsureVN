@@ -1,8 +1,10 @@
 """Test the new strip + line-based extraction logic on an actual corrupted source file."""
+
 import re
 from pathlib import Path
 
 MARKER = "**Diễn giải dữ liệu:**"
+
 
 def strip_previous_interpretations(content: str) -> str:
     pattern = re.escape(MARKER) + r".*?(?=\n(?:#{1,6}\s|\|)|$)"
@@ -10,9 +12,11 @@ def strip_previous_interpretations(content: str) -> str:
     content = re.sub(r"\n{3,}", "\n\n", content)
     return content
 
+
 def _is_table_row(line: str) -> bool:
     stripped = line.strip()
     return stripped.startswith("|")
+
 
 def extract_markdown_tables(content: str) -> list[tuple[int, int, str]]:
     lines = content.split("\n")
@@ -44,29 +48,31 @@ def extract_markdown_tables(content: str) -> list[tuple[int, int, str]]:
 
 
 # Test with the actual corrupted file
-src = Path("/home/quangnhvn34/dev/me/InsureVN/data/health_insurance/health_insurance_markdowns/aia.com.vn/2711-BHSK-Bung-Gia-Luc-Quy-tac-dieu-khoan-mau-2025/2711-BHSK-Bung-Gia-Luc-Quy-tac-dieu-khoan-mau-2025.md")
+src = Path(
+    "/home/quangnhvn34/dev/me/InsureVN/data/health_insurance/health_insurance_markdowns/aia.com.vn/2711-BHSK-Bung-Gia-Luc-Quy-tac-dieu-khoan-mau-2025/2711-BHSK-Bung-Gia-Luc-Quy-tac-dieu-khoan-mau-2025.md"
+)
 raw = src.read_text(encoding="utf-8")
 
-print(f"=== BEFORE STRIP ===")
+print("=== BEFORE STRIP ===")
 print(f"Markers found: {raw.count(MARKER)}")
 print(f"Pipe lines: {sum(1 for l in raw.splitlines() if '|' in l)}")
 
 clean = strip_previous_interpretations(raw)
-print(f"\n=== AFTER STRIP ===")
+print("\n=== AFTER STRIP ===")
 print(f"Markers found: {clean.count(MARKER)}")
 print(f"Pipe lines: {sum(1 for l in clean.splitlines() if '|' in l)}")
 
 tables = extract_markdown_tables(clean)
-print(f"\n=== TABLES FOUND ===")
+print("\n=== TABLES FOUND ===")
 print(f"Number of tables: {len(tables)}")
 for i, (start, end, text) in enumerate(tables):
     lines = text.split("\n")
-    print(f"\nTable {i+1}: {len(lines)} rows, chars [{start}:{end}]")
+    print(f"\nTable {i + 1}: {len(lines)} rows, chars [{start}:{end}]")
     print(f"  First row: {lines[0][:80]}...")
     print(f"  Last row:  {lines[-1][:80]}...")
 
 # Verify the insertion would be at the right place
-print(f"\n=== INSERTION VERIFICATION ===")
+print("\n=== INSERTION VERIFICATION ===")
 for i, (start, end, text) in enumerate(tables):
-    after = clean[end:end+100].replace("\n", "\\n")
-    print(f"Table {i+1} → text AFTER table: [{after[:60]}]")
+    after = clean[end : end + 100].replace("\n", "\\n")
+    print(f"Table {i + 1} → text AFTER table: [{after[:60]}]")

@@ -1,5 +1,7 @@
 import pytest
+
 from src.tools.mcp_client import get_sqlite_mcp_tools
+
 
 @pytest.mark.asyncio
 async def test_get_sqlite_mcp_tools():

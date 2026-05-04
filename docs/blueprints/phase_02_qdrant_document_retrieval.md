@@ -8,7 +8,8 @@
 
 New packages to install:
 - `qdrant-client` — Qdrant vector database client
-- `sentence-transformers` — local embedding model inference
+- `langchain-google-genai` — Google Gemini embedding and LLM integration
+- `sentence-transformers` — local embedding model inference (for Option 2)
 - `underthesea` — Vietnamese word segmentation for BM25/keyword search
 
 ## 1. Thong Tin Chung
@@ -40,7 +41,10 @@ New packages to install:
 
 **Framework selection:** Use LangChain retriever/vector store primitives for Qdrant and optional BM25/sparse retrieval. LangGraph is not needed yet except for future compatibility of return contracts.
 
-**Embedding model:** Default to `intfloat/multilingual-e5-large` via `sentence-transformers` (local inference). Config key: `RAG_EMBEDDING_MODEL`. If latency is unacceptable on available hardware, fall back to `BAAI/bge-m3`. Evaluate on 20 Vietnamese insurance queries from benchmark fixtures before committing.
+**Embedding model:** 
+- **Option 1 (Cloud):** Use `gemini-embedding-2` via `langchain-google-genai`. Best for high-precision multilingual performance.
+- **Option 2 (Local):** Use `Qwen/Qwen2.5-Math-7B-Instruct` or specific `Qwen3-Embedding-8B` (once available) via `sentence-transformers` or `Ollama`. Best for data privacy and local high-performance inference.
+Config keys: `GOOGLE_API_KEY` (for Option 1) and `RAG_EMBEDDING_MODEL`.
 
 **Vietnamese text normalization:** Use `underthesea` for word segmentation in BM25/keyword retrieval. Apply NFC Unicode normalization on all queries and indexed text to handle diacritics (`bảo hiểm` ↔ `bao hiem`). Config key: `RAG_VIETNAMESE_SEGMENTER` (default: `underthesea`).
 
@@ -54,8 +58,8 @@ New packages to install:
 - `tests/integration/test_qdrant_retriever_filters.py`
 
 **Files to modify:**
-- `src/core/config.py`: add `QDRANT_*`, `RAG_EMBEDDING_*`, and retrieval limits with explicit casts.
-- `.env`: register every new Qdrant/RAG parameter with comments.
+- `src/core/config.py`: add `QDRANT_*`, `GOOGLE_API_KEY`, `RAG_EMBEDDING_MODEL`, and retrieval limits with explicit casts.
+- `.env`: register `GOOGLE_API_KEY` and every new Qdrant/RAG parameter with comments.
 
 **Tools/MCP/DB:**
 - Qdrant stores document chunks.
@@ -80,7 +84,7 @@ New packages to install:
 2. Implement `DocumentChunker` with deterministic chunk IDs and NFC Unicode normalization.
 3. Write failing tests for Qdrant payload validation and missing citation fields.
 4. Implement `QdrantEvidenceAdapter` using the `Evidence` model from Phase 01.
-5. Add config fields with agent/tool prefixes: `RAG_QDRANT_URL`, `RAG_QDRANT_COLLECTION`, `RAG_EMBEDDING_MODEL`, `RAG_CHILD_CHUNK_TOKENS`, `RAG_CHILD_CHUNK_OVERLAP`, `RAG_PARENT_SECTION_MAX_CHARS`.
+5. Add config fields with agent/tool prefixes: `RAG_QDRANT_URL`, `RAG_QDRANT_COLLECTION`, `GOOGLE_API_KEY`, `RAG_EMBEDDING_MODEL`, `RAG_CHILD_CHUNK_TOKENS`, `RAG_CHILD_CHUNK_OVERLAP`, `RAG_PARENT_SECTION_MAX_CHARS`.
 6. Write failing keyword retrieval tests for exact policy codes, disease/drug names, and Vietnamese legal terms.
 7. Implement BM25 or Qdrant sparse retrieval and reciprocal rank fusion with dense results.
 8. Write failing integration tests that index two companies with similar policy text and query with a hard `company_code` filter.

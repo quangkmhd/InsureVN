@@ -14,7 +14,7 @@ It automates the full insurance lifecycle: policy explanation, claim processing,
 | Layer               | Technology                                   |
 | :------------------ | :------------------------------------------- |
 | Language            | Python 3.12.3                                |
-| Agent Framework     | LangChain, LangGraph                         |
+| Agent Framework     | LangChain, LangGraph, Deep Agents           |
 | LLM Provider        | Ollama, Nvida,... (called through LangChain) |
 | Web Framework       | FastAPI                                      |
 | Vector Database     | Qdrant                                       |
@@ -28,7 +28,10 @@ It automates the full insurance lifecycle: policy explanation, claim processing,
 
 - **Style**: PEP 8, enforced by `ruff`
 - **Formatting**: `ruff format`
-- **Naming**: `snake_case` for functions/variables, `PascalCase` for classes
+- **Naming**:
+  - `snake_case` for functions/variables, `PascalCase` for classes.
+  - **Agent Objects**: Use descriptive, searchable names with agent prefixes (e.g., `database_agent_llm`, `search_agent_tools`).
+  - **No generic names**: Avoid naming objects simply `agent` or `llm` inside agent-specific logic to ensure global searchability via agent keys.
 - **Type hints**: Required on all function signatures
 - **Docstrings**: Google style, required on all public functions/classes
 - **Imports**: Group by stdlib → third-party → local, sorted alphabetically
@@ -242,7 +245,18 @@ These guidelines are working if:
 
 ---
 
-## 8. Scope
+## 9. Configuration Standards
+
+- **Strict Agent Isolation**: Every agent must have its own dedicated and isolated configuration parameters. Never use global variables or shared environment keys for agent-specific logic (e.g., LLM settings, tool limits, API keys).
+- **Prefix-Based Ownership**: All agent settings in `.env` and `Settings` MUST be prefixed with the agent's identity (e.g., `[AGENT_NAME]_[PARAMETER]`). This ensures clear parameter ownership and prevents configuration leakage between agents.
+- **Decoupled Configuration Layer**: Agents must remain decoupled from the environment. They must never call `os.getenv`, `load_dotenv`, or access raw config files. All inputs must be proxied through a centralized, type-safe registry (e.g., `src/core/config.py`).
+- **Mandatory Type Safety**: Configuration parameters must be explicitly cast to their functional types (e.g., `float`, `int`, `bool`) at the configuration layer. No raw string-based logic is allowed for numeric or boolean controls.
+- **Tool-Specific Encapsulation**: If a tool is used by an agent, its specific parameters (API keys, base URLs, retry limits) must be encapsulated within that agent's configuration block to allow independent tuning.
+- **Mandatory `.env` Registration**: Every agent-specific parameter must be explicitly added to the `.env` file with clear comments. This ensures that the environment is self-documenting and easy to configure for local development.
+
+---
+
+## 10. Success Criteria
 
 This is a **production-grade product**, not an MVP. Build with:
 
@@ -251,3 +265,26 @@ This is a **production-grade product**, not an MVP. Build with:
 - Security considerations
 - Scalability in mind
 - Comprehensive test coverage
+
+<claude-mem-context>
+# Memory Context
+
+# [InsureVN] recent context, 2026-05-03 11:05pm GMT+7
+
+Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
+Format: ID TIME TYPE TITLE
+Fetch details: get_observations([IDs]) | Search: mem-search skill
+
+Stats: 6 obs (1,971t read) | 28,672t work | 93% savings
+
+### May 3, 2026
+
+1 10:14p 🔵 Command execution failed due to bwrap permission error
+2 " 🔵 Brainstorming skill guidelines loaded successfully
+3 " ✅ Brainstorming plan initialized
+4 10:16p 🔵 Understood Visual Companion Guide workflow and features
+5 10:20p 🟣 Brainstorming server initiated for RAG agent design
+6 " 🟣 RAG Agent Scope Definition Initiated
+
+Access 29k tokens of past work via get_observations([IDs]) or mem-search skill.
+`</claude-mem-context>`

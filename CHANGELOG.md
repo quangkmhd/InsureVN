@@ -2,6 +2,21 @@
 
 All notable changes to the InsureVN project will be documented in this file.
 
+## [Unreleased] - 2026-05-04
+
+### 🔧 Improvements
+
+- **Standardized Agent Configuration**: Established a robust, prefix-based configuration architecture. Each agent now has dedicated, isolated parameters (e.g., `DATABASE_LLM_*`, `SEARCH_LLM_*`) managed through a centralized `Settings` registry, eliminating direct dependency on environment variables within agent logic.
+- **Configuration Isolation & Type Safety**: Implemented strict isolation between agent settings to prevent configuration leakage and ensured mandatory type casting for all parameters (e.g., temperature, top_p) at the configuration layer.
+- **Meaningful Naming Refactor**: Systematically renamed internal agent identifiers (e.g., `graph` -> `database_agent`) to align with domain-specific naming standards and improved global searchability within the codebase.
+- **Architectural Documentation Updates**: Updated `AGENTS.md` and `GEMINI.md` with formal **Configuration Standards** and **Naming Conventions**, providing clear guidelines for future agent development.
+
+### 📝 Documentation
+
+- **Quad-Retrieval RAG Design**: Published a new technical specification for the Quad-Retrieval (Vector, Keyword, Graph, SQL) architecture in `docs/superpowers/specs/2026-05-04-quad-retrieval-rag-architecture.md`.
+
+---
+
 ## [1.0.0] - 2026-05-03
 
 ### ✨ New Features

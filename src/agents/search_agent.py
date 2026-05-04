@@ -2,7 +2,6 @@ from __future__ import annotations
 import re
 import os
 from typing import Any, Optional
-from dotenv import load_dotenv
 
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
@@ -13,10 +12,7 @@ from src.core.config import settings
 from langfuse import propagate_attributes, get_client
 from langfuse.langchain import CallbackHandler
 
-# Load environment variables from .env
-load_dotenv()
-os.environ.setdefault("LANGFUSE_HOST", getattr(settings, "LANGFUSE_HOST", "https://cloud.langfuse.com"))
-
+# Langfuse Trace metadata
 logger = get_logger(__name__)
 
 class SearchAgent:
@@ -29,35 +25,30 @@ class SearchAgent:
         """Factory method to initialize the search agent asynchronously."""
         logger.info("Initializing SearchAgent")
         
-        # Verify Tavily API key is present
-        if not os.getenv("TAVILY_API_KEY"):
-            logger.warning("TAVILY_API_KEY is not set. The search tool will fail.")
-
+        # Ensure Tavily API key is set in environment for the tool
+        if settings.SEARCH_TAVILY_API_KEY:
+            os.environ["TAVILY_API_KEY"] = settings.SEARCH_TAVILY_API_KEY
+        
         # Initialize the Tavily Search tool
-        # max_results can be tweaked based on needs
-        search_tool = TavilySearchResults(max_results=50)
+        search_tool = TavilySearchResults(max_results=settings.SEARCH_MAX_RESULTS)
         search_tools = [search_tool]
         
-        model_name = os.getenv("LLM_MODEL")
-        model_provider = os.getenv("LLM_PROVIDER")
-        api_key = os.getenv("LLM_API_KEY")
-        base_url = os.getenv("LLM_BASE_URL")
-        
         init_kwargs: dict[str, Any] = {
-            "temperature": 0.7,  # slightly lower for factual search tasks
-            "top_p": 0.95,
+            "temperature": settings.SEARCH_LLM_TEMPERATURE,
+            "top_p": settings.SEARCH_LLM_TOP_P,
+            "top_k": settings.SEARCH_LLM_TOP_K,
         }
         
-        if api_key:
-            init_kwargs["api_key"] = api_key
-        if base_url:
-            init_kwargs["base_url"] = base_url
+        if settings.SEARCH_LLM_API_KEY:
+            init_kwargs["api_key"] = settings.SEARCH_LLM_API_KEY
+        if settings.SEARCH_LLM_BASE_URL:
+            init_kwargs["base_url"] = settings.SEARCH_LLM_BASE_URL
             
-        is_ollama = (model_provider == "ollama") or (model_name and "ollama" in model_name.lower())
-        if is_ollama and api_key:
-            init_kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {api_key}"}}
+        is_ollama = (settings.SEARCH_LLM_PROVIDER == "ollama") or (settings.SEARCH_LLM_MODEL and "ollama" in settings.SEARCH_LLM_MODEL.lower())
+        if is_ollama and settings.SEARCH_LLM_API_KEY:
+            init_kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {settings.SEARCH_LLM_API_KEY}"}}
             
-        search_agent_llm = init_chat_model(model_name, model_provider=model_provider, **init_kwargs)
+        search_agent_llm = init_chat_model(settings.SEARCH_LLM_MODEL, model_provider=settings.SEARCH_LLM_PROVIDER, **init_kwargs)
 
         # Prompt Management: fetch from Langfuse with fallback
         FALLBACK_PROMPT = (

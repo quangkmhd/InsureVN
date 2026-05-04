@@ -2,6 +2,7 @@ import pytest
 import re
 from unittest.mock import AsyncMock, patch, MagicMock
 from src.agents.database_agent import DatabaseAgent
+from src.core.config import settings
 
 def test_strip_thinking_logic():
     """Verify the logic for stripping thinking tokens."""
@@ -39,9 +40,9 @@ async def test_database_agent_config_parameters(mock_langfuse_client, mock_init_
         
         # Check init_chat_model call
         _, kwargs = mock_init_chat.call_args
-        assert kwargs["temperature"] == 1.0
-        assert kwargs["top_p"] == 0.95
-        assert kwargs["top_k"] == 64
+        assert kwargs["temperature"] == settings.DATABASE_LLM_TEMPERATURE
+        assert kwargs["top_p"] == settings.DATABASE_LLM_TOP_P
+        assert kwargs["top_k"] == settings.DATABASE_LLM_TOP_K
         
         # Check create_agent call for system_prompt
         _, agent_kwargs = mock_create_agent.call_args

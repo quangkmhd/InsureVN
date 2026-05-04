@@ -3,21 +3,13 @@ import re
 from typing import Any, Optional
 from langchain.agents import create_agent
 from src.tools.mcp_client import get_sqlite_mcp_tools
-import os
-from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from src.core.logger import get_logger
 from src.core.config import settings
 from langfuse import propagate_attributes, get_client
 from langfuse.langchain import CallbackHandler
 
-# Load environment variables from .env
-load_dotenv()
-os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_HOST)
-model_name = os.getenv("LLM_MODEL")
-model_provider = os.getenv("LLM_PROVIDER")
-api_key = os.getenv("LLM_API_KEY")
-base_url = os.getenv("LLM_BASE_URL")
+# Langfuse Trace metadata
 logger = get_logger(__name__)
 
 class DatabaseAgent:
@@ -33,21 +25,22 @@ class DatabaseAgent:
         sqlite_mcp_tools = await get_sqlite_mcp_tools()
         
         init_kwargs: dict[str, Any] = {
-            "temperature": 1.0,
-            "top_p": 0.95,
-            "top_k": 64,
+            "temperature": settings.DATABASE_LLM_TEMPERATURE,
+            "top_p": settings.DATABASE_LLM_TOP_P,
+            "top_k": settings.DATABASE_LLM_TOP_K,
         }
         
-        if api_key:
-            init_kwargs["api_key"] = api_key
-        if base_url:
-            init_kwargs["base_url"] = base_url
+        if settings.DATABASE_LLM_API_KEY:
+            init_kwargs["api_key"] = settings.DATABASE_LLM_API_KEY
+        if settings.DATABASE_LLM_BASE_URL:
+            init_kwargs["base_url"] = settings.DATABASE_LLM_BASE_URL
             
-        is_ollama = (model_provider == "ollama") or (model_name and "ollama" in model_name.lower())
-        if is_ollama and api_key:
-            init_kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {api_key}"}}
+        is_ollama = (settings.DATABASE_LLM_PROVIDER == "ollama") or (settings.DATABASE_LLM_MODEL and "ollama" in settings.DATABASE_LLM_MODEL.lower())
+        if is_ollama and settings.DATABASE_LLM_API_KEY:
+            init_kwargs["client_kwargs"] = {"headers": {"Authorization": f"Bearer {settings.DATABASE_LLM_API_KEY}"}}
             
-        database_agent_llm = init_chat_model(model_name, model_provider=model_provider, **init_kwargs)
+        database_agent_llm = init_chat_model(settings.DATABASE_LLM_MODEL, model_provider=settings.DATABASE_LLM_PROVIDER, **init_kwargs)
+
 
         # Prompt Management: fetch from Langfuse with fallback
         FALLBACK_PROMPT = (

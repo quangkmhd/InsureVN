@@ -4,7 +4,9 @@ from typing import List, Optional, Dict, Any
 
 class SourceType(str, Enum):
     SQLITE_ROW = "sqlite_row"
+    QDRANT_CHUNK = "qdrant_chunk"
     QDRANT_DOC = "qdrant_doc"
+    GRAPH_TRIPLE = "graph_triple"
     USER_INPUT = "user_input"
 
 class RetrievalMode(str, Enum):

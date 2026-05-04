@@ -170,3 +170,7 @@ unsloth_compiled_cache/
 everything-claude-code/
 .crush/
 .goose/
+scratch/
+superpowers/
+LightRAG/
+asset/

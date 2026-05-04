@@ -17,7 +17,7 @@ async def test_database_agent_init(mock_get_tools, mock_tools):
     mock_get_tools.return_value = mock_tools
     agent = await DatabaseAgent.create()
     assert agent is not None
-    assert agent.graph is not None
+    assert agent.database_agent is not None
 
 @pytest.mark.asyncio
 @patch("src.agents.database_agent.get_sqlite_mcp_tools")
@@ -26,28 +26,28 @@ async def test_database_agent_invoke(mock_get_tools, mock_tools):
     mock_get_tools.return_value = mock_tools
     agent = await DatabaseAgent.create()
     
-    # Mock the ainvoke method of the underlying graph
-    agent.graph.ainvoke = AsyncMock(return_value={"messages": [AIMessage(content="Tables are: companies, documents")]})
+    # Mock the ainvoke method of the underlying database_agent
+    agent.database_agent.ainvoke = AsyncMock(return_value={"messages": [AIMessage(content="Tables are: companies, documents")]})
     
     result = await agent.invoke("What tables are in the database?")
     assert "Tables are" in result
 
 @pytest.mark.asyncio
 async def test_database_agent_invoke_with_langfuse_callback():
-    # Setup mock graph
-    mock_graph = AsyncMock()
-    mock_graph.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
+    # Setup mock agent
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
     
-    agent = DatabaseAgent(graph=mock_graph)
+    agent = DatabaseAgent(database_agent=mock_agent)
     
     # Test invoke without passing explicit config, should inject callbacks
     result = await agent.invoke("Hello")
     
     assert result == "Answer"
     
-    # Ensure graph.ainvoke was called with the config containing callbacks
-    mock_graph.ainvoke.assert_called_once()
-    call_args = mock_graph.ainvoke.call_args[1]
+    # Ensure database_agent.ainvoke was called with the config containing callbacks
+    mock_agent.ainvoke.assert_called_once()
+    call_args = mock_agent.ainvoke.call_args[1]
     
     config_arg = call_args.get("config")
     assert config_arg is not None
@@ -56,9 +56,9 @@ async def test_database_agent_invoke_with_langfuse_callback():
 
 @pytest.mark.asyncio
 async def test_database_agent_invoke_preserves_caller_config():
-    mock_graph = AsyncMock()
-    mock_graph.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
-    agent = DatabaseAgent(graph=mock_graph)
+    mock_agent = AsyncMock()
+    mock_agent.ainvoke.return_value = {"messages": [MagicMock(content="Answer")]}
+    agent = DatabaseAgent(database_agent=mock_agent)
     caller_callback = MagicMock()
     caller_config = {
         "callbacks": [caller_callback],
@@ -78,7 +78,7 @@ async def test_database_agent_invoke_preserves_caller_config():
         "session_id": "session-1",
         "configurable": {"thread_id": "thread-1"},
     }
-    invoke_config = mock_graph.ainvoke.call_args.kwargs["config"]
+    invoke_config = mock_agent.ainvoke.call_args.kwargs["config"]
     assert invoke_config["callbacks"][0] is caller_callback
     assert len(invoke_config["callbacks"]) == 2
     assert invoke_config["run_name"] == "custom-run"

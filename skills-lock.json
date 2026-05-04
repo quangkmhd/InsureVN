@@ -324,6 +324,12 @@
       "sourceType": "github",
       "skillPath": "skills/writing-skills/SKILL.md",
       "computedHash": "38ba648975ae6ba512d6695676f146163db61a496b867f716f4bdfb0ee3aca3e"
+    },
+    "meaningful-agent-naming": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/meaningful-agent-naming/SKILL.md",
+      "computedHash": "c46bad636729d7deb05fee46fd60cb849ef05876112903c35cb21a73ee61f50f"
     }
   }
 }

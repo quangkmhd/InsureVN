@@ -14,12 +14,15 @@ from langfuse.langchain import CallbackHandler
 # Load environment variables from .env
 load_dotenv()
 os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_HOST)
-
+model_name = os.getenv("LLM_MODEL")
+model_provider = os.getenv("LLM_PROVIDER")
+api_key = os.getenv("LLM_API_KEY")
+base_url = os.getenv("LLM_BASE_URL")
 logger = get_logger(__name__)
 
 class DatabaseAgent:
-    def __init__(self, graph: Any, prompt_version: Optional[int] = None):
-        self.graph = graph
+    def __init__(self, database_agent: Any, prompt_version: Optional[int] = None):
+        self.database_agent = database_agent
         self.prompt_version = prompt_version
         
     @classmethod
@@ -28,12 +31,6 @@ class DatabaseAgent:
         logger.info("Initializing DatabaseAgent")
         
         tools = await get_sqlite_mcp_tools()
-
-        
-        model_name = os.getenv("LLM_MODEL")
-        model_provider = os.getenv("LLM_PROVIDER")
-        api_key = os.getenv("LLM_API_KEY")
-        base_url = os.getenv("LLM_BASE_URL")
         
         init_kwargs: dict[str, Any] = {
             "temperature": 1.0,
@@ -78,7 +75,7 @@ class DatabaseAgent:
         if not system_prompt.startswith("<|think|>"):
             system_prompt = f"<|think|>\n{system_prompt}"
 
-        graph = create_agent(llm, tools=tools, system_prompt=system_prompt)
+        database_agent = create_agent(llm, tools=tools, system_prompt=system_prompt)
         logger.info("DatabaseAgent initialized successfully")
         
         # Get version if loaded from Langfuse
@@ -88,7 +85,7 @@ class DatabaseAgent:
         except Exception:
             pass
 
-        return cls(graph, prompt_version=prompt_version)
+        return cls(database_agent, prompt_version=prompt_version)
         
     async def invoke(self, query: str, config: Optional[dict] = None) -> str:
         """Invoke the agent with a query."""
@@ -124,7 +121,7 @@ class DatabaseAgent:
                 session_id=session_id,
                 tags=["database_agent"],
             ):
-                result = await self.graph.ainvoke(inputs, config=invoke_config)
+                result = await self.database_agent.ainvoke(inputs, config=invoke_config)
 
             content = result["messages"][-1].content
             # No Thinking Content in History: Strip thought blocks from the response

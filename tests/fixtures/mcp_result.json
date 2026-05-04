@@ -1,0 +1,9 @@
+{
+    "source_table_id": "benefits_1",
+    "document_id": "DOC001",
+    "source_file_path": "/data/doc.pdf",
+    "company_code": "C01",
+    "document_name": "Health Policy",
+    "benefit_name": "Inpatient",
+    "limit_amount": 5000000
+}

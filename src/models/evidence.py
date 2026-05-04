@@ -47,10 +47,10 @@ class Evidence(BaseModel):
 
 class Citation(BaseModel):
     company_code: str
-    document_id: str
-    document_name: str
-    source_file_path: str
-    source_table_id: str
+    document_id: Optional[str] = None
+    document_name: Optional[str] = None
+    source_file_path: Optional[str] = None
+    source_table_id: Optional[str] = None
     page: Optional[int] = None
 
 class BenchmarkCase(BaseModel):

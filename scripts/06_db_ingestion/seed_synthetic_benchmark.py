@@ -1,6 +1,13 @@
-import json
 import sqlite3
 import os
+import sys
+
+# Ensure src module can be imported when running as script
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+from src.core.logger import get_logger
+
+logger = get_logger("seed_synthetic_benchmark")
 
 def seed_benchmark_cases(db_path: str, cases_count: int = 100):
     conn = sqlite3.connect(db_path)
@@ -45,6 +52,14 @@ def seed_benchmark_cases(db_path: str, cases_count: int = 100):
         
     conn.commit()
     conn.close()
+    
+    logger.info(
+        f"Seeded {cases_count} synthetic benchmark cases",
+        extra={
+            "component": "synthetic_seed",
+            "total_evidence_count": cases_count
+        }
+    )
 
 if __name__ == "__main__":
     db_path = os.environ.get("DB_PATH", "database/insurevn.db")

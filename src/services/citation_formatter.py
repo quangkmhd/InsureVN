@@ -6,10 +6,10 @@ class CitationFormatter:
         CitationFormatter.validate_required_fields(evidence)
         return Citation(
             company_code=evidence.metadata["company_code"],
-            document_id=evidence.metadata.get("document_id", "unknown"),
-            document_name=evidence.metadata.get("document_name", "unknown"),
-            source_file_path=evidence.metadata.get("source_file_path", "unknown"),
-            source_table_id=evidence.metadata.get("source_table_id", "unknown"),
+            document_id=evidence.metadata.get("document_id"),
+            document_name=evidence.metadata.get("document_name"),
+            source_file_path=evidence.metadata.get("source_file_path"),
+            source_table_id=evidence.metadata.get("source_table_id"),
             page=evidence.metadata.get("page")
         )
 

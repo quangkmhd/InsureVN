@@ -1,5 +1,8 @@
 from typing import Any, Dict
 from src.models.evidence import Evidence, SourceType
+from src.core.logger import get_logger
+
+logger = get_logger("evidence_adapters")
 
 class StructuredEvidenceAdapter:
     @staticmethod
@@ -13,6 +16,16 @@ class StructuredEvidenceAdapter:
         
         metadata = {k: v for k, v in row.items() if k in metadata_keys}
         metadata["tool_name"] = tool_name
+        
+        logger.info(
+            f"Converted MCP result to Evidence using {tool_name}",
+            extra={
+                "component": "structured_evidence_adapter",
+                "source_type": SourceType.SQLITE_ROW.value,
+                "source_id": str(source_id),
+                "retrieved_by": "DatabaseAgent"
+            }
+        )
         
         return Evidence(
             source_type=SourceType.SQLITE_ROW,
@@ -30,6 +43,16 @@ class ProfileEvidenceAdapter:
         
         content_parts = [f"{k}: {v}" for k, v in row.items()]
         content = ", ".join(content_parts)
+        
+        logger.info(
+            "Converted Profile row to Evidence",
+            extra={
+                "component": "profile_evidence_adapter",
+                "source_type": SourceType.SQLITE_ROW.value,
+                "source_id": str(source_id),
+                "retrieved_by": "ProfileAdapter"
+            }
+        )
         
         return Evidence(
             source_type=SourceType.SQLITE_ROW,

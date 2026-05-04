@@ -2,6 +2,9 @@ import hashlib
 from typing import List, Dict, Any, Set
 from pydantic import BaseModel
 from src.models.evidence import Evidence
+from src.core.logger import get_logger
+
+logger = get_logger("evidence_merger")
 
 class MergedEvidencePacket(BaseModel):
     evidences: List[Evidence]
@@ -23,12 +26,25 @@ class EvidenceMerger:
                 source_contents[ev.source_id] = set()
             
             if ev.content not in source_contents[ev.source_id] and len(source_contents[ev.source_id]) > 0:
-                conflicts.append(f"Conflict detected for source_id: {ev.source_id}")
+                existing_contents = list(source_contents[ev.source_id])
+                conflicts.append(f"Conflict detected for source_id '{ev.source_id}'. "
+                                 f"New content snippet: '{ev.content[:50]}...'. "
+                                 f"Existing content snippet: '{existing_contents[0][:50]}...'.")
             
             source_contents[ev.source_id].add(ev.content)
             
             if dedupe_key not in unique_evidences:
                 unique_evidences[dedupe_key] = ev
+                
+        logger.info(
+            "Merged evidence",
+            extra={
+                "component": "evidence_merger",
+                "total_evidence_count": len(evidence_items),
+                "conflict_count": len(conflicts),
+                "merged_evidence_count": len(unique_evidences)
+            }
+        )
                 
         return MergedEvidencePacket(
             evidences=list(unique_evidences.values()),

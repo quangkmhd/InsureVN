@@ -1,6 +1,7 @@
 import pytest
 import sqlite3
 import os
+import json
 
 @pytest.fixture
 def temp_db(tmp_path):
@@ -20,3 +21,15 @@ def temp_db(tmp_path):
     
     if db_file.exists():
         db_file.unlink()
+
+@pytest.fixture
+def mcp_result_fixture():
+    fixture_path = os.path.join(os.path.dirname(__file__), 'fixtures/mcp_result.json')
+    with open(fixture_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+@pytest.fixture
+def profile_row_fixture():
+    fixture_path = os.path.join(os.path.dirname(__file__), 'fixtures/profile_row.json')
+    with open(fixture_path, 'r', encoding='utf-8') as f:
+        return json.load(f)

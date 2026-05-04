@@ -145,6 +145,12 @@
       "skillPath": "skills/finishing-a-development-branch/SKILL.md",
       "computedHash": "dd2f82c6dc8582b621f9eb57fcb65f557f88eadf872727ac81d0840ae12c504e"
     },
+    "fireworks-tech-graph": {
+      "source": "yizhiyanhua-ai/fireworks-tech-graph",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "d0ebc5cbb727a406ea2a41f6a395dc24dd09efb6dcd7ffd6c25c41028624471c"
+    },
     "framework-selection": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
@@ -210,6 +216,12 @@
       "sourceType": "github",
       "skillPath": "skills/mcp-builder/SKILL.md",
       "computedHash": "826e46adf81e1372282e205c34e1a2ee876e72148007726e4a2512599d2fef7b"
+    },
+    "meaningful-naming": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/meaningful-naming/SKILL.md",
+      "computedHash": "0fe0a3d55aa7cf732f732d02f34fc5ad0b1f75fa3a7963be288f5756cc213f51"
     },
     "ml-model-training": {
       "source": "secondsky/claude-skills",
@@ -324,12 +336,6 @@
       "sourceType": "github",
       "skillPath": "skills/writing-skills/SKILL.md",
       "computedHash": "38ba648975ae6ba512d6695676f146163db61a496b867f716f4bdfb0ee3aca3e"
-    },
-    "meaningful-naming": {
-      "source": "local",
-      "sourceType": "local",
-      "skillPath": ".agents/skills/meaningful-naming/SKILL.md",
-      "computedHash": "0fe0a3d55aa7cf732f732d02f34fc5ad0b1f75fa3a7963be288f5756cc213f51"
     }
   }
 }

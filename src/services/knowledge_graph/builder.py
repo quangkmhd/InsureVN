@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import unicodedata
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -328,15 +329,17 @@ def _fetch_all(
 
 
 def _stable_slug(value: str) -> str:
-    normalized = value.strip().lower()
-    normalized = re.sub(r"[^a-z0-9]+", "_", normalized)
-    return normalized.strip("_")
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9]+", "_", ascii_value.lower()).strip("_")
+    return slug or "unknown"
 
 
 def _stable_document_key(value: str) -> str:
-    normalized = value.strip().lower()
-    normalized = re.sub(r"[^a-z0-9._-]+", "_", normalized)
-    return normalized.strip("_")
+    normalized = unicodedata.normalize("NFKD", value)
+    ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9._-]+", "_", ascii_value.lower()).strip("_")
+    return slug or "unknown"
 
 
 def _table_exists(connection: sqlite3.Connection, table_name: str) -> bool:

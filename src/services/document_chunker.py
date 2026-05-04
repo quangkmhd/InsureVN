@@ -174,7 +174,7 @@ class DocumentChunker:
         return sections
 
     def _split_text(self, text: str) -> list[str]:
-        normalized_text = unicodedata.normalize("NFC", text.strip())
+        normalized_text = text.strip()
         if len(normalized_text) <= self.child_chunk_chars:
             return [normalized_text]
 

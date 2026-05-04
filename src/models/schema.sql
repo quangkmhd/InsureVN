@@ -248,3 +248,43 @@ CREATE TABLE IF NOT EXISTS short_term_premiums (
 );
 
 CREATE INDEX IF NOT EXISTS idx_stp_document ON short_term_premiums(document_id);
+
+-- ============================================================
+-- TẦNG 4: Synthetic Foundation (Phase 01)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS synthetic_users (
+    id             VARCHAR(50) PRIMARY KEY,
+    age            INT,
+    gender         VARCHAR(20),
+    income         REAL,
+    job            VARCHAR(100),
+    city           VARCHAR(100),
+    family_status  VARCHAR(100),
+    health_background TEXT,
+    risk_tolerance VARCHAR(50),
+    created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS synthetic_policies (
+    id              VARCHAR(50) PRIMARY KEY,
+    user_id         VARCHAR(50) REFERENCES synthetic_users(id),
+    company_id      INT REFERENCES companies(id),
+    plan_type_id    INT REFERENCES plan_types(id),
+    document_id     INT REFERENCES documents(id),
+    effective_date  DATE,
+    renewal_date    DATE,
+    payment_status  VARCHAR(50),
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS synthetic_benchmark_cases (
+    case_id                 VARCHAR(50) PRIMARY KEY,
+    user_id                 VARCHAR(50) REFERENCES synthetic_users(id),
+    query                   TEXT NOT NULL,
+    expected_intent_group   VARCHAR(50),
+    expected_risk_level     VARCHAR(50),
+    expected_workflow       VARCHAR(50),
+    expected_evidence_types TEXT, -- JSON array
+    created_at              DATETIME DEFAULT CURRENT_TIMESTAMP
+);

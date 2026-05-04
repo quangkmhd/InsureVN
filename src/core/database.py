@@ -1,7 +1,9 @@
 import sqlite3
 from pathlib import Path
 from urllib.parse import quote
-from src.core.config import settings
+
+from core.config import settings
+
 
 def get_db_connection(read_only: bool = False):
     """Establish a connection to the SQLite database."""
@@ -15,10 +17,11 @@ def get_db_connection(read_only: bool = False):
     conn.row_factory = sqlite3.Row
     return conn
 
+
 def execute_sql_file(file_path: str):
     """Execute a SQL file."""
     with get_db_connection() as conn:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             sql_script = f.read()
             conn.executescript(sql_script)
         conn.commit()

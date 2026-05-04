@@ -1,32 +1,35 @@
-from mcp.server.fastmcp import FastMCP
-from functools import wraps
 import os
-from src.core.database import get_db_connection
-from src.core.config import settings
-from src.core.logger import get_logger
 import sys
+from functools import wraps
+
+from mcp.server.fastmcp import FastMCP
+
+from core.config import settings
+from core.database import get_db_connection
+from core.logger import get_logger
 
 os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_HOST)
 
 # Initialize logger for MCP (logs to stderr to avoid breaking stdio protocol)
 logger = get_logger(
-    "mcp-insurevn-db", 
-    stream=sys.stderr, 
-    log_file="log/mcp_database.log"
+    "mcp-insurevn-db", stream=sys.stderr, log_file="log/mcp_database.log"
 )
 
 try:
-    from langfuse import observe, get_client
+    from langfuse import get_client, observe
 except ImportError:
     get_client = None
 
     def observe(*args, **kwargs):
         def decorator(func):
             return func
+
         return decorator
+
 
 # Initialize FastMCP server
 mcp = FastMCP("insurevn-db")
+
 
 def _rows_to_dicts(cursor) -> list[dict]:
     if not cursor.description:
@@ -34,16 +37,20 @@ def _rows_to_dicts(cursor) -> list[dict]:
     columns = [col[0] for col in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
+
 def _limit(value: int, default: int = 50, maximum: int = 200) -> int:
     if value is None:
         return default
     return max(1, min(int(value), maximum))
 
+
 def _like(value: str) -> str:
     return f"%{value.strip()}%"
 
+
 def _placeholders(values: list[str]) -> str:
     return ", ".join("?" for _ in values)
+
 
 def _truncate(value: object, maximum: int = 500) -> str:
     text = repr(value)
@@ -51,15 +58,20 @@ def _truncate(value: object, maximum: int = 500) -> str:
         return f"{text[:maximum]}..."
     return text
 
+
 def _result_size(result: object) -> int | None:
     if isinstance(result, (list, tuple, set, dict, str)):
         return len(result)
     return None
 
+
 def _is_empty_result(result: object) -> bool:
     return isinstance(result, (list, tuple, set, dict, str)) and len(result) == 0
 
-def _update_current_span(level: str, status_message: str, metadata: dict | None = None) -> None:
+
+def _update_current_span(
+    level: str, status_message: str, metadata: dict | None = None
+) -> None:
     if get_client is None:
         return
 
@@ -72,8 +84,10 @@ def _update_current_span(level: str, status_message: str, metadata: dict | None 
     except Exception:
         logger.debug("Failed to update Langfuse span", exc_info=True)
 
+
 def mcp_observe(name: str):
     """Trace MCP tools and return structured JSON on failure so the agent has full context."""
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -93,42 +107,49 @@ def mcp_observe(name: str):
                     "error_type": type(exc).__name__,
                     "message": str(exc),
                     "tool": name,
-                    "suggestion": "Check your SQL syntax or arguments and try again."
+                    "suggestion": "Check your SQL syntax or arguments and try again.",
                 }
-                
+
                 # Log the error for production monitoring
-                logger.error(f"MCP tool failed: {name}", extra={**metadata, **error_payload}, exc_info=True)
-                
+                logger.error(
+                    f"MCP tool failed: {name}",
+                    extra={**metadata, **error_payload},
+                    exc_info=True,
+                )
+
                 # Update Langfuse span
                 _update_current_span(
                     level="ERROR",
                     status_message=f"{type(exc).__name__}: {exc}",
                     metadata={**metadata, **error_payload},
                 )
-                
+
                 # IMPORTANT: Return JSON string instead of raising.
                 import json
+
                 return json.dumps(error_payload, ensure_ascii=False)
 
             size = _result_size(result)
             completion_data = {**metadata, "result_size": size}
-            
+
             if _is_empty_result(result):
-                logger.warning(f"MCP tool returned no results: {name}", extra=completion_data)
+                logger.warning(
+                    f"MCP tool returned no results: {name}", extra=completion_data
+                )
                 _update_current_span(
                     level="WARNING",
                     status_message="MCP tool returned no results",
                     metadata={**completion_data, "result_empty": True},
                 )
                 return []
-            else:
-                logger.info(f"MCP tool completed: {name}", extra=completion_data)
+            logger.info(f"MCP tool completed: {name}", extra=completion_data)
 
             return result
 
         return observe(name=name)(wrapper)
 
     return decorator
+
 
 @mcp.tool()
 @mcp_observe(name="list-tables")
@@ -139,6 +160,7 @@ def list_tables() -> list[str]:
         rows = cursor.fetchall()
         return [row["name"] for row in rows]
 
+
 @mcp.tool()
 @mcp_observe(name="get-schema")
 def get_schema(table_names: list[str]) -> list[str]:
@@ -147,8 +169,7 @@ def get_schema(table_names: list[str]) -> list[str]:
     with get_db_connection() as conn:
         for table in table_names:
             cursor = conn.execute(
-                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?;", 
-                (table,)
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?;", (table,)
             )
             row = cursor.fetchone()
             if row and row["sql"]:
@@ -157,23 +178,28 @@ def get_schema(table_names: list[str]) -> list[str]:
                 schemas.append(f"-- Schema not found for table: {table}")
     return schemas
 
+
 @mcp.tool()
 @mcp_observe(name="execute-query")
 def execute_query(query: str) -> list[dict]:
     """Execute a read-only SQL query against the database and return results as a list of dictionaries."""
     query_upper = query.strip().upper()
     # Basic security check for read-only operations
-    if not any(query_upper.startswith(prefix) for prefix in ["SELECT", "WITH", "EXPLAIN QUERY PLAN"]):
+    if not any(
+        query_upper.startswith(prefix)
+        for prefix in ["SELECT", "WITH", "EXPLAIN QUERY PLAN"]
+    ):
         raise ValueError("Security Error: Only SELECT queries are allowed.")
-    
+
     with get_db_connection(read_only=True) as conn:
         cursor = conn.execute(query)
         rows = cursor.fetchall()
-        
+
         if cursor.description:
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in rows]
         return []
+
 
 @mcp.tool()
 @mcp_observe(name="database-summary")
@@ -195,6 +221,7 @@ def database_summary() -> list[dict]:
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query))
 
+
 @mcp.tool()
 @mcp_observe(name="list-companies")
 def list_companies() -> list[dict]:
@@ -215,6 +242,7 @@ def list_companies() -> list[dict]:
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query))
 
+
 @mcp.tool()
 @mcp_observe(name="list-documents")
 def list_documents(
@@ -233,7 +261,9 @@ def list_documents(
         where.append("d.document_type = ?")
         params.append(document_type)
     if keyword:
-        where.append("(d.document_name LIKE ? OR d.source_path LIKE ? OR d.description LIKE ?)")
+        where.append(
+            "(d.document_name LIKE ? OR d.source_path LIKE ? OR d.description LIKE ?)"
+        )
         params.extend([_like(keyword), _like(keyword), _like(keyword)])
 
     query = f"""
@@ -254,7 +284,7 @@ def list_documents(
     JOIN companies c ON c.id = d.company_id
     LEFT JOIN source_tables st ON st.document_id = d.id
     LEFT JOIN plan_types pt ON pt.document_id = d.id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     GROUP BY d.id
     ORDER BY c.code, d.document_name
     LIMIT ?
@@ -262,6 +292,7 @@ def list_documents(
     params.append(_limit(limit, default=100))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="list-source-tables")
@@ -308,13 +339,14 @@ def list_source_tables(
     FROM source_tables st
     JOIN documents d ON d.id = st.document_id
     JOIN companies c ON c.id = d.company_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, d.document_name, st.page_number, st.table_index
     LIMIT ?
     """
     params.append(_limit(limit, default=100))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="list-benefit-categories")
@@ -335,6 +367,7 @@ def list_benefit_categories() -> list[dict]:
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query))
 
+
 @mcp.tool()
 @mcp_observe(name="search-plans")
 def search_plans(
@@ -347,7 +380,9 @@ def search_plans(
     params = []
     where = []
     if keyword:
-        where.append("(pt.raw_name LIKE ? OR pt.normalized_code LIKE ? OR pt.product_line LIKE ?)")
+        where.append(
+            "(pt.raw_name LIKE ? OR pt.normalized_code LIKE ? OR pt.product_line LIKE ?)"
+        )
         params.extend([_like(keyword), _like(keyword), _like(keyword)])
     if company_code:
         where.append("c.code = ?")
@@ -370,13 +405,14 @@ def search_plans(
     FROM plan_types pt
     LEFT JOIN companies c ON c.id = pt.company_id
     LEFT JOIN documents d ON d.id = pt.document_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, pt.product_line, pt.plan_level, pt.raw_name
     LIMIT ?
     """
     params.append(_limit(limit, default=100))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="list-plans")
@@ -401,13 +437,14 @@ def list_plans(company_code: str | None = None, limit: int = 100) -> list[dict]:
     FROM plan_types pt
     LEFT JOIN companies c ON c.id = pt.company_id
     LEFT JOIN documents d ON d.id = pt.document_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, pt.product_line, pt.plan_level, pt.raw_name
     LIMIT ?
     """
     params.append(_limit(limit, default=100))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="get-premium-quotes")
@@ -456,13 +493,14 @@ def get_premium_quotes(
     JOIN companies c ON c.id = d.company_id
     JOIN source_tables st ON st.id = pe.source_table_id
     LEFT JOIN plan_types pt ON pt.id = pe.plan_type_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY pe.premium_amount, c.code, pt.plan_level
     LIMIT ?
     """
     params.append(_limit(limit))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="search-benefits")
@@ -508,13 +546,14 @@ def search_benefits(
     JOIN source_tables st ON st.id = bi.source_table_id
     LEFT JOIN benefit_values bv ON bv.benefit_item_id = bi.id
     LEFT JOIN plan_types pt ON pt.id = bv.plan_type_id
-    WHERE {' AND '.join(where)}
+    WHERE {" AND ".join(where)}
     ORDER BY c.code, d.document_name, bi.display_order, pt.plan_level
     LIMIT ?
     """
     params.append(_limit(limit))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="search-hospitals")
@@ -530,7 +569,9 @@ def search_hospitals(
     params = []
     where = []
     if keyword:
-        where.append("(h.name_vi LIKE ? OR h.name_en LIKE ? OR h.address LIKE ? OR h.note LIKE ?)")
+        where.append(
+            "(h.name_vi LIKE ? OR h.name_en LIKE ? OR h.address LIKE ? OR h.note LIKE ?)"
+        )
         params.extend([_like(keyword), _like(keyword), _like(keyword), _like(keyword)])
     if city:
         where.append("h.city LIKE ?")
@@ -569,13 +610,14 @@ def search_hospitals(
     JOIN documents d ON d.id = h.document_id
     JOIN companies c ON c.id = d.company_id
     JOIN source_tables st ON st.id = h.source_table_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, h.country, h.city, h.name_vi
     LIMIT ?
     """
     params.append(_limit(limit))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="search-waiting-periods")
@@ -589,7 +631,9 @@ def search_waiting_periods(
     params = []
     where = []
     if keyword:
-        where.append("(wp.condition_group LIKE ? OR wp.condition_detail LIKE ? OR wp.waiting_text LIKE ?)")
+        where.append(
+            "(wp.condition_group LIKE ? OR wp.condition_detail LIKE ? OR wp.waiting_text LIKE ?)"
+        )
         params.extend([_like(keyword), _like(keyword), _like(keyword)])
     if company_code:
         where.append("c.code = ?")
@@ -614,13 +658,14 @@ def search_waiting_periods(
     JOIN documents d ON d.id = wp.document_id
     JOIN companies c ON c.id = d.company_id
     JOIN source_tables st ON st.id = wp.source_table_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, wp.waiting_days, wp.condition_detail
     LIMIT ?
     """
     params.append(_limit(limit))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="search-claim-payouts")
@@ -654,13 +699,14 @@ def search_claim_payouts(
     JOIN documents d ON d.id = cp.document_id
     JOIN companies c ON c.id = d.company_id
     JOIN source_tables st ON st.id = cp.source_table_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, cp.event
     LIMIT ?
     """
     params.append(_limit(limit))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="search-glossary-terms")
@@ -691,13 +737,14 @@ def search_glossary_terms(
     JOIN documents d ON d.id = gt.document_id
     JOIN companies c ON c.id = d.company_id
     JOIN source_tables st ON st.id = gt.source_table_id
-    WHERE {' AND '.join(where)}
+    WHERE {" AND ".join(where)}
     ORDER BY c.code, gt.term
     LIMIT ?
     """
     params.append(_limit(limit, default=30))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="get-benefit-matrix")
@@ -719,7 +766,9 @@ def get_benefit_matrix(
         where.append("c.code = ?")
         params.append(company_code)
     if keyword:
-        where.append("(bi.raw_name LIKE ? OR bi.normalized_name LIKE ? OR bi.note LIKE ? OR bv.value LIKE ?)")
+        where.append(
+            "(bi.raw_name LIKE ? OR bi.normalized_name LIKE ? OR bi.note LIKE ? OR bv.value LIKE ?)"
+        )
         params.extend([_like(keyword), _like(keyword), _like(keyword), _like(keyword)])
     if category_code:
         where.append("bc.code = ?")
@@ -759,13 +808,14 @@ def get_benefit_matrix(
     LEFT JOIN benefit_categories bc ON bc.id = bi.category_id
     LEFT JOIN benefit_values bv ON bv.benefit_item_id = bi.id
     LEFT JOIN plan_types pt ON pt.id = bv.plan_type_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, d.document_name, bi.display_order, pt.plan_level
     LIMIT ?
     """
     params.append(_limit(limit, default=150, maximum=300))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="get-short-term-premiums")
@@ -799,13 +849,14 @@ def get_short_term_premiums(
     JOIN documents d ON d.id = stp.document_id
     JOIN companies c ON c.id = d.company_id
     JOIN source_tables st ON st.id = stp.source_table_id
-    {'WHERE ' + ' AND '.join(where) if where else ''}
+    {"WHERE " + " AND ".join(where) if where else ""}
     ORDER BY c.code, stp.duration_days, stp.duration_text
     LIMIT ?
     """
     params.append(_limit(limit))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="get-raw-source")
@@ -836,6 +887,7 @@ def get_raw_source(source_table_id: int) -> dict:
     with get_db_connection() as conn:
         rows = _rows_to_dicts(conn.execute(query, (source_table_id,)))
         return rows[0] if rows else {}
+
 
 @mcp.tool()
 @mcp_observe(name="compare-benefits")
@@ -885,13 +937,14 @@ def compare_benefits(
     JOIN source_tables st ON st.id = bi.source_table_id
     LEFT JOIN benefit_values bv ON bv.benefit_item_id = bi.id
     LEFT JOIN plan_types pt ON pt.id = bv.plan_type_id
-    WHERE {' AND '.join(where)}
+    WHERE {" AND ".join(where)}
     ORDER BY c.code, pt.plan_level, d.document_name, bi.display_order
     LIMIT ?
     """
     params.append(_limit(limit, default=100))
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 @mcp.tool()
 @mcp_observe(name="search-exclusions")
@@ -911,7 +964,9 @@ def search_exclusions(
     glossary_clauses = []
     for term in terms:
         pattern = _like(term)
-        benefit_clauses.append("(bi.raw_name LIKE ? OR bi.note LIKE ? OR bi.applicable_to LIKE ?)")
+        benefit_clauses.append(
+            "(bi.raw_name LIKE ? OR bi.note LIKE ? OR bi.applicable_to LIKE ?)"
+        )
         benefit_params.extend([pattern, pattern, pattern])
         glossary_clauses.append("(gt.term LIKE ? OR gt.definition LIKE ?)")
         glossary_params.extend([pattern, pattern])
@@ -970,6 +1025,7 @@ def search_exclusions(
     params = benefit_params + glossary_params + [_limit(limit)]
     with get_db_connection() as conn:
         return _rows_to_dicts(conn.execute(query, params))
+
 
 if __name__ == "__main__":
     mcp.run()

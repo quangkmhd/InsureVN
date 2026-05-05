@@ -13,7 +13,6 @@ def test_qdrant_evidence_mapper_preserves_required_citations() -> None:
         "product_line": "health",
         "plan_code": "gold",
         "section_type": "waiting_period",
-        "page_number": 12,
         "chunk_index": 3,
         "file_name": "health.md",
         "source_table_id": "documents:1",
@@ -58,21 +57,49 @@ def test_qdrant_evidence_mapper_rejects_missing_required_payload_fields() -> Non
         "plan_code": "gold",
         "section_type": "waiting_period",
         "chunk_index": 3,
-        "file_name": "missing.md",
         "source_table_id": "documents:1",
         "effective_date": "2026-01-01",
         "parent_section_id": "doc-aia-health:waiting-period:0",
         "content_hash": "abc123",
         "ingestion_version": "rag-2026-05-05",
-        "text": "Missing page number.",
+        "text": "Missing file name.",
     }
 
-    with pytest.raises(ValueError, match="page_number"):
+    with pytest.raises(ValueError, match="file_name"):
         QdrantEvidenceMapper.from_payload(
             point_id="doc-aia-health:waiting-period:3",
             payload=payload,
             score=0.87,
         )
+
+
+def test_qdrant_evidence_mapper_accepts_optional_filter_fields_when_absent() -> None:
+    payload = {
+        "company_code": "AIA",
+        "document_id": "doc-aia-health",
+        "document_type": "policy",
+        "document_name": "AIA Health Policy",
+        "product_line": "health",
+        "section_type": "waiting_period",
+        "chunk_index": 3,
+        "file_name": "health.md",
+        "parent_section_id": "doc-aia-health:waiting-period:0",
+        "content_hash": "abc123",
+        "ingestion_version": "rag-2026-05-05",
+        "parent_text": "Thoi gian cho cua benh dac biet la 90 ngay.",
+    }
+
+    evidence = QdrantEvidenceMapper.from_payload(
+        point_id="doc-aia-health:waiting-period:3",
+        payload=payload,
+        score=0.87,
+    )
+
+    assert evidence.source_type == SourceType.QDRANT_CHUNK
+    assert evidence.metadata["document_id"] == "doc-aia-health"
+    assert "plan_code" not in evidence.metadata
+    assert "source_table_id" not in evidence.metadata
+    assert "effective_date" not in evidence.metadata
 
 
 def test_qdrant_evidence_mapper_requires_production_lineage_fields() -> None:
@@ -84,7 +111,6 @@ def test_qdrant_evidence_mapper_requires_production_lineage_fields() -> None:
         "product_line": "health",
         "plan_code": "gold",
         "section_type": "waiting_period",
-        "page_number": 12,
         "chunk_index": 3,
         "file_name": "health.md",
         "source_table_id": "documents:1",

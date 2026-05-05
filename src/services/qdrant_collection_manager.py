@@ -7,14 +7,11 @@ from src.services.observability import service_observe
 from src.services.retrieval_readiness import RetrievalReadinessReport
 
 QDRANT_FILTER_PAYLOAD_INDEX_FIELDS = (
-    "company_code",
-    "document_id",
-    "document_type",
-    "product_line",
-    "plan_code",
-    "section_type",
-    "effective_date",
-    "source_table_id",
+    "metadata.company_code",
+    "metadata.document_id",
+    "metadata.document_type",
+    "metadata.product_line",
+    "metadata.section_type",
 )
 
 

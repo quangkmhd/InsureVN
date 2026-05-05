@@ -75,6 +75,13 @@ def test_qdrant_collection_manager_creates_required_payload_indexes() -> None:
 
     indexed_fields = {call["field_name"] for call in client.created_indexes}
     assert indexed_fields == set(QDRANT_FILTER_PAYLOAD_INDEX_FIELDS)
+    assert indexed_fields == {
+        "metadata.company_code",
+        "metadata.document_id",
+        "metadata.document_type",
+        "metadata.product_line",
+        "metadata.section_type",
+    }
     assert all(
         call["field_schema"] == models.PayloadSchemaType.KEYWORD
         for call in client.created_indexes

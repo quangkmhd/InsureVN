@@ -134,6 +134,49 @@ def test_document_chunker_validates_required_payload_fields() -> None:
         raise AssertionError("Expected missing company_code to fail validation.")
 
 
+def test_document_chunker_allows_optional_filter_payload_fields() -> None:
+    chunker = DocumentChunker(child_chunk_chars=120, child_chunk_overlap=20)
+
+    document_chunks = chunker.chunk_markdown(
+        "## Thoi gian cho\n\nBenh dac biet co thoi gian cho 90 ngay.",
+        metadata={
+            "company_code": "AIA",
+            "document_id": "doc-aia-health",
+            "document_type": "policy",
+            "document_name": "AIA Health Policy",
+            "product_line": "health",
+            "file_name": "health.md",
+        },
+    )
+
+    payload = document_chunks.child_chunks[0].payload
+    assert payload["company_code"] == "AIA"
+    assert payload["file_name"] == "health.md"
+    assert "plan_code" not in payload
+    assert "source_table_id" not in payload
+    assert "effective_date" not in payload
+
+
+def test_document_chunker_omits_unreliable_page_number_payload() -> None:
+    chunker = DocumentChunker(child_chunk_chars=200, child_chunk_overlap=0)
+
+    document_chunks = chunker.chunk_markdown(
+        "## Quyen loi nam vien\n\nChi tra chi phi nam vien.",
+        metadata={
+            "company_code": "AIA",
+            "document_id": "doc-aia-health",
+            "document_type": "policy",
+            "document_name": "AIA Health Policy",
+            "product_line": "health",
+            "file_name": "health.md",
+            "page_number": 4,
+        },
+    )
+
+    payload = document_chunks.child_chunks[0].payload
+    assert "page_number" not in payload
+
+
 def test_document_chunker_adds_production_payload_lineage_fields() -> None:
     markdown_text = "## Thoi gian cho\n\nBenh dac biet co thoi gian cho 90 ngay."
     metadata = {

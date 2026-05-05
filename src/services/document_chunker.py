@@ -26,14 +26,10 @@ REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "document_type",
     "document_name",
     "product_line",
-    "plan_code",
     "section_type",
-    "page_number",
     "chunk_index",
     "parent_section_id",
     "file_name",
-    "source_table_id",
-    "effective_date",
     "content_hash",
     "ingestion_version",
 )
@@ -516,7 +512,6 @@ class DocumentChunker:
         chunk_index: int,
     ) -> dict[str, Any]:
         metadata = _qdrant_payload_metadata(parent_section.metadata)
-        page_number = metadata.get("page_number", metadata.get("page", 1))
         ingestion_version = metadata.get("ingestion_version", "unversioned")
         content_hash = sha256(
             unicodedata.normalize("NFC", child_text).encode("utf-8")
@@ -524,7 +519,6 @@ class DocumentChunker:
         return {
             **metadata,
             "section_type": self._section_type(parent_section.heading),
-            "page_number": page_number,
             "chunk_index": chunk_index,
             "parent_section_id": parent_section.section_id,
             "text": child_text,
@@ -548,6 +542,8 @@ class DocumentChunker:
 def _qdrant_payload_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     payload_metadata = dict(metadata)
     source_path = payload_metadata.pop("source_path", None)
+    payload_metadata.pop("page", None)
+    payload_metadata.pop("page_number", None)
     if "file_name" not in payload_metadata and source_path:
         payload_metadata["file_name"] = Path(str(source_path)).name
     return payload_metadata

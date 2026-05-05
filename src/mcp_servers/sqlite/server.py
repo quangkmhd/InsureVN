@@ -22,7 +22,7 @@ try:
 except ImportError:
     get_client = None
 
-    def observe(*args, **kwargs):
+    def observe(*_args, **_kwargs):
         def decorator(func):
             return func
 
@@ -37,7 +37,7 @@ def _rows_to_dicts(cursor) -> list[dict]:
     if not cursor.description:
         return []
     columns = [col[0] for col in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+    return [dict(zip(columns, row, strict=True)) for row in cursor.fetchall()]
 
 
 def _limit(value: int, default: int = 50, maximum: int = 200) -> int:
@@ -88,7 +88,7 @@ def _update_current_span(
 
 
 def mcp_observe(name: str):
-    """Trace MCP tools and return structured JSON on failure so the agent has full context."""
+    """Trace MCP tools and return structured JSON on failure."""
 
     def decorator(func):
         @wraps(func)
@@ -188,7 +188,7 @@ def get_schema(table_names: list[str]) -> list[str]:
 @mcp.tool()
 @mcp_observe(name="execute-query")
 def execute_query(query: str) -> list[dict]:
-    """Execute a read-only SQL query against the database and return results as a list of dictionaries."""
+    """Execute a read-only SQL query and return rows as dictionaries."""
     query_upper = query.strip().upper()
     # Basic security check for read-only operations
     if not any(
@@ -203,7 +203,7 @@ def execute_query(query: str) -> list[dict]:
 
         if cursor.description:
             columns = [col[0] for col in cursor.description]
-            return [dict(zip(columns, row)) for row in rows]
+            return [dict(zip(columns, row, strict=True)) for row in rows]
         return []
 
 
@@ -257,7 +257,7 @@ def list_documents(
     keyword: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
-    """Return source PDF documents with optional insurer, document type, and keyword filters."""
+    """Return source PDF documents with optional filters."""
     params = []
     where = []
     if company_code:
@@ -387,7 +387,8 @@ def search_plans(
     where = []
     if keyword:
         where.append(
-            "(pt.raw_name LIKE ? OR pt.normalized_code LIKE ? OR pt.product_line LIKE ?)"
+            "(pt.raw_name LIKE ? OR pt.normalized_code LIKE ? "
+            "OR pt.product_line LIKE ?)"
         )
         params.extend([_like(keyword), _like(keyword), _like(keyword)])
     if company_code:
@@ -461,7 +462,7 @@ def get_premium_quotes(
     max_premium: float | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Find annual premium rows by age, insurer, plan code, and optional maximum premium."""
+    """Find annual premium rows by plan and price filters."""
     params = []
     where = []
     if age is not None:
@@ -516,7 +517,7 @@ def search_benefits(
     plan_code: str | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Search benefit names, notes, and values by keyword, with optional insurer and plan filters."""
+    """Search benefit names, notes, and values by keyword."""
     params = [_like(keyword), _like(keyword), _like(keyword)]
     where = ["(bi.raw_name LIKE ? OR bi.note LIKE ? OR bv.value LIKE ?)"]
     if company_code:
@@ -571,12 +572,13 @@ def search_hospitals(
     gop_supported: bool | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Search hospital/network entries by name, address, city, country, insurer, and GOP support."""
+    """Search hospital/network entries with optional filters."""
     params = []
     where = []
     if keyword:
         where.append(
-            "(h.name_vi LIKE ? OR h.name_en LIKE ? OR h.address LIKE ? OR h.note LIKE ?)"
+            "(h.name_vi LIKE ? OR h.name_en LIKE ? "
+            "OR h.address LIKE ? OR h.note LIKE ?)"
         )
         params.extend([_like(keyword), _like(keyword), _like(keyword), _like(keyword)])
     if city:
@@ -633,12 +635,13 @@ def search_waiting_periods(
     max_waiting_days: int | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Search waiting-period rules by condition text, insurer, and optional maximum waiting days."""
+    """Search waiting-period rules with optional filters."""
     params = []
     where = []
     if keyword:
         where.append(
-            "(wp.condition_group LIKE ? OR wp.condition_detail LIKE ? OR wp.waiting_text LIKE ?)"
+            "(wp.condition_group LIKE ? OR wp.condition_detail LIKE ? "
+            "OR wp.waiting_text LIKE ?)"
         )
         params.extend([_like(keyword), _like(keyword), _like(keyword)])
     if company_code:
@@ -762,7 +765,7 @@ def get_benefit_matrix(
     plan_code: str | None = None,
     limit: int = 150,
 ) -> list[dict]:
-    """Return benefit items and plan-specific values for a document/company/category filter."""
+    """Return benefit items and plan-specific values."""
     params = []
     where = []
     if document_id is not None:
@@ -773,7 +776,8 @@ def get_benefit_matrix(
         params.append(company_code)
     if keyword:
         where.append(
-            "(bi.raw_name LIKE ? OR bi.normalized_name LIKE ? OR bi.note LIKE ? OR bv.value LIKE ?)"
+            "(bi.raw_name LIKE ? OR bi.normalized_name LIKE ? "
+            "OR bi.note LIKE ? OR bv.value LIKE ?)"
         )
         params.extend([_like(keyword), _like(keyword), _like(keyword), _like(keyword)])
     if category_code:
@@ -903,7 +907,7 @@ def compare_benefits(
     plan_codes: list[str] | None = None,
     limit: int = 100,
 ) -> list[dict]:
-    """Compare benefit rows across insurers for a keyword and optional normalized plan codes."""
+    """Compare benefit rows across insurers."""
     if not company_codes:
         raise ValueError("company_codes must contain at least one insurer code.")
 
@@ -959,7 +963,7 @@ def search_exclusions(
     company_code: str | None = None,
     limit: int = 50,
 ) -> list[dict]:
-    """Search exclusion-related terms and extracted benefit rows across glossary and benefits."""
+    """Search exclusion terms across glossary and benefits."""
     terms = ["loại trừ", "không chi trả", "không được bảo hiểm", "exclusion"]
     if keyword:
         terms.append(keyword)

@@ -133,6 +133,15 @@ class Settings:
         self.RAG_RETRIEVAL_TIMEOUT_SECONDS: float = float(
             os.getenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "30.0")
         )
+        self.JINA_API_KEY: str = os.getenv("JINA_API_KEY", "")
+        self.RAG_RERANK_PROVIDER: str = os.getenv("RAG_RERANK_PROVIDER", "jina")
+        self.RAG_RERANK_MODEL: str = os.getenv("RAG_RERANK_MODEL", "jina-reranker-v3")
+        self.RAG_RERANK_BASE_URL: str = os.getenv(
+            "RAG_RERANK_BASE_URL", "https://api.jina.ai/v1/rerank"
+        )
+        self.RAG_RERANK_TIMEOUT_SECONDS: float = float(
+            os.getenv("RAG_RERANK_TIMEOUT_SECONDS", "30.0")
+        )
         self.RAG_REQUIRE_HYBRID_SEARCH: bool = _env_bool(
             "RAG_REQUIRE_HYBRID_SEARCH", default=True
         )

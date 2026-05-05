@@ -46,12 +46,13 @@ def build_dry_run_report(
     semantic_breakpoint_amount: float = 1.5,
     table_line_ratio_threshold: float = 0.55,
     table_chunk_chars: int = 3500,
+    mapping_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a dry-run indexing report for Markdown documents.
 
     Args:
         document_paths: Markdown document paths to inspect.
-        metadata: Shared document metadata. `source_path` is set per document.
+        metadata: Shared document metadata. `file_name` is set per document.
         child_chunk_chars: Maximum child chunk size in characters.
         child_chunk_overlap: Character overlap between adjacent chunks.
         chunking_strategy: Document chunking strategy.
@@ -63,6 +64,7 @@ def build_dry_run_report(
         semantic_breakpoint_amount: Semantic breakpoint threshold amount.
         table_line_ratio_threshold: Ratio that marks table-heavy sections.
         table_chunk_chars: Maximum table chunk size.
+        mapping_data: Optional mapping from md file to tables.
 
     Returns:
         JSON-serializable report with document, parent section, and chunk counts.
@@ -87,7 +89,27 @@ def build_dry_run_report(
     duplicate_chunk_count = 0
 
     for document_path in document_paths:
-        document_metadata = {**metadata, "source_path": str(document_path)}
+        document_metadata = {**metadata, "file_name": document_path.name}
+
+        # Look up source_table_id from mapping if available and missing in metadata
+        if mapping_data and "source_table_id" not in document_metadata:
+            md_dir = PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns"
+            try:
+                rel_path = str(document_path.relative_to(md_dir))
+                if rel_path in mapping_data:
+                    tables = mapping_data[rel_path].get("tables", [])
+                    if tables:
+                        # Fallback: dùng source_table_id của bảng đầu tiên tìm thấy trong doc
+                        document_metadata["source_table_id"] = tables[0]["source_table_id"]
+                        logger.info(f"Mapped {document_path.name} to source_table_id: {document_metadata['source_table_id']}")
+            except ValueError:
+                pass
+        
+        # Nếu vẫn thiếu, gán fallback ID để không bị crash validate_payload
+        if "source_table_id" not in document_metadata:
+            document_metadata["source_table_id"] = -1
+            logger.warning(f"No mapping found for {document_path.name}, using source_table_id: -1")
+
         chunked_document = chunker.chunk_markdown(
             document_path.read_text(encoding="utf-8"),
             metadata=document_metadata,
@@ -102,7 +124,7 @@ def build_dry_run_report(
                 seen_content_hashes.add(content_hash)
         documents.append(
             {
-                "source_path": str(document_path),
+                "file_name": document_path.name,
                 "parent_section_count": len(chunked_document.parent_sections),
                 "chunk_count": len(chunked_document.child_chunks),
             }
@@ -137,6 +159,7 @@ def build_chunks(
     semantic_breakpoint_amount: float = 1.5,
     table_line_ratio_threshold: float = 0.55,
     table_chunk_chars: int = 3500,
+    mapping_data: dict[str, Any] | None = None,
 ) -> list[ChildChunk]:
     """Chunk Markdown documents for indexing."""
     chunker = build_document_chunker(
@@ -154,7 +177,21 @@ def build_chunks(
     )
     chunks: list[ChildChunk] = []
     for document_path in document_paths:
-        document_metadata = {**metadata, "source_path": str(document_path)}
+        document_metadata = {**metadata, "file_name": document_path.name}
+
+        # Look up source_table_id from mapping if available and missing in metadata
+        if mapping_data and "source_table_id" not in document_metadata:
+            md_dir = PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns"
+            try:
+                rel_path = str(document_path.relative_to(md_dir))
+                if rel_path in mapping_data:
+                    tables = mapping_data[rel_path].get("tables", [])
+                    if tables:
+                        document_metadata["source_table_id"] = tables[0]["source_table_id"]
+            except ValueError:
+                # Not in markdown dir, skip mapping
+                pass
+
         chunked_document = chunker.chunk_markdown(
             document_path.read_text(encoding="utf-8"),
             metadata=document_metadata,
@@ -236,12 +273,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--document", action="append", required=True)
     parser.add_argument("--metadata-json", required=True)
+    parser.add_argument("--mapping-json", help="Path to table mapping file")
+    parser.add_argument("--output-json", help="Path to save chunks as JSON (skips Qdrant index if provided)")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--recreate", action="store_true")
     args = parser.parse_args()
 
     document_paths = [Path(document) for document in args.document]
     metadata = json.loads(Path(args.metadata_json).read_text(encoding="utf-8"))
+    
+    mapping_data = None
+    if args.mapping_json:
+        mapping_data = json.loads(Path(args.mapping_json).read_text(encoding="utf-8"))
+    elif (PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns" / "table_mapping.json").exists():
+        # Auto-load if default mapping exists
+        mapping_path = PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns" / "table_mapping.json"
+        mapping_data = json.loads(mapping_path.read_text(encoding="utf-8"))
+        logger.info(f"Auto-loaded table mapping from {mapping_path}")
     chunking_kwargs = {
         "chunking_strategy": settings.RAG_CHUNKING_STRATEGY,
         "semantic_target_chars": settings.RAG_SEMANTIC_TARGET_CHARS,
@@ -259,6 +307,7 @@ def main() -> None:
             metadata=metadata,
             child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
             child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
+            mapping_data=mapping_data,
             **chunking_kwargs,
         )
         print(json.dumps(report, ensure_ascii=False))
@@ -276,8 +325,26 @@ def main() -> None:
         child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
         child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
         semantic_embedding_provider=embedding_provider,
+        mapping_data=mapping_data,
         **chunking_kwargs,
     )
+    if args.output_json:
+        output_path = Path(args.output_json)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Convert ChildChunk objects to serializable dicts
+        serializable_chunks = [
+            {
+                "id": c.chunk_id,
+                "parent_id": c.parent_section_id,
+                "text": c.text,
+                "payload": c.payload
+            }
+            for c in chunks
+        ]
+        output_path.write_text(json.dumps(serializable_chunks, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info(f"Saved {len(chunks)} chunks to {args.output_json}")
+        return
+
     retriever = QdrantRetriever(
         client=QdrantClient(url=settings.RAG_QDRANT_URL),
         collection_name=settings.RAG_QDRANT_COLLECTION,

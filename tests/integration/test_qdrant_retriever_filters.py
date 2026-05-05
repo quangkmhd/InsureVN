@@ -41,7 +41,7 @@ def _chunk_policy(
             "document_name": document_name,
             "product_line": "health",
             "plan_code": plan_code,
-            "source_path": f"data/processed/{document_id}.md",
+            "file_name": f"{document_id}.md",
             "source_table_id": f"documents:{document_id}",
             "effective_date": "2026-01-01",
         },

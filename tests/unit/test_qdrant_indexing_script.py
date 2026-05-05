@@ -68,7 +68,8 @@ def test_dry_run_report_counts_parent_sections_and_child_chunks(tmp_path) -> Non
     assert report["chunk_count"] == 2
     assert report["skipped_duplicate_count"] == 0
     assert report["readiness_result"] == "not_checked_dry_run"
-    assert report["documents"][0]["source_path"] == str(markdown_path)
+    assert report["documents"][0]["file_name"] == markdown_path.name
+    assert "source_path" not in report["documents"][0]
 
 
 def test_dry_run_report_counts_duplicate_chunks(tmp_path) -> None:
@@ -184,7 +185,8 @@ def test_build_chunks_passes_hybrid_semantic_configuration(
     assert captured["semantic_embedding_provider"] is semantic_embedding_provider
     assert captured["semantic_target_chars"] == 1400
     assert captured["table_chunk_chars"] == 3500
-    assert captured["metadata"]["source_path"] == str(markdown_path)
+    assert captured["metadata"]["file_name"] == markdown_path.name
+    assert "source_path" not in captured["metadata"]
 
 
 def test_build_sparse_embedding_provider_uses_langchain_fastembed(monkeypatch) -> None:

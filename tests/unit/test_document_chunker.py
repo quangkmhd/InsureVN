@@ -31,7 +31,7 @@ def _metadata() -> dict:
         "document_name": "AIA Health Policy",
         "product_line": "health",
         "plan_code": "gold",
-        "source_path": "data/processed/aia/health.md",
+        "file_name": "health.md",
         "source_table_id": "documents:1",
         "effective_date": "2026-01-01",
     }
@@ -60,7 +60,7 @@ Benh dac biet co thoi gian cho 90 ngay.
             "document_name": "AIA Health Policy",
             "product_line": "health",
             "plan_code": "gold",
-            "source_path": "data/processed/aia/health.md",
+            "file_name": "health.md",
             "source_table_id": "documents:1",
             "effective_date": "2026-01-01",
         },
@@ -79,6 +79,8 @@ Benh dac biet co thoi gian cho 90 ngay.
         document_chunks.parent_sections[0].section_id
     )
     assert document_chunks.child_chunks[0].payload["company_code"] == "AIA"
+    assert document_chunks.child_chunks[0].payload["file_name"] == "health.md"
+    assert "source_path" not in document_chunks.child_chunks[0].payload
     assert document_chunks.child_chunks[0].payload["section_type"] == (
         "bao_hiem_suc_khoe"
     )
@@ -99,7 +101,7 @@ def test_document_chunker_normalizes_unicode_to_nfc() -> None:
             "document_name": "Bao Viet",
             "product_line": "health",
             "plan_code": None,
-            "source_path": "data/processed/bv.md",
+            "file_name": "bv.md",
             "source_table_id": "documents:2",
             "effective_date": None,
         },
@@ -121,7 +123,7 @@ def test_document_chunker_validates_required_payload_fields() -> None:
                 "document_name": "Missing Company",
                 "product_line": "health",
                 "plan_code": "standard",
-                "source_path": "data/processed/missing.md",
+                "file_name": "missing.md",
                 "source_table_id": "documents:3",
                 "effective_date": "2026-01-01",
             },
@@ -141,7 +143,7 @@ def test_document_chunker_adds_production_payload_lineage_fields() -> None:
         "document_name": "AIA Health Policy",
         "product_line": "health",
         "plan_code": "gold",
-        "source_path": "data/processed/aia/health.md",
+        "file_name": "health.md",
         "source_table_id": "documents:1",
         "effective_date": "2026-01-01",
         "ingestion_version": "rag-2026-05-05",

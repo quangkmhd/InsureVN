@@ -3,6 +3,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from hashlib import sha256
+from pathlib import Path
 from typing import Any, Literal
 
 from langchain_core.embeddings import Embeddings
@@ -30,7 +31,7 @@ REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "page_number",
     "chunk_index",
     "parent_section_id",
-    "source_path",
+    "file_name",
     "source_table_id",
     "effective_date",
     "content_hash",
@@ -514,7 +515,7 @@ class DocumentChunker:
         child_text: str,
         chunk_index: int,
     ) -> dict[str, Any]:
-        metadata = dict(parent_section.metadata)
+        metadata = _qdrant_payload_metadata(parent_section.metadata)
         page_number = metadata.get("page_number", metadata.get("page", 1))
         ingestion_version = metadata.get("ingestion_version", "unversioned")
         content_hash = sha256(
@@ -542,3 +543,11 @@ class DocumentChunker:
         ascii_value = normalized_value.encode("ascii", "ignore").decode("ascii")
         slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_value.lower()).strip("-")
         return slug or "section"
+
+
+def _qdrant_payload_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    payload_metadata = dict(metadata)
+    source_path = payload_metadata.pop("source_path", None)
+    if "file_name" not in payload_metadata and source_path:
+        payload_metadata["file_name"] = Path(str(source_path)).name
+    return payload_metadata

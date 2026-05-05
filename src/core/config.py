@@ -41,9 +41,7 @@ class Settings:
         self.LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "http://localhost:11434")
 
         # Database Agent Specific
-        self.DATABASE_LLM_PROVIDER: str = os.getenv(
-            "DATABASE_LLM_PROVIDER", "ollama"
-        )
+        self.DATABASE_LLM_PROVIDER: str = os.getenv("DATABASE_LLM_PROVIDER", "ollama")
         self.DATABASE_LLM_MODEL: str = os.getenv(
             "DATABASE_LLM_MODEL", "gemma4:31b-cloud"
         )
@@ -76,13 +74,24 @@ class Settings:
 
         # RAG/Qdrant Document Retrieval
         self.RAG_QDRANT_URL: str = os.getenv("RAG_QDRANT_URL", "http://localhost:6333")
+        self.RAG_QDRANT_API_KEY: str = os.getenv("RAG_QDRANT_API_KEY", "")
         self.RAG_QDRANT_COLLECTION: str = os.getenv(
             "RAG_QDRANT_COLLECTION", "insurevn_policy_chunks"
         )
+        self.RAG_DENSE_VECTOR_NAME: str = os.getenv(
+            "RAG_DENSE_VECTOR_NAME", "text_dense"
+        )
+        self.RAG_SPARSE_VECTOR_NAME: str = os.getenv(
+            "RAG_SPARSE_VECTOR_NAME", "text_sparse"
+        )
+        self.RAG_EMBEDDING_PROVIDER: str = os.getenv(
+            "RAG_EMBEDDING_PROVIDER", "google_genai"
+        )
         self.GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
         self.RAG_EMBEDDING_MODEL: str = os.getenv(
-            "RAG_EMBEDDING_MODEL", "hashing-local"
+            "RAG_EMBEDDING_MODEL", "gemini-embedding-2-preview"
         )
+        self.RAG_SPARSE_MODEL: str = os.getenv("RAG_SPARSE_MODEL", "Qdrant/bm25")
         self.RAG_VIETNAMESE_SEGMENTER: str = os.getenv(
             "RAG_VIETNAMESE_SEGMENTER", "underthesea"
         )
@@ -96,11 +105,21 @@ class Settings:
             os.getenv("RAG_PARENT_SECTION_MAX_CHARS", "6000")
         )
         self.RAG_RETRIEVAL_TOP_K: int = int(os.getenv("RAG_RETRIEVAL_TOP_K", "5"))
+        self.RAG_RETRIEVAL_TIMEOUT_SECONDS: float = float(
+            os.getenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "30.0")
+        )
+        self.RAG_REQUIRE_HYBRID_SEARCH: bool = _env_bool(
+            "RAG_REQUIRE_HYBRID_SEARCH", default=True
+        )
         self.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE: bool = _env_bool(
             "RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", default=False
         )
 
         # Knowledge Graph
+        self.NEO4J_URI: str = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        self.NEO4J_USERNAME: str = os.getenv("NEO4J_USERNAME", "neo4j")
+        self.NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "")
+        self.NEO4J_DATABASE: str = os.getenv("NEO4J_DATABASE", "neo4j")
         self.GRAPH_JSON_PATH: str = os.getenv(
             "GRAPH_JSON_PATH",
             "data/processed/knowledge_graph/insurevn_graph.json",
@@ -108,6 +127,12 @@ class Settings:
         self.GRAPH_MAX_HOPS: int = int(os.getenv("GRAPH_MAX_HOPS", "2"))
         self.GRAPH_RELOAD_ON_STARTUP: bool = _env_bool(
             "GRAPH_RELOAD_ON_STARTUP", default=True
+        )
+        self.GRAPH_EAGER_K: int = int(os.getenv("GRAPH_EAGER_K", "5"))
+        self.GRAPH_EAGER_START_K: int = int(os.getenv("GRAPH_EAGER_START_K", "1"))
+        self.GRAPH_EAGER_MAX_DEPTH: int = int(os.getenv("GRAPH_EAGER_MAX_DEPTH", "2"))
+        self.GRAPH_MIN_CONFIDENCE: float = float(
+            os.getenv("GRAPH_MIN_CONFIDENCE", "0.75")
         )
 
     @property

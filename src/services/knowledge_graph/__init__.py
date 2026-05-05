@@ -7,7 +7,7 @@ from src.services.knowledge_graph.document_extractor import (
 )
 from src.services.knowledge_graph.evidence_adapter import GraphEvidenceAdapter
 from src.services.knowledge_graph.quality import GraphQualityValidator
-from src.services.knowledge_graph.retriever import GraphRetriever
+from src.services.knowledge_graph.retriever import NetworkxGraphPathRetriever
 from src.services.knowledge_graph.serializer import GraphJsonSerializer
 
 __all__ = [
@@ -16,6 +16,6 @@ __all__ = [
     "GraphEvidenceAdapter",
     "GraphJsonSerializer",
     "GraphQualityValidator",
-    "GraphRetriever",
     "KnowledgeGraphBuilder",
+    "NetworkxGraphPathRetriever",
 ]

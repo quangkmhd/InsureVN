@@ -7,30 +7,15 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
-ALLOWED_NODE_TYPES = {
-    "Company",
-    "Document",
-    "Plan",
-    "Benefit",
-    "Exclusion",
-    "WaitingPeriod",
-    "Condition",
-    "Hospital",
-    "GlossaryTerm",
-    "ClaimEvent",
-    "Section",
-    "Chunk",
-}
-ALLOWED_RELATIONSHIP_TYPES = {
-    "DOCUMENT_DEFINES",
-    "OFFERS",
-    "INCLUDES",
-    "EXCLUDES",
-    "APPLIES_TO",
-    "HAS_WAITING_PERIOD",
-    "USES_NETWORK",
-    "MENTIONED_IN",
-}
+from src.services.knowledge_graph.schema import (
+    ALLOWED_NODE_LABELS,
+)
+from src.services.knowledge_graph.schema import (
+    ALLOWED_RELATIONSHIP_TYPES as SCHEMA_ALLOWED_RELATIONSHIP_TYPES,
+)
+
+ALLOWED_NODE_TYPES = ALLOWED_NODE_LABELS
+ALLOWED_RELATIONSHIP_TYPES = SCHEMA_ALLOWED_RELATIONSHIP_TYPES
 
 
 @dataclass(frozen=True)

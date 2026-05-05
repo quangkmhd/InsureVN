@@ -1,3 +1,4 @@
+import inspect
 import logging
 
 from qdrant_client import QdrantClient
@@ -78,6 +79,23 @@ def _build_retriever() -> QdrantRetriever:
     return retriever
 
 
+def test_retriever_sets_up_named_dense_and_sparse_vectors() -> None:
+    retriever = QdrantRetriever(
+        client=QdrantClient(":memory:"),
+        collection_name="named_vector_chunks",
+        embedding_provider=HashingEmbeddingProvider(vector_size=32),
+        keyword_enabled=True,
+        dense_vector_name="text_dense",
+        sparse_vector_name="text_sparse",
+    )
+
+    retriever.setup_collection(recreate=True)
+
+    collection_info = retriever.client.get_collection("named_vector_chunks")
+    assert "text_dense" in collection_info.config.params.vectors
+    assert "text_sparse" in collection_info.config.params.sparse_vectors
+
+
 def test_retrieve_applies_company_hard_filter_and_returns_parent_evidence() -> None:
     retriever = _build_retriever()
 
@@ -97,6 +115,8 @@ def test_retrieve_applies_company_hard_filter_and_returns_parent_evidence() -> N
         "Goi Gold co thoi gian cho 90 ngay" in item.content for item in evidence_items
     )
     assert all(item.metadata["parent_section_id"] for item in evidence_items)
+    assert all(item.metadata["retrieval_mode"] == "hybrid" for item in evidence_items)
+    assert all("fusion_score" in item.metadata for item in evidence_items)
 
 
 def test_keyword_pillar_finds_exact_policy_terms_when_dense_signal_is_weak() -> None:
@@ -190,65 +210,25 @@ def test_allowed_vector_degraded_mode_logs_warning(caplog) -> None:
     )
 
 
-def test_keyword_search_paginates_all_qdrant_scroll_results() -> None:
-    first_payload = {
-        "company_code": "AIA",
-        "document_id": "first-page",
-        "document_type": "policy",
-        "document_name": "First Page",
-        "product_line": "health",
-        "plan_code": "gold",
-        "section_type": "benefit",
-        "page_number": 1,
-        "chunk_index": 0,
-        "source_path": "data/processed/first.md",
-        "source_table_id": "documents:first",
-        "effective_date": "2026-01-01",
-        "chunk_id": "first-page:benefit:0",
-        "parent_section_id": "first-page:benefit",
-        "parent_text": "Generic policy wording without the exact token.",
-    }
-    second_payload = {
-        **first_payload,
-        "document_id": "second-page",
-        "document_name": "Second Page",
-        "source_path": "data/processed/second.md",
-        "source_table_id": "documents:second",
-        "chunk_id": "second-page:benefit:0",
-        "parent_section_id": "second-page:benefit",
-        "parent_text": "The exact needleterm is only present on the second page.",
-    }
-
-    class _Point:
-        def __init__(self, payload):
-            self.payload = payload
-
-    class _PagedClient:
-        def __init__(self) -> None:
-            self.offsets = []
-
-        def scroll(self, **kwargs):
-            self.offsets.append(kwargs.get("offset"))
-            if kwargs.get("offset") is None:
-                return [_Point(first_payload)], "next-page"
-            return [_Point(second_payload)], None
-
-    client = _PagedClient()
-    retriever = QdrantRetriever(
-        client=client,
-        collection_name="paged",
-        embedding_provider=HashingEmbeddingProvider(vector_size=32),
-        keyword_enabled=True,
-    )
+def test_keyword_search_uses_langchain_sparse_vector_store() -> None:
+    retriever = _build_retriever()
 
     evidence_items = retriever.retrieve(
         RetrievalPlan(
-            search_queries=["needleterm"],
+            search_queries=["Avastin"],
             mode=RetrievalMode.BM25,
+            filters=HardFilters(company_codes=["AIA"]),
             top_k=1,
         )
     )
 
-    assert client.offsets == [None, "next-page"]
     assert len(evidence_items) == 1
-    assert evidence_items[0].metadata["document_id"] == "second-page"
+    assert evidence_items[0].metadata["document_id"] == "aia-health"
+
+
+def test_retriever_delegates_qdrant_search_to_langchain_vector_store() -> None:
+    source = inspect.getsource(QdrantRetriever)
+
+    assert ".query_points(" not in source
+    assert ".scroll(" not in source
+    assert "_bm25_rank" not in source

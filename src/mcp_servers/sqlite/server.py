@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from functools import wraps
@@ -132,8 +133,6 @@ def mcp_observe(name: str):
                 )
 
                 # IMPORTANT: Return JSON string instead of raising.
-                import json
-
                 return json.dumps(error_payload, ensure_ascii=False)
 
             size = _result_size(result)

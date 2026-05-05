@@ -32,7 +32,7 @@ class GraphPath:
     latency_ms: float
 
 
-class GraphRetriever:
+class NetworkxGraphPathRetriever:
     """Retrieve N-hop relationship paths from a NetworkX graph."""
 
     def __init__(self, graph: nx.DiGraph) -> None:

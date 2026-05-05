@@ -3,19 +3,26 @@
 from __future__ import annotations
 
 import hashlib
-import math
 import re
 import time
 import unicodedata
-from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_qdrant import FastEmbedSparse, SparseEmbeddings
+from langchain_qdrant import RetrievalMode as LangChainQdrantRetrievalMode
 from qdrant_client import QdrantClient, models
 
 from src.core.logger import get_logger
 from src.models.evidence import Evidence, HardFilters, RetrievalMode, RetrievalPlan
 from src.services.document_chunker import ChildChunk
+from src.services.langchain_qdrant_adapter import LangChainQdrantAdapter
+from src.services.qdrant_collection_manager import (
+    QdrantCollectionConfig,
+    QdrantCollectionManager,
+)
 from src.services.qdrant_evidence_adapter import QdrantEvidenceAdapter
 
 logger = get_logger("qdrant_retriever")
@@ -25,7 +32,7 @@ class RetrievalReadinessError(RuntimeError):
     """Raised when retriever configuration is not production-ready."""
 
 
-class EmbeddingProvider(Protocol):
+class EmbeddingProvider(Embeddings):
     """Protocol for dense query and document embeddings."""
 
     vector_size: int
@@ -35,10 +42,18 @@ class EmbeddingProvider(Protocol):
 
 
 @dataclass(frozen=True)
-class HashingEmbeddingProvider:
+class HashingEmbeddingProvider(EmbeddingProvider):
     """Deterministic token-hashing embedding provider for local tests."""
 
     vector_size: int = 384
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed documents into dense vectors."""
+        return [self.embed(text) for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        """Embed query text into a dense vector."""
+        return self.embed(text)
 
     def embed(self, text: str) -> list[float]:
         """Embed text with normalized token hashes.
@@ -52,7 +67,7 @@ class HashingEmbeddingProvider:
             index = int(digest, 16) % self.vector_size
             vector[index] += 1.0
 
-        norm = math.sqrt(sum(value * value for value in vector))
+        norm = sum(value * value for value in vector) ** 0.5
         if norm == 0:
             return vector
         return [value / norm for value in vector]
@@ -74,8 +89,12 @@ class QdrantRetriever:
         client: QdrantClient,
         collection_name: str,
         embedding_provider: EmbeddingProvider,
+        sparse_embedding_provider: SparseEmbeddings | None = None,
+        sparse_model_name: str = "Qdrant/bm25",
         keyword_enabled: bool = True,
         allow_dense_only_degraded_mode: bool = False,
+        dense_vector_name: str = "text_dense",
+        sparse_vector_name: str = "text_sparse",
     ) -> None:
         """Initialize the retriever.
 
@@ -83,15 +102,29 @@ class QdrantRetriever:
             client: Qdrant client. Tests can use `QdrantClient(":memory:")`.
             collection_name: Qdrant collection containing child chunks.
             embedding_provider: Provider used for query and chunk vectors.
+            sparse_embedding_provider: Provider used for LangChain sparse retrieval.
+            sparse_model_name: FastEmbed sparse model used when no provider is passed.
             keyword_enabled: Whether the BM25-style keyword pillar is enabled.
             allow_dense_only_degraded_mode: Allows local dense-only retrieval, but
                 `assert_production_ready()` still rejects it.
+            dense_vector_name: Qdrant named dense vector used for semantic search.
+            sparse_vector_name: Qdrant named sparse vector reserved for hybrid search.
         """
         self.client = client
         self.collection_name = collection_name
         self.embedding_provider = embedding_provider
+        self.sparse_embedding_provider = sparse_embedding_provider or FastEmbedSparse(
+            model_name=sparse_model_name
+        )
         self.keyword_enabled = keyword_enabled
         self.allow_dense_only_degraded_mode = allow_dense_only_degraded_mode
+        self.dense_vector_name = dense_vector_name
+        self.sparse_vector_name = sparse_vector_name
+        self._langchain_qdrant_adapter = LangChainQdrantAdapter(
+            collection_name=collection_name,
+            dense_vector_name=dense_vector_name,
+            sparse_vector_name=sparse_vector_name,
+        )
 
         if not keyword_enabled and not allow_dense_only_degraded_mode:
             raise RetrievalReadinessError(
@@ -101,45 +134,45 @@ class QdrantRetriever:
 
     def setup_collection(self, *, recreate: bool = False) -> None:
         """Create the Qdrant collection when it does not exist."""
-        if recreate and self._collection_exists():
-            self.client.delete_collection(self.collection_name)
-
-        if self._collection_exists():
-            return
-
-        self.client.create_collection(
-            collection_name=self.collection_name,
-            vectors_config=models.VectorParams(
-                size=self.embedding_provider.vector_size,
-                distance=models.Distance.COSINE,
+        manager = QdrantCollectionManager(
+            client=self.client,
+            config=QdrantCollectionConfig(
+                collection_name=self.collection_name,
+                dense_vector_name=self.dense_vector_name,
+                sparse_vector_name=self.sparse_vector_name,
+                dense_vector_size=self.embedding_provider.vector_size,
             ),
         )
+        manager.ensure_collection(recreate=recreate)
 
     def index_chunks(self, chunks: list[ChildChunk]) -> None:
-        """Index child chunks with dense vectors and citation payloads."""
-        points = []
+        """Index child chunks with LangChain's Qdrant vector store."""
+        if not chunks:
+            return
+
+        documents = []
+        ids = []
         for chunk in chunks:
             payload = dict(chunk.payload)
             payload["chunk_id"] = chunk.chunk_id
             payload["parent_section_id"] = chunk.parent_section_id
-            points.append(
-                models.PointStruct(
-                    id=_point_id(chunk.chunk_id),
-                    vector=self.embedding_provider.embed(chunk.text),
-                    payload=payload,
+            documents.append(
+                Document(
+                    page_content=normalize_vietnamese_text(chunk.text),
+                    metadata=payload,
                 )
             )
+            ids.append(_point_id(chunk.chunk_id))
 
-        if not points:
-            return
-
-        self.client.upsert(collection_name=self.collection_name, points=points)
+        self._create_vector_store(
+            LangChainQdrantRetrievalMode.HYBRID,
+        ).add_documents(documents, ids=ids)
         logger.info(
             "Indexed Qdrant chunks",
             extra={
                 "component": "qdrant_indexer",
                 "collection_name": self.collection_name,
-                "chunk_count": len(points),
+                "chunk_count": len(documents),
             },
         )
 
@@ -168,33 +201,22 @@ class QdrantRetriever:
         query_filter = self._build_filter(retrieval_plan.filters)
         top_k = retrieval_plan.top_k
 
-        dense_results: list[_ScoredPayload] = []
-        keyword_results: list[_ScoredPayload] = []
-
-        if retrieval_plan.mode in {RetrievalMode.VECTOR, RetrievalMode.HYBRID}:
-            dense_results = self._dense_search(query_text, query_filter, top_k)
-
-        if retrieval_plan.mode in {RetrievalMode.BM25, RetrievalMode.HYBRID}:
-            if self.keyword_enabled:
-                keyword_results = self._keyword_search(query_text, query_filter, top_k)
-            else:
-                logger.warning(
-                    "Dense-only degraded retrieval",
-                    extra={
-                        "component": "qdrant_retriever",
-                        "collection_name": self.collection_name,
-                        "retrieval_degraded": True,
-                    },
-                )
-
-        ranked_results = _reciprocal_rank_fusion(
-            [dense_results, keyword_results],
+        ranked_results = self._langchain_search(
+            mode=retrieval_plan.mode,
+            query_text=query_text,
+            query_filter=query_filter,
             top_k=top_k,
         )
         evidence_items = [
             QdrantEvidenceAdapter.from_payload(
                 point_id=result.payload.get("chunk_id", result.point_id),
-                payload=result.payload,
+                payload={
+                    **result.payload,
+                    "retrieval_mode": retrieval_plan.mode.value,
+                    "fusion_score": result.score,
+                    "dense_score": result.payload.get("dense_score", result.score),
+                    "sparse_score": result.payload.get("sparse_score", result.score),
+                },
                 score=result.score,
             )
             for result in ranked_results
@@ -224,61 +246,60 @@ class QdrantRetriever:
                 "keyword retrieval is disabled; dense-only mode is degraded"
             )
 
-    def _dense_search(
+    def _langchain_search(
         self,
+        *,
+        mode: RetrievalMode,
         query_text: str,
         query_filter: models.Filter | None,
         top_k: int,
     ) -> list[_ScoredPayload]:
-        query_vector = self.embedding_provider.embed(query_text)
-        response = self.client.query_points(
-            collection_name=self.collection_name,
-            query=query_vector,
-            query_filter=query_filter,
-            limit=top_k,
-            with_payload=True,
+        vector_store = self._create_vector_store(_to_langchain_retrieval_mode(mode))
+        scored_documents = vector_store.similarity_search_with_score(
+            normalize_vietnamese_text(query_text),
+            k=top_k,
+            filter=query_filter,
         )
         return [
             _ScoredPayload(
-                point_id=str(point.id),
-                payload=dict(point.payload or {}),
-                score=max(0.0, min(float(point.score), 1.0)),
+                point_id=str(document.metadata.get("chunk_id", index)),
+                payload={
+                    **document.metadata,
+                    "text": document.metadata.get("text", document.page_content),
+                },
+                score=max(0.0, min(float(score), 1.0)),
             )
-            for point in response.points
-            if point.payload is not None
+            for index, (document, score) in enumerate(scored_documents)
         ]
 
-    def _keyword_search(
+    def _create_vector_store(
         self,
-        query_text: str,
-        query_filter: models.Filter | None,
-        top_k: int,
-    ) -> list[_ScoredPayload]:
-        records = []
-        next_offset = None
-        while True:
-            page_records, next_offset = self.client.scroll(
-                collection_name=self.collection_name,
-                scroll_filter=query_filter,
-                limit=10_000,
-                offset=next_offset,
-                with_payload=True,
-                with_vectors=False,
-            )
-            records.extend(page_records)
-            if next_offset is None:
-                break
-
-        payloads = [dict(record.payload or {}) for record in records if record.payload]
-        scored_payloads = _bm25_rank(query_text, payloads)
-        return [
-            _ScoredPayload(
-                point_id=str(_point_id(str(payload.get("chunk_id", index)))),
-                payload=payload,
-                score=score,
-            )
-            for index, (payload, score) in enumerate(scored_payloads[:top_k])
-        ]
+        retrieval_mode: LangChainQdrantRetrievalMode,
+    ) -> Any:
+        dense_embeddings = (
+            self.embedding_provider
+            if retrieval_mode
+            in {
+                LangChainQdrantRetrievalMode.DENSE,
+                LangChainQdrantRetrievalMode.HYBRID,
+            }
+            else None
+        )
+        sparse_embeddings = (
+            self.sparse_embedding_provider
+            if retrieval_mode
+            in {
+                LangChainQdrantRetrievalMode.SPARSE,
+                LangChainQdrantRetrievalMode.HYBRID,
+            }
+            else None
+        )
+        return self._langchain_qdrant_adapter.create_vector_store(
+            client=self.client,
+            embeddings=dense_embeddings,
+            sparse_embeddings=sparse_embeddings,
+            retrieval_mode=retrieval_mode,
+        )
 
     def _build_filter(self, filters: HardFilters | None) -> models.Filter | None:
         if filters is None:
@@ -321,13 +342,14 @@ def _tokenize(text: str) -> list[str]:
 
 
 def _field_condition(key: str, values: list[str]) -> models.FieldCondition:
+    metadata_key = f"metadata.{key}"
     if len(values) == 1:
         return models.FieldCondition(
-            key=key,
+            key=metadata_key,
             match=models.MatchValue(value=values[0]),
         )
     return models.FieldCondition(
-        key=key,
+        key=metadata_key,
         match=models.MatchAny(any=values),
     )
 
@@ -337,71 +359,11 @@ def _point_id(chunk_id: str) -> int:
     return int(digest[:15], 16)
 
 
-def _bm25_rank(
-    query_text: str,
-    payloads: list[dict[str, Any]],
-) -> list[tuple[dict[str, Any], float]]:
-    query_terms = _tokenize(query_text)
-    if not query_terms:
-        return []
-
-    documents = [
-        _tokenize(str(payload.get("parent_text") or payload.get("text") or ""))
-        for payload in payloads
-    ]
-    document_count = len(documents)
-    if document_count == 0:
-        return []
-
-    average_length = sum(len(document) for document in documents) / document_count
-    document_frequency = Counter(
-        term for term in set(query_terms) for document in documents if term in document
-    )
-
-    scored: list[tuple[dict[str, Any], float]] = []
-    for payload, document_terms in zip(payloads, documents, strict=True):
-        term_counts = Counter(document_terms)
-        score = 0.0
-        for term in query_terms:
-            if term_counts[term] == 0:
-                continue
-            idf = math.log(
-                1
-                + (
-                    (document_count - document_frequency[term] + 0.5)
-                    / (document_frequency[term] + 0.5)
-                )
-            )
-            denominator = term_counts[term] + 1.5 * (
-                1 - 0.75 + 0.75 * (len(document_terms) / average_length)
-            )
-            score += idf * ((term_counts[term] * 2.5) / denominator)
-        if score > 0:
-            scored.append((payload, min(score, 1.0)))
-
-    return sorted(scored, key=lambda item: item[1], reverse=True)
-
-
-def _reciprocal_rank_fusion(
-    ranked_lists: list[list[_ScoredPayload]],
-    *,
-    top_k: int,
-) -> list[_ScoredPayload]:
-    fused_scores: dict[str, float] = {}
-    payloads_by_key: dict[str, _ScoredPayload] = {}
-
-    for ranked_list in ranked_lists:
-        for rank, result in enumerate(ranked_list, start=1):
-            key = str(result.payload.get("chunk_id", result.point_id))
-            fused_scores[key] = fused_scores.get(key, 0.0) + (1.0 / (60 + rank))
-            payloads_by_key[key] = result
-
-    sorted_keys = sorted(fused_scores, key=fused_scores.get, reverse=True)
-    return [
-        _ScoredPayload(
-            point_id=payloads_by_key[key].point_id,
-            payload=payloads_by_key[key].payload,
-            score=min(fused_scores[key] * 10, 1.0),
-        )
-        for key in sorted_keys[:top_k]
-    ]
+def _to_langchain_retrieval_mode(
+    mode: RetrievalMode,
+) -> LangChainQdrantRetrievalMode:
+    if mode == RetrievalMode.VECTOR:
+        return LangChainQdrantRetrievalMode.DENSE
+    if mode == RetrievalMode.BM25:
+        return LangChainQdrantRetrievalMode.SPARSE
+    return LangChainQdrantRetrievalMode.HYBRID

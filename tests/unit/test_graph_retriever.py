@@ -7,7 +7,7 @@ from src.models.evidence import SourceType
 from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
 from src.services.knowledge_graph.document_extractor import GraphDocument
 from src.services.knowledge_graph.evidence_adapter import GraphEvidenceAdapter
-from src.services.knowledge_graph.retriever import GraphRetriever
+from src.services.knowledge_graph.retriever import NetworkxGraphPathRetriever
 from src.services.knowledge_graph.serializer import GraphJsonSerializer
 
 
@@ -36,7 +36,7 @@ def test_retriever_returns_n_hop_relationship_paths() -> None:
     """Traverse plan exclusion and condition paths within max hops."""
     graph = _build_fixture_graph()
 
-    paths = GraphRetriever(graph).retrieve(
+    paths = NetworkxGraphPathRetriever(graph).retrieve(
         start_entities=["plan:AIA:gold"],
         relation_types=["EXCLUDES", "APPLIES_TO"],
         max_hops=2,
@@ -57,7 +57,7 @@ def test_retriever_returns_direct_and_multi_hop_paths_within_limit() -> None:
     """Return all matching paths up to max_hops, not only terminal paths."""
     graph = _build_fixture_graph()
 
-    paths = GraphRetriever(graph).retrieve(
+    paths = NetworkxGraphPathRetriever(graph).retrieve(
         start_entities=["plan:AIA:gold"],
         relation_types=["EXCLUDES", "APPLIES_TO"],
         max_hops=2,
@@ -80,10 +80,10 @@ def test_json_reload_preserves_traversal_results(tmp_path: Path) -> None:
     GraphJsonSerializer().save(graph, graph_path)
     loaded_graph = GraphJsonSerializer().load(graph_path)
 
-    original_paths = GraphRetriever(graph).retrieve(
+    original_paths = NetworkxGraphPathRetriever(graph).retrieve(
         ["plan:AIA:gold"], ["EXCLUDES", "APPLIES_TO"], max_hops=2
     )
-    loaded_paths = GraphRetriever(loaded_graph).retrieve(
+    loaded_paths = NetworkxGraphPathRetriever(loaded_graph).retrieve(
         ["plan:AIA:gold"], ["EXCLUDES", "APPLIES_TO"], max_hops=2
     )
     assert [path.node_ids for path in loaded_paths] == [
@@ -94,7 +94,9 @@ def test_json_reload_preserves_traversal_results(tmp_path: Path) -> None:
 def test_graph_evidence_adapter_returns_graph_triple_evidence() -> None:
     """Convert traversal paths into shared Evidence records."""
     graph = _build_fixture_graph()
-    paths = GraphRetriever(graph).retrieve(["plan:AIA:gold"], ["EXCLUDES"], max_hops=1)
+    paths = NetworkxGraphPathRetriever(graph).retrieve(
+        ["plan:AIA:gold"], ["EXCLUDES"], max_hops=1
+    )
 
     evidence = GraphEvidenceAdapter().to_evidence(paths)
 
@@ -116,7 +118,7 @@ def test_retriever_logs_required_query_metadata(caplog) -> None:
     graph = _build_fixture_graph()
 
     with caplog.at_level(logging.INFO):
-        GraphRetriever(graph).retrieve(
+        NetworkxGraphPathRetriever(graph).retrieve(
             ["plan:AIA:gold"], ["EXCLUDES", "APPLIES_TO"], max_hops=2
         )
 

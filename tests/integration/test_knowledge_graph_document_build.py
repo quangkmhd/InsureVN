@@ -8,7 +8,7 @@ from pathlib import Path
 from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
 from src.services.knowledge_graph.document_extractor import GraphDocument
 from src.services.knowledge_graph.quality import GraphQualityValidator
-from src.services.knowledge_graph.retriever import GraphRetriever
+from src.services.knowledge_graph.retriever import NetworkxGraphPathRetriever
 
 
 def test_document_build_fixture_produces_quality_graph_under_latency_budget(
@@ -70,7 +70,7 @@ def test_document_build_fixture_produces_quality_graph_under_latency_budget(
         document_counts={"aia_health_2026": 1},
         chunk_counts={"aia_health_2026": 1},
     )
-    paths = GraphRetriever(graph).retrieve(
+    paths = NetworkxGraphPathRetriever(graph).retrieve(
         ["plan:AIA:gold"], ["EXCLUDES", "APPLIES_TO"], max_hops=2
     )
 

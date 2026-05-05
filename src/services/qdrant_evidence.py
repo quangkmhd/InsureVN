@@ -43,8 +43,8 @@ class QdrantEvidenceMapper:
 
     @staticmethod
     @service_observe(
-        name="service.qdrant_evidence_adapter.validate_payload",
-        component="qdrant_evidence_adapter",
+        name="service.qdrant_evidence.validate_payload",
+        component="qdrant_evidence",
     )
     def validate_payload(payload: dict[str, Any]) -> None:
         """Validate required Qdrant evidence citation fields."""

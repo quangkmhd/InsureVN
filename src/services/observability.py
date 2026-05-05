@@ -6,6 +6,7 @@ import inspect
 import logging
 import time
 from collections.abc import Callable
+from contextvars import ContextVar
 from functools import wraps
 from typing import Any, ParamSpec, TypeVar
 
@@ -15,6 +16,20 @@ from src.core.logger import get_logger
 
 P = ParamSpec("P")
 R = TypeVar("R")
+_SERVICE_METADATA_CONTEXT: ContextVar[dict[str, Any] | None] = ContextVar(
+    "service_metadata_context",
+    default=None,
+)
+
+
+def add_current_service_metadata(metadata: dict[str, Any]) -> None:
+    """Attach sanitized metadata to the active service observation."""
+    current_metadata = _SERVICE_METADATA_CONTEXT.get()
+    if current_metadata is None:
+        _update_current_span(metadata=metadata)
+        return
+
+    current_metadata.update(metadata)
 
 
 def service_observe(
@@ -39,15 +54,16 @@ def service_observe(
             @wraps(func)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 started_at = time.perf_counter()
-                _debug_started(
-                    service_logger=service_logger,
-                    name=name,
-                    component=component,
-                    func=func,
-                    args=args,
-                    kwargs=kwargs,
-                )
+                metadata_token = _SERVICE_METADATA_CONTEXT.set({})
                 try:
+                    _debug_started(
+                        service_logger=service_logger,
+                        name=name,
+                        component=component,
+                        func=func,
+                        args=args,
+                        kwargs=kwargs,
+                    )
                     result = await func(*args, **kwargs)
                 except Exception as exc:
                     _debug_failed(
@@ -57,18 +73,22 @@ def service_observe(
                         func=func,
                         started_at=started_at,
                         exc=exc,
+                        extra_metadata=_SERVICE_METADATA_CONTEXT.get() or {},
                     )
                     raise
-
-                _debug_completed(
-                    service_logger=service_logger,
-                    name=name,
-                    component=component,
-                    func=func,
-                    started_at=started_at,
-                    result=result,
-                )
-                return result
+                else:
+                    _debug_completed(
+                        service_logger=service_logger,
+                        name=name,
+                        component=component,
+                        func=func,
+                        started_at=started_at,
+                        result=result,
+                        extra_metadata=_SERVICE_METADATA_CONTEXT.get() or {},
+                    )
+                    return result
+                finally:
+                    _SERVICE_METADATA_CONTEXT.reset(metadata_token)
 
             return observe(
                 name=name,
@@ -80,15 +100,16 @@ def service_observe(
         @wraps(func)
         def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             started_at = time.perf_counter()
-            _debug_started(
-                service_logger=service_logger,
-                name=name,
-                component=component,
-                func=func,
-                args=args,
-                kwargs=kwargs,
-            )
+            metadata_token = _SERVICE_METADATA_CONTEXT.set({})
             try:
+                _debug_started(
+                    service_logger=service_logger,
+                    name=name,
+                    component=component,
+                    func=func,
+                    args=args,
+                    kwargs=kwargs,
+                )
                 result = func(*args, **kwargs)
             except Exception as exc:
                 _debug_failed(
@@ -98,18 +119,23 @@ def service_observe(
                     func=func,
                     started_at=started_at,
                     exc=exc,
+                    extra_metadata=_SERVICE_METADATA_CONTEXT.get() or {},
                 )
                 raise
 
-            _debug_completed(
-                service_logger=service_logger,
-                name=name,
-                component=component,
-                func=func,
-                started_at=started_at,
-                result=result,
-            )
-            return result
+            else:
+                _debug_completed(
+                    service_logger=service_logger,
+                    name=name,
+                    component=component,
+                    func=func,
+                    started_at=started_at,
+                    result=result,
+                    extra_metadata=_SERVICE_METADATA_CONTEXT.get() or {},
+                )
+                return result
+            finally:
+                _SERVICE_METADATA_CONTEXT.reset(metadata_token)
 
         return observe(
             name=name,
@@ -154,6 +180,7 @@ def _debug_completed(
     func: Callable[..., Any],
     started_at: float,
     result: Any,
+    extra_metadata: dict[str, Any],
 ) -> None:
     duration_ms = round((time.perf_counter() - started_at) * 1000, 3)
     output_summary = _summarize_value(result)
@@ -161,6 +188,7 @@ def _debug_completed(
         output=output_summary,
         metadata={
             **_metadata(component=component, name=name, func=func),
+            **extra_metadata,
             "duration_ms": duration_ms,
         },
     )
@@ -184,11 +212,13 @@ def _debug_failed(
     func: Callable[..., Any],
     started_at: float,
     exc: Exception,
+    extra_metadata: dict[str, Any],
 ) -> None:
     duration_ms = round((time.perf_counter() - started_at) * 1000, 3)
     _update_current_span(
         metadata={
             **_metadata(component=component, name=name, func=func),
+            **extra_metadata,
             "duration_ms": duration_ms,
             "error_type": type(exc).__name__,
         },

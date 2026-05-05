@@ -15,7 +15,7 @@ def test_qdrant_evidence_mapper_preserves_required_citations() -> None:
         "section_type": "waiting_period",
         "page_number": 12,
         "chunk_index": 3,
-        "source_path": "data/processed/aia/health.md",
+        "file_name": "health.md",
         "source_table_id": "documents:1",
         "effective_date": "2026-01-01",
         "parent_section_id": "doc-aia-health:waiting-period:0",
@@ -45,6 +45,7 @@ def test_qdrant_evidence_mapper_preserves_required_citations() -> None:
     assert evidence.metadata["dense_score"] == 0.71
     assert evidence.metadata["sparse_score"] == 0.94
     assert evidence.metadata["fusion_score"] == 0.87
+    assert evidence.metadata["file_name"] == "health.md"
 
 
 def test_qdrant_evidence_mapper_rejects_missing_required_payload_fields() -> None:
@@ -57,7 +58,7 @@ def test_qdrant_evidence_mapper_rejects_missing_required_payload_fields() -> Non
         "plan_code": "gold",
         "section_type": "waiting_period",
         "chunk_index": 3,
-        "source_path": "data/processed/aia/health.md",
+        "file_name": "missing.md",
         "source_table_id": "documents:1",
         "effective_date": "2026-01-01",
         "parent_section_id": "doc-aia-health:waiting-period:0",
@@ -85,7 +86,7 @@ def test_qdrant_evidence_mapper_requires_production_lineage_fields() -> None:
         "section_type": "waiting_period",
         "page_number": 12,
         "chunk_index": 3,
-        "source_path": "data/processed/aia/health.md",
+        "file_name": "health.md",
         "source_table_id": "documents:1",
         "effective_date": "2026-01-01",
         "parent_section_id": "doc-aia-health:waiting-period:0",

@@ -9,7 +9,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
-from src.services.observability import service_observe
+from src.services.observability import add_current_service_metadata, service_observe
 
 ChunkingStrategy = Literal["recursive", "hybrid_semantic"]
 SemanticBreakpointType = Literal[
@@ -65,6 +65,17 @@ class ChunkedDocument:
 
     parent_sections: list[ParentSection]
     child_chunks: list[ChildChunk]
+
+
+@dataclass
+class ChunkingMetrics:
+    """Aggregated telemetry for one document chunking operation."""
+
+    empty_section_count: int = 0
+    recursive_section_count: int = 0
+    semantic_section_count: int = 0
+    table_heavy_section_count: int = 0
+    fallback_chunk_count: int = 0
 
 
 class DocumentChunker:
@@ -159,11 +170,12 @@ class DocumentChunker:
         """
         normalized_text = unicodedata.normalize("NFC", markdown_text)
         parent_sections = self._parse_parent_sections(normalized_text, metadata)
+        chunking_metrics = ChunkingMetrics()
         child_chunks: list[ChildChunk] = []
 
         for parent_section in parent_sections:
             for chunk_index, child_text in enumerate(
-                self._split_text(parent_section.text)
+                self._split_text(parent_section.text, chunking_metrics)
             ):
                 payload = self._build_payload(
                     parent_section=parent_section,
@@ -184,10 +196,15 @@ class DocumentChunker:
                     )
                 )
 
-        return ChunkedDocument(
+        chunked_document = ChunkedDocument(
             parent_sections=parent_sections,
             child_chunks=child_chunks,
         )
+        self._update_langfuse_chunking_summary(
+            chunked_document=chunked_document,
+            chunking_metrics=chunking_metrics,
+        )
+        return chunked_document
 
     @classmethod
     @service_observe(
@@ -248,17 +265,31 @@ class DocumentChunker:
 
         return sections
 
-    def _split_text(self, text: str) -> list[str]:
+    def _split_text(
+        self,
+        text: str,
+        chunking_metrics: ChunkingMetrics | None = None,
+    ) -> list[str]:
         normalized_text = text.strip()
         if not normalized_text:
+            if chunking_metrics is not None:
+                chunking_metrics.empty_section_count += 1
             return []
         if len(normalized_text) <= self.child_chunk_chars:
+            if chunking_metrics is not None:
+                chunking_metrics.recursive_section_count += 1
             return [normalized_text]
 
         if self._is_table_heavy(normalized_text):
+            if chunking_metrics is not None:
+                chunking_metrics.table_heavy_section_count += 1
             return self._split_table_heavy_text(normalized_text)
         if self._uses_semantic_chunking():
-            return self._split_semantically(normalized_text)
+            if chunking_metrics is not None:
+                chunking_metrics.semantic_section_count += 1
+            return self._split_semantically(normalized_text, chunking_metrics)
+        if chunking_metrics is not None:
+            chunking_metrics.recursive_section_count += 1
         return self._split_recursively(normalized_text)
 
     def _uses_semantic_chunking(self) -> bool:
@@ -267,7 +298,11 @@ class DocumentChunker:
             and self.semantic_embedding_provider is not None
         )
 
-    def _split_semantically(self, text: str) -> list[str]:
+    def _split_semantically(
+        self,
+        text: str,
+        chunking_metrics: ChunkingMetrics | None = None,
+    ) -> list[str]:
         number_of_chunks = None
         if len(text) > self.semantic_target_chars:
             number_of_chunks = max(2, math.ceil(len(text) / self.semantic_target_chars))
@@ -282,15 +317,54 @@ class DocumentChunker:
         )
         semantic_chunks = self._clean_chunks(semantic_splitter.split_text(text))
         if not semantic_chunks:
-            return self._split_recursively(text)
+            recursive_chunks = self._split_recursively(text)
+            if chunking_metrics is not None:
+                chunking_metrics.fallback_chunk_count += len(recursive_chunks)
+            return recursive_chunks
 
         guarded_chunks: list[str] = []
         for semantic_chunk in semantic_chunks:
             if len(semantic_chunk) <= self.semantic_max_chars:
                 guarded_chunks.append(semantic_chunk)
             else:
-                guarded_chunks.extend(self._split_recursively(semantic_chunk))
+                recursive_chunks = self._split_recursively(semantic_chunk)
+                if chunking_metrics is not None:
+                    chunking_metrics.fallback_chunk_count += len(recursive_chunks)
+                guarded_chunks.extend(recursive_chunks)
         return self._clean_chunks(guarded_chunks)
+
+    def _update_langfuse_chunking_summary(
+        self,
+        *,
+        chunked_document: ChunkedDocument,
+        chunking_metrics: ChunkingMetrics,
+    ) -> None:
+        chunk_lengths = [
+            len(child_chunk.text) for child_chunk in chunked_document.child_chunks
+        ]
+        chunking_metadata = {
+            "strategy": self.chunking_strategy,
+            "semantic_enabled": self._uses_semantic_chunking(),
+            "parent_section_count": len(chunked_document.parent_sections),
+            "child_chunk_count": len(chunked_document.child_chunks),
+            "empty_section_count": chunking_metrics.empty_section_count,
+            "recursive_section_count": chunking_metrics.recursive_section_count,
+            "semantic_section_count": chunking_metrics.semantic_section_count,
+            "table_heavy_section_count": chunking_metrics.table_heavy_section_count,
+            "fallback_chunk_count": chunking_metrics.fallback_chunk_count,
+            "chunk_length_min": min(chunk_lengths) if chunk_lengths else 0,
+            "chunk_length_max": max(chunk_lengths) if chunk_lengths else 0,
+            "chunk_length_avg": (
+                round(sum(chunk_lengths) / len(chunk_lengths), 2)
+                if chunk_lengths
+                else 0
+            ),
+            "table_line_ratio_threshold": self.table_line_ratio_threshold,
+            "table_chunk_chars": self.table_chunk_chars,
+            "semantic_target_chars": self.semantic_target_chars,
+            "semantic_max_chars": self.semantic_max_chars,
+        }
+        add_current_service_metadata({"chunking": chunking_metadata})
 
     def _split_recursively(self, text: str) -> list[str]:
         return self._clean_chunks(self._recursive_splitter.split_text(text))

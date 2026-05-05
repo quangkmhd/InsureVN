@@ -1,4 +1,5 @@
 import unicodedata
+from unittest.mock import MagicMock, patch
 
 from langchain_core.embeddings import Embeddings
 
@@ -220,3 +221,48 @@ def test_document_chunker_splits_table_heavy_sections_with_repeated_header() -> 
     assert all("| STT | Ten co so y te | Tinh thanh |" in text for text in child_texts)
     assert any("Benh vien 1" in text for text in child_texts)
     assert any("Benh vien 9" in text for text in child_texts)
+
+
+def test_document_chunker_updates_langfuse_with_chunking_summary() -> None:
+    fake_langfuse_client = MagicMock()
+    markdown_text = (
+        "# Danh sach co so y te\n\n"
+        "| STT | Ten co so y te |\n"
+        "|---|---|\n"
+        "| 1 | Benh vien A |\n"
+        "| 2 | Benh vien B |\n"
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=80,
+        child_chunk_overlap=0,
+        chunking_strategy="hybrid_semantic",
+        table_chunk_chars=120,
+        table_line_ratio_threshold=0.4,
+    )
+
+    with patch(
+        "src.services.observability.get_client", return_value=fake_langfuse_client
+    ):
+        document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+
+    chunking_metadata_calls = [
+        call.kwargs["metadata"]["chunking"]
+        for call in fake_langfuse_client.update_current_span.call_args_list
+        if "metadata" in call.kwargs and "chunking" in call.kwargs["metadata"]
+    ]
+
+    assert chunking_metadata_calls
+    chunking_metadata = chunking_metadata_calls[-1]
+    assert chunking_metadata["strategy"] == "hybrid_semantic"
+    assert chunking_metadata["parent_section_count"] == len(
+        document_chunks.parent_sections
+    )
+    assert chunking_metadata["child_chunk_count"] == len(document_chunks.child_chunks)
+    assert chunking_metadata["table_heavy_section_count"] == 1
+    assert chunking_metadata["semantic_section_count"] == 0
+    assert chunking_metadata["recursive_section_count"] == 0
+    assert chunking_metadata["empty_section_count"] == 0
+    assert chunking_metadata["fallback_chunk_count"] == 0
+    assert chunking_metadata["chunk_length_max"] == max(
+        len(child_chunk.text) for child_chunk in document_chunks.child_chunks
+    )

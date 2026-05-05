@@ -7,6 +7,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from langchain_core.embeddings import Embeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_qdrant import FastEmbedSparse, SparseEmbeddings
 from qdrant_client import QdrantClient
 
 from src.core.config import settings
@@ -42,6 +45,8 @@ def build_dry_run_report(
     documents: list[dict[str, Any]] = []
     parent_section_count = 0
     chunk_count = 0
+    seen_content_hashes: set[str] = set()
+    duplicate_chunk_count = 0
 
     for document_path in document_paths:
         document_metadata = {**metadata, "source_path": str(document_path)}
@@ -51,6 +56,12 @@ def build_dry_run_report(
         )
         parent_section_count += len(chunked_document.parent_sections)
         chunk_count += len(chunked_document.child_chunks)
+        for child_chunk in chunked_document.child_chunks:
+            content_hash = str(child_chunk.payload["content_hash"])
+            if content_hash in seen_content_hashes:
+                duplicate_chunk_count += 1
+            else:
+                seen_content_hashes.add(content_hash)
         documents.append(
             {
                 "source_path": str(document_path),
@@ -65,6 +76,9 @@ def build_dry_run_report(
         "document_count": len(document_paths),
         "parent_section_count": parent_section_count,
         "chunk_count": chunk_count,
+        "unique_chunk_count": len(seen_content_hashes),
+        "skipped_duplicate_count": duplicate_chunk_count,
+        "readiness_result": "not_checked_dry_run",
         "documents": documents,
     }
 
@@ -92,11 +106,18 @@ def build_chunks(
     return chunks
 
 
-def build_embedding_provider(model_name: str) -> HashingEmbeddingProvider:
+def build_embedding_provider(
+    *,
+    provider: str,
+    model_name: str,
+    google_api_key: str,
+) -> Embeddings:
     """Build the configured embedding provider.
 
     Args:
+        provider: Embedding provider configured by `RAG_EMBEDDING_PROVIDER`.
         model_name: Embedding model configured by `RAG_EMBEDDING_MODEL`.
+        google_api_key: Google API key for Gemini embedding providers.
 
     Returns:
         Embedding provider for indexing and retrieval.
@@ -104,12 +125,22 @@ def build_embedding_provider(model_name: str) -> HashingEmbeddingProvider:
     Raises:
         ValueError: If the configured model is not implemented in this phase.
     """
-    if model_name == "hashing-local":
+    if provider == "google_genai":
+        return GoogleGenerativeAIEmbeddings(
+            model=model_name,
+            google_api_key=google_api_key,
+        )
+    if provider == "hashing":
         return HashingEmbeddingProvider()
     raise ValueError(
-        "Unsupported RAG_EMBEDDING_MODEL. "
-        "Phase 02 currently implements only 'hashing-local'."
+        "Unsupported RAG_EMBEDDING_PROVIDER. "
+        "Use 'google_genai' for production or 'hashing' for local tests."
     )
+
+
+def build_sparse_embedding_provider(model_name: str) -> SparseEmbeddings:
+    """Build LangChain's sparse embedding provider for Qdrant hybrid search."""
+    return FastEmbedSparse(model_name=model_name)
 
 
 def main() -> None:
@@ -143,7 +174,14 @@ def main() -> None:
     retriever = QdrantRetriever(
         client=QdrantClient(url=settings.RAG_QDRANT_URL),
         collection_name=settings.RAG_QDRANT_COLLECTION,
-        embedding_provider=build_embedding_provider(settings.RAG_EMBEDDING_MODEL),
+        embedding_provider=build_embedding_provider(
+            provider=settings.RAG_EMBEDDING_PROVIDER,
+            model_name=settings.RAG_EMBEDDING_MODEL,
+            google_api_key=settings.GOOGLE_API_KEY,
+        ),
+        sparse_embedding_provider=build_sparse_embedding_provider(
+            settings.RAG_SPARSE_MODEL
+        ),
         keyword_enabled=True,
     )
     retriever.setup_collection(recreate=args.recreate)

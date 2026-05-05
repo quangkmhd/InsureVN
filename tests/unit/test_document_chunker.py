@@ -96,3 +96,41 @@ def test_document_chunker_validates_required_payload_fields() -> None:
         assert "company_code" in str(exc)
     else:
         raise AssertionError("Expected missing company_code to fail validation.")
+
+
+def test_document_chunker_adds_production_payload_lineage_fields() -> None:
+    markdown_text = "## Thoi gian cho\n\nBenh dac biet co thoi gian cho 90 ngay."
+    metadata = {
+        "company_code": "AIA",
+        "document_id": "doc-aia-health",
+        "document_type": "policy",
+        "document_name": "AIA Health Policy",
+        "product_line": "health",
+        "plan_code": "gold",
+        "source_path": "data/processed/aia/health.md",
+        "source_table_id": "documents:1",
+        "effective_date": "2026-01-01",
+        "ingestion_version": "rag-2026-05-05",
+    }
+    chunker = DocumentChunker(child_chunk_chars=120, child_chunk_overlap=20)
+
+    first_chunks = chunker.chunk_markdown(markdown_text, metadata=metadata)
+    second_chunks = chunker.chunk_markdown(markdown_text, metadata=metadata)
+
+    first_payload = first_chunks.child_chunks[0].payload
+    second_payload = second_chunks.child_chunks[0].payload
+    assert first_payload["parent_section_id"] == (
+        first_chunks.child_chunks[0].parent_section_id
+    )
+    assert first_payload["ingestion_version"] == "rag-2026-05-05"
+    assert first_payload["content_hash"]
+    assert first_payload["content_hash"] == second_payload["content_hash"]
+    assert (
+        first_payload["content_hash"]
+        != chunker.chunk_markdown(
+            "## Thoi gian cho\n\nNoi dung da thay doi.",
+            metadata=metadata,
+        )
+        .child_chunks[0]
+        .payload["content_hash"]
+    )

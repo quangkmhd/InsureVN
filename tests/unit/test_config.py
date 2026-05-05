@@ -3,23 +3,37 @@ from src.core.config import Settings
 
 def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_QDRANT_URL", raising=False)
+    monkeypatch.delenv("RAG_QDRANT_API_KEY", raising=False)
     monkeypatch.delenv("RAG_QDRANT_COLLECTION", raising=False)
+    monkeypatch.delenv("RAG_DENSE_VECTOR_NAME", raising=False)
+    monkeypatch.delenv("RAG_SPARSE_VECTOR_NAME", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_PROVIDER", raising=False)
+    monkeypatch.delenv("RAG_SPARSE_MODEL", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_TOKENS", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_OVERLAP", raising=False)
     monkeypatch.delenv("RAG_PARENT_SECTION_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TOP_K", raising=False)
+    monkeypatch.delenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("RAG_REQUIRE_HYBRID_SEARCH", raising=False)
     monkeypatch.delenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", raising=False)
 
     settings = Settings()
 
     assert settings.RAG_QDRANT_URL == "http://localhost:6333"
+    assert settings.RAG_QDRANT_API_KEY == ""
     assert settings.RAG_QDRANT_COLLECTION == "insurevn_policy_chunks"
-    assert settings.RAG_EMBEDDING_MODEL == "hashing-local"
+    assert settings.RAG_DENSE_VECTOR_NAME == "text_dense"
+    assert settings.RAG_SPARSE_VECTOR_NAME == "text_sparse"
+    assert settings.RAG_EMBEDDING_PROVIDER == "google_genai"
+    assert settings.RAG_EMBEDDING_MODEL == "gemini-embedding-2-preview"
+    assert settings.RAG_SPARSE_MODEL == "Qdrant/bm25"
     assert isinstance(settings.RAG_CHILD_CHUNK_TOKENS, int)
     assert settings.RAG_CHILD_CHUNK_TOKENS == 1200
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 150
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 6000
     assert settings.RAG_RETRIEVAL_TOP_K == 5
+    assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 30.0
+    assert settings.RAG_REQUIRE_HYBRID_SEARCH is True
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is False
 
 
@@ -28,6 +42,8 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("RAG_CHILD_CHUNK_OVERLAP", "90")
     monkeypatch.setenv("RAG_PARENT_SECTION_MAX_CHARS", "4500")
     monkeypatch.setenv("RAG_RETRIEVAL_TOP_K", "8")
+    monkeypatch.setenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "12.5")
+    monkeypatch.setenv("RAG_REQUIRE_HYBRID_SEARCH", "false")
     monkeypatch.setenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", "true")
 
     settings = Settings()
@@ -36,7 +52,45 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 90
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 4500
     assert settings.RAG_RETRIEVAL_TOP_K == 8
+    assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 12.5
+    assert settings.RAG_REQUIRE_HYBRID_SEARCH is False
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is True
+
+
+def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
+    monkeypatch.delenv("NEO4J_URI", raising=False)
+    monkeypatch.delenv("NEO4J_USERNAME", raising=False)
+    monkeypatch.delenv("NEO4J_PASSWORD", raising=False)
+    monkeypatch.delenv("NEO4J_DATABASE", raising=False)
+    monkeypatch.delenv("GRAPH_EAGER_K", raising=False)
+    monkeypatch.delenv("GRAPH_EAGER_START_K", raising=False)
+    monkeypatch.delenv("GRAPH_EAGER_MAX_DEPTH", raising=False)
+    monkeypatch.delenv("GRAPH_MIN_CONFIDENCE", raising=False)
+
+    settings = Settings()
+
+    assert settings.NEO4J_URI == "bolt://localhost:7687"
+    assert settings.NEO4J_USERNAME == "neo4j"
+    assert settings.NEO4J_PASSWORD == ""
+    assert settings.NEO4J_DATABASE == "neo4j"
+    assert settings.GRAPH_EAGER_K == 5
+    assert settings.GRAPH_EAGER_START_K == 1
+    assert settings.GRAPH_EAGER_MAX_DEPTH == 2
+    assert settings.GRAPH_MIN_CONFIDENCE == 0.75
+
+
+def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
+    monkeypatch.setenv("GRAPH_EAGER_K", "8")
+    monkeypatch.setenv("GRAPH_EAGER_START_K", "2")
+    monkeypatch.setenv("GRAPH_EAGER_MAX_DEPTH", "3")
+    monkeypatch.setenv("GRAPH_MIN_CONFIDENCE", "0.82")
+
+    settings = Settings()
+
+    assert settings.GRAPH_EAGER_K == 8
+    assert settings.GRAPH_EAGER_START_K == 2
+    assert settings.GRAPH_EAGER_MAX_DEPTH == 3
+    assert settings.GRAPH_MIN_CONFIDENCE == 0.82
 
 
 def test_langfuse_settings_prefer_current_base_url(monkeypatch) -> None:

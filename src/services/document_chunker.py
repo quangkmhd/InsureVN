@@ -1,6 +1,7 @@
 import re
 import unicodedata
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 REQUIRED_QDRANT_PAYLOAD_FIELDS = (
@@ -13,9 +14,12 @@ REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "section_type",
     "page_number",
     "chunk_index",
+    "parent_section_id",
     "source_path",
     "source_table_id",
     "effective_date",
+    "content_hash",
+    "ingestion_version",
 )
 
 
@@ -196,14 +200,20 @@ class DocumentChunker:
     ) -> dict[str, Any]:
         metadata = dict(parent_section.metadata)
         page_number = metadata.get("page_number", metadata.get("page", 1))
+        ingestion_version = metadata.get("ingestion_version", "unversioned")
+        content_hash = sha256(
+            unicodedata.normalize("NFC", child_text).encode("utf-8")
+        ).hexdigest()
         return {
             **metadata,
             "section_type": self._section_type(parent_section.heading),
             "page_number": page_number,
             "chunk_index": chunk_index,
-            "text": child_text,
             "parent_section_id": parent_section.section_id,
+            "text": child_text,
             "parent_text": parent_section.text,
+            "content_hash": content_hash,
+            "ingestion_version": ingestion_version,
         }
 
     @staticmethod

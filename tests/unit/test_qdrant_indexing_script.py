@@ -43,15 +43,97 @@ def test_dry_run_report_counts_parent_sections_and_child_chunks(tmp_path) -> Non
     assert report["document_count"] == 1
     assert report["parent_section_count"] == 2
     assert report["chunk_count"] == 2
+    assert report["skipped_duplicate_count"] == 0
+    assert report["readiness_result"] == "not_checked_dry_run"
     assert report["documents"][0]["source_path"] == str(markdown_path)
 
 
-def test_build_embedding_provider_rejects_unimplemented_model() -> None:
+def test_dry_run_report_counts_duplicate_chunks(tmp_path) -> None:
+    script = _load_indexing_script()
+    first_path = tmp_path / "aia_health_first.md"
+    second_path = tmp_path / "aia_health_second.md"
+    markdown_text = (
+        "# AIA Health\n\n## Waiting Period\n\nSpecial diseases wait 90 days."
+    )
+    first_path.write_text(markdown_text, encoding="utf-8")
+    second_path.write_text(markdown_text, encoding="utf-8")
+
+    report = script.build_dry_run_report(
+        document_paths=[first_path, second_path],
+        metadata={
+            "company_code": "AIA",
+            "document_id": "aia-health",
+            "document_type": "policy",
+            "document_name": "AIA Health Policy",
+            "product_line": "health",
+            "plan_code": "gold",
+            "source_table_id": "documents:1",
+            "effective_date": "2026-01-01",
+            "ingestion_version": "rag-2026-05-05",
+        },
+        child_chunk_chars=200,
+        child_chunk_overlap=20,
+    )
+
+    assert report["document_count"] == 2
+    assert report["chunk_count"] == 4
+    assert report["unique_chunk_count"] == 2
+    assert report["skipped_duplicate_count"] == 2
+
+
+def test_build_embedding_provider_uses_langchain_google_embeddings(monkeypatch) -> None:
+    script = _load_indexing_script()
+    captured = {}
+
+    class FakeGoogleGenerativeAIEmbeddings:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(
+        script,
+        "GoogleGenerativeAIEmbeddings",
+        FakeGoogleGenerativeAIEmbeddings,
+    )
+
+    provider = script.build_embedding_provider(
+        provider="google_genai",
+        model_name="gemini-embedding-2-preview",
+        google_api_key="test-google-key",
+    )
+
+    assert isinstance(provider, FakeGoogleGenerativeAIEmbeddings)
+    assert captured == {
+        "model": "gemini-embedding-2-preview",
+        "google_api_key": "test-google-key",
+    }
+
+
+def test_build_sparse_embedding_provider_uses_langchain_fastembed(monkeypatch) -> None:
+    script = _load_indexing_script()
+    captured = {}
+
+    class FakeFastEmbedSparse:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(script, "FastEmbedSparse", FakeFastEmbedSparse)
+
+    provider = script.build_sparse_embedding_provider("Qdrant/bm25")
+
+    assert isinstance(provider, FakeFastEmbedSparse)
+    assert captured == {"model_name": "Qdrant/bm25"}
+
+
+def test_build_embedding_provider_rejects_unimplemented_provider() -> None:
     script = _load_indexing_script()
 
     try:
-        script.build_embedding_provider("gemini-embedding-2")
+        script.build_embedding_provider(
+            provider="custom",
+            model_name="custom-model",
+            google_api_key="",
+        )
     except ValueError as exc:
-        assert "Unsupported RAG_EMBEDDING_MODEL" in str(exc)
+        assert "Unsupported RAG_EMBEDDING_PROVIDER" in str(exc)
     else:
-        raise AssertionError("Unsupported embedding models must fail explicitly.")
+        raise AssertionError("Unsupported embedding providers must fail explicitly.")

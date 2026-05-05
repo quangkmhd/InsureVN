@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from time import perf_counter
 
+import uvicorn
 from fastapi import FastAPI, Request
 from langfuse import observe
 
@@ -86,6 +87,4 @@ def create_app() -> FastAPI:
 app = create_app()
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)

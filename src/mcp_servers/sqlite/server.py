@@ -109,11 +109,17 @@ def mcp_observe(name: str):
                     "tool": name,
                     "suggestion": "Check your SQL syntax or arguments and try again.",
                 }
+                log_payload = {
+                    **metadata,
+                    **error_payload,
+                    "error_message": error_payload["message"],
+                }
+                log_payload.pop("message", None)
 
                 # Log the error for production monitoring
                 logger.error(
                     f"MCP tool failed: {name}",
-                    extra={**metadata, **error_payload},
+                    extra=log_payload,
                     exc_info=True,
                 )
 

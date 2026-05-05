@@ -1,6 +1,6 @@
+import json
 from unittest.mock import MagicMock, patch
 
-import pytest
 from mcp.server.fastmcp import FastMCP
 
 
@@ -80,17 +80,19 @@ def test_execute_query_valid(mock_get_db):
 def test_execute_query_invalid():
     from src.mcp_servers.sqlite.server import execute_query
 
-    with pytest.raises(ValueError, match="Only SELECT queries are allowed"):
-        execute_query("DROP TABLE users")
+    result = json.loads(execute_query("DROP TABLE users"))
+    assert result["status"] == "error"
+    assert result["error_type"] == "ValueError"
+    assert "Only SELECT queries are allowed" in result["message"]
 
-    with pytest.raises(ValueError, match="Only SELECT queries are allowed"):
-        execute_query("UPDATE users SET name='Hack'")
+    result = json.loads(execute_query("UPDATE users SET name='Hack'"))
+    assert "Only SELECT queries are allowed" in result["message"]
 
-    with pytest.raises(ValueError, match="Only SELECT queries are allowed"):
-        execute_query("INSERT INTO users VALUES (1)")
+    result = json.loads(execute_query("INSERT INTO users VALUES (1)"))
+    assert "Only SELECT queries are allowed" in result["message"]
 
-    with pytest.raises(ValueError, match="Only SELECT queries are allowed"):
-        execute_query("PRAGMA user_version = 123")
+    result = json.loads(execute_query("PRAGMA user_version = 123"))
+    assert "Only SELECT queries are allowed" in result["message"]
 
 
 @patch("src.mcp_servers.sqlite.server.get_db_connection")
@@ -222,8 +224,11 @@ def test_compare_benefits_filters(mock_get_db):
 def test_compare_benefits_requires_company_codes():
     from src.mcp_servers.sqlite.server import compare_benefits
 
-    with pytest.raises(ValueError, match="company_codes"):
-        compare_benefits("ung thư", [])
+    result = json.loads(compare_benefits("ung thư", []))
+
+    assert result["status"] == "error"
+    assert result["error_type"] == "ValueError"
+    assert "company_codes" in result["message"]
 
 
 @patch("src.mcp_servers.sqlite.server.get_db_connection")

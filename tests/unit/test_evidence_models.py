@@ -1,23 +1,48 @@
 import pytest
 from pydantic import ValidationError
+
 from src.models.evidence import (
-    Evidence, Citation, RetrievalPlan, HardFilters, BenchmarkCase,
-    SourceType, RetrievalMode, IntentGroup, RiskLevel, Workflow
+    BenchmarkCase,
+    Citation,
+    Evidence,
+    HardFilters,
+    IntentGroup,
+    RetrievalMode,
+    RetrievalPlan,
+    RiskLevel,
+    SourceType,
+    Workflow,
 )
 
+
 def test_hard_filters_validation():
-    filters = HardFilters(company_codes=["C01"], document_types=["policy"])
+    filters = HardFilters(
+        company_codes=["C01"],
+        document_types=["policy"],
+        document_ids=["DOC123"],
+        product_lines=["health"],
+        plan_codes=["gold"],
+        section_types=["waiting_period"],
+    )
     assert filters.company_codes == ["C01"]
     assert filters.document_types == ["policy"]
+    assert filters.document_ids == ["DOC123"]
+    assert filters.product_lines == ["health"]
+    assert filters.plan_codes == ["gold"]
+    assert filters.section_types == ["waiting_period"]
+
 
 def test_retrieval_plan_validation():
     plan = RetrievalPlan(
         search_queries=["premium cost"],
         mode=RetrievalMode.HYBRID,
-        filters=HardFilters(company_codes=["C01"])
+        filters=HardFilters(company_codes=["C01"]),
+        top_k=7,
     )
     assert plan.mode == RetrievalMode.HYBRID
     assert plan.filters.company_codes == ["C01"]
+    assert plan.top_k == 7
+
 
 def test_evidence_validation():
     evidence = Evidence(
@@ -26,7 +51,7 @@ def test_evidence_validation():
         content="Coverage includes hospital stay.",
         metadata={"table": "policy_benefits"},
         confidence=0.95,
-        retrieved_by="DatabaseAgent"
+        retrieved_by="DatabaseAgent",
     )
     assert evidence.source_type == SourceType.SQLITE_ROW
     assert evidence.confidence == 0.95
@@ -37,9 +62,10 @@ def test_evidence_validation():
             source_id="1",
             content="test",
             metadata={},
-            confidence=1.5, # > 1.0 should fail
-            retrieved_by="Agent"
+            confidence=1.5,  # > 1.0 should fail
+            retrieved_by="Agent",
         )
+
 
 def test_citation_validation():
     citation = Citation(
@@ -48,10 +74,11 @@ def test_citation_validation():
         document_name="Policy 2026",
         source_file_path="/docs/policy.pdf",
         source_table_id="table_1",
-        page=5
+        page=5,
     )
     assert citation.page == 5
     assert citation.company_code == "C01"
+
 
 def test_benchmark_case_validation():
     case = BenchmarkCase(
@@ -60,6 +87,6 @@ def test_benchmark_case_validation():
         intent_group=IntentGroup.PREMIUM_INQUIRY,
         risk_level=RiskLevel.LOW,
         workflow=Workflow.POLICY_QA,
-        expected_evidence_types=[SourceType.SQLITE_ROW]
+        expected_evidence_types=[SourceType.SQLITE_ROW],
     )
     assert case.workflow == Workflow.POLICY_QA

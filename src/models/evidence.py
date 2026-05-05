@@ -39,13 +39,18 @@ class Workflow(StrEnum):
 
 class HardFilters(BaseModel):
     company_codes: list[str] | None = None
+    document_ids: list[str] | None = None
     document_types: list[str] | None = None
+    product_lines: list[str] | None = None
+    plan_codes: list[str] | None = None
+    section_types: list[str] | None = None
 
 
 class RetrievalPlan(BaseModel):
     search_queries: list[str]
     mode: RetrievalMode
     filters: HardFilters | None = None
+    top_k: int = Field(default=5, ge=1)
 
 
 class Evidence(BaseModel):

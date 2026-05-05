@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Any
 
+from src.services.observability import service_observe
+
 REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "company_code",
     "document_id",
@@ -76,6 +78,9 @@ class DocumentChunker:
         self.child_chunk_chars = child_chunk_chars
         self.child_chunk_overlap = child_chunk_overlap
 
+    @service_observe(
+        name="service.document_chunker.chunk_markdown", component="document_chunker"
+    )
     def chunk_markdown(
         self,
         markdown_text: str,
@@ -123,6 +128,10 @@ class DocumentChunker:
         )
 
     @classmethod
+    @service_observe(
+        name="service.document_chunker.validate_payload",
+        component="document_chunker",
+    )
     def validate_payload(cls, payload: dict[str, Any]) -> None:
         """Validate required Qdrant citation payload fields."""
         missing_fields = [

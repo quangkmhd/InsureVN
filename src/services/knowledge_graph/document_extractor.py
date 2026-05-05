@@ -13,6 +13,7 @@ from src.services.knowledge_graph.schema import (
 from src.services.knowledge_graph.schema import (
     ALLOWED_RELATIONSHIP_TYPES as SCHEMA_ALLOWED_RELATIONSHIP_TYPES,
 )
+from src.services.observability import service_observe
 
 ALLOWED_NODE_TYPES = ALLOWED_NODE_LABELS
 ALLOWED_RELATIONSHIP_TYPES = SCHEMA_ALLOWED_RELATIONSHIP_TYPES
@@ -61,6 +62,10 @@ class _PlanBlock:
 class DocumentGraphExtractor:
     """Extract strict graph entities and relationships from policy documents."""
 
+    @service_observe(
+        name="service.knowledge_graph.document_extractor.extract",
+        component="document_graph_extractor",
+    )
     def extract(
         self,
         document: GraphDocument,

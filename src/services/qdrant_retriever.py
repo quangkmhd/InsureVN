@@ -19,6 +19,7 @@ from src.core.logger import get_logger
 from src.models.evidence import Evidence, HardFilters, RetrievalMode, RetrievalPlan
 from src.services.document_chunker import ChildChunk
 from src.services.langchain_qdrant_adapter import LangChainQdrantAdapter
+from src.services.observability import service_observe
 from src.services.qdrant_collection_manager import (
     QdrantCollectionConfig,
     QdrantCollectionManager,
@@ -132,6 +133,9 @@ class QdrantRetriever:
                 "set explicit degraded mode for local use"
             )
 
+    @service_observe(
+        name="service.qdrant_retriever.setup_collection", component="qdrant_retriever"
+    )
     def setup_collection(self, *, recreate: bool = False) -> None:
         """Create the Qdrant collection when it does not exist."""
         manager = QdrantCollectionManager(
@@ -145,6 +149,9 @@ class QdrantRetriever:
         )
         manager.ensure_collection(recreate=recreate)
 
+    @service_observe(
+        name="service.qdrant_retriever.index_chunks", component="qdrant_retriever"
+    )
     def index_chunks(self, chunks: list[ChildChunk]) -> None:
         """Index child chunks with LangChain's Qdrant vector store."""
         if not chunks:
@@ -176,6 +183,9 @@ class QdrantRetriever:
             },
         )
 
+    @service_observe(
+        name="service.qdrant_retriever.retrieve", component="qdrant_retriever"
+    )
     def retrieve(self, retrieval_plan: RetrievalPlan) -> list[Evidence]:
         """Retrieve evidence for the given retrieval plan."""
         if (
@@ -239,6 +249,10 @@ class QdrantRetriever:
         )
         return evidence_items
 
+    @service_observe(
+        name="service.qdrant_retriever.assert_production_ready",
+        component="qdrant_retriever",
+    )
     def assert_production_ready(self) -> None:
         """Reject degraded retrieval settings for production gates."""
         if not self.keyword_enabled:

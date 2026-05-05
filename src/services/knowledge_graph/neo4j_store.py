@@ -3,6 +3,7 @@ from typing import Any
 from langchain_neo4j import Neo4jGraph
 
 from src.services.knowledge_graph.schema import NEO4J_UNIQUENESS_CONSTRAINTS
+from src.services.observability import service_observe
 
 
 class Neo4jKnowledgeGraphStore:
@@ -13,6 +14,10 @@ class Neo4jKnowledgeGraphStore:
         self._graph = graph
 
     @classmethod
+    @service_observe(
+        name="service.knowledge_graph.neo4j_store.from_connection",
+        component="neo4j_store",
+    )
     def from_connection(
         cls,
         *,
@@ -31,6 +36,10 @@ class Neo4jKnowledgeGraphStore:
             kwargs["database"] = database
         return cls(graph=Neo4jGraph(**kwargs))
 
+    @service_observe(
+        name="service.knowledge_graph.neo4j_store.ensure_schema",
+        component="neo4j_store",
+    )
     def ensure_schema(self) -> None:
         """Create Neo4j uniqueness constraints required for idempotent import."""
         for label, property_name in NEO4J_UNIQUENESS_CONSTRAINTS:
@@ -42,6 +51,10 @@ class Neo4jKnowledgeGraphStore:
                 """
             )
 
+    @service_observe(
+        name="service.knowledge_graph.neo4j_store.import_graph_documents",
+        component="neo4j_store",
+    )
     def import_graph_documents(self, graph_documents: list[Any]) -> None:
         """Import LangChain GraphDocument objects with source linkage."""
         self._graph.add_graph_documents(

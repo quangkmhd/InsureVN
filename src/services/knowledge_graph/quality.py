@@ -10,6 +10,7 @@ from src.core.logger import get_logger
 from src.services.knowledge_graph.document_extractor import (
     ALLOWED_RELATIONSHIP_TYPES,
 )
+from src.services.observability import service_observe
 
 logger = get_logger(__name__)
 
@@ -37,6 +38,10 @@ class GraphQualityValidator:
         """Initialize validator with a minimum relationship confidence."""
         self._min_confidence = min_confidence
 
+    @service_observe(
+        name="service.knowledge_graph.quality.validate",
+        component="graph_quality",
+    )
     def validate(
         self,
         graph: nx.DiGraph,

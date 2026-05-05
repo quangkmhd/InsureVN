@@ -1,6 +1,8 @@
 import re
 import unicodedata
 
+from src.services.observability import service_observe
+
 ALLOWED_NODE_LABELS = {
     "Company",
     "Document",
@@ -59,21 +61,37 @@ NEO4J_UNIQUENESS_CONSTRAINTS = (
 )
 
 
+@service_observe(
+    name="service.knowledge_graph.schema.build_company_id",
+    component="knowledge_graph_schema",
+)
 def build_company_id(company_code: str) -> str:
     """Build a stable Company node ID."""
     return f"company:{company_code.strip().upper()}"
 
 
+@service_observe(
+    name="service.knowledge_graph.schema.build_document_id",
+    component="knowledge_graph_schema",
+)
 def build_document_id(document_id: str) -> str:
     """Build a stable Document node ID."""
     return f"document:{_stable_slug(document_id)}"
 
 
+@service_observe(
+    name="service.knowledge_graph.schema.build_plan_id",
+    component="knowledge_graph_schema",
+)
 def build_plan_id(company_code: str, plan_code: str) -> str:
     """Build a stable Plan node ID."""
     return f"plan:{company_code.strip().upper()}:{_stable_slug(plan_code)}"
 
 
+@service_observe(
+    name="service.knowledge_graph.schema.build_chunk_id",
+    component="knowledge_graph_schema",
+)
 def build_chunk_id(document_id: str, chunk_index: int) -> str:
     """Build a stable Chunk node ID."""
     return f"chunk:{_stable_slug(document_id)}:{chunk_index}"

@@ -9,6 +9,7 @@ from typing import Any
 import networkx as nx
 
 from src.core.logger import get_logger
+from src.services.observability import service_observe
 
 logger = get_logger(__name__)
 
@@ -39,6 +40,10 @@ class NetworkxGraphPathRetriever:
         """Initialize retriever with a directed knowledge graph."""
         self._graph = graph
 
+    @service_observe(
+        name="service.knowledge_graph.retriever.retrieve",
+        component="graph_retriever",
+    )
     def retrieve(
         self,
         start_entities: list[str],
@@ -76,6 +81,10 @@ class NetworkxGraphPathRetriever:
             )
         return paths
 
+    @service_observe(
+        name="service.knowledge_graph.retriever.explain_path",
+        component="graph_retriever",
+    )
     def explain_path(self, path: GraphPath) -> dict[str, Any]:
         """Return serializable path details for debugging."""
         return {

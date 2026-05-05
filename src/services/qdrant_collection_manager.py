@@ -3,6 +3,7 @@ from typing import Any
 
 from qdrant_client import models
 
+from src.services.observability import service_observe
 from src.services.retrieval_readiness import RetrievalReadinessReport
 
 QDRANT_FILTER_PAYLOAD_INDEX_FIELDS = (
@@ -41,6 +42,10 @@ class QdrantCollectionManager:
         self.client = client
         self.config = config
 
+    @service_observe(
+        name="service.qdrant_collection_manager.ensure_collection",
+        component="qdrant_collection_manager",
+    )
     def ensure_collection(self, *, recreate: bool = False) -> None:
         """Create the hybrid Qdrant collection when it does not exist."""
         if recreate and self._collection_exists():
@@ -66,6 +71,10 @@ class QdrantCollectionManager:
             },
         )
 
+    @service_observe(
+        name="service.qdrant_collection_manager.ensure_payload_indexes",
+        component="qdrant_collection_manager",
+    )
     def ensure_payload_indexes(self) -> None:
         """Create keyword payload indexes required for hard-filter retrieval."""
         for field_name in QDRANT_FILTER_PAYLOAD_INDEX_FIELDS:
@@ -75,6 +84,10 @@ class QdrantCollectionManager:
                 field_schema=models.PayloadSchemaType.KEYWORD,
             )
 
+    @service_observe(
+        name="service.qdrant_collection_manager.build_readiness_report",
+        component="qdrant_collection_manager",
+    )
     def build_readiness_report(
         self,
         *,

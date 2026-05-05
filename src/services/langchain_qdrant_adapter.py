@@ -3,6 +3,8 @@ from typing import Any
 
 from langchain_qdrant import QdrantVectorStore, RetrievalMode
 
+from src.services.observability import service_observe
+
 
 @dataclass(frozen=True)
 class LangChainQdrantAdapter:
@@ -12,6 +14,10 @@ class LangChainQdrantAdapter:
     dense_vector_name: str
     sparse_vector_name: str
 
+    @service_observe(
+        name="service.langchain_qdrant_adapter.create_vector_store",
+        component="langchain_qdrant_adapter",
+    )
     def create_vector_store(
         self,
         *,

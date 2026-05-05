@@ -4,11 +4,16 @@ from __future__ import annotations
 
 from src.models.evidence import Evidence, SourceType
 from src.services.knowledge_graph.retriever import GraphPath
+from src.services.observability import service_observe
 
 
 class GraphEvidenceAdapter:
     """Adapt graph paths into Evidence(source_type='graph_triple')."""
 
+    @service_observe(
+        name="service.knowledge_graph.evidence_adapter.to_evidence",
+        component="graph_evidence_adapter",
+    )
     def to_evidence(self, paths: list[GraphPath]) -> list[Evidence]:
         """Convert traversal paths to Evidence records."""
         evidence: list[Evidence] = []

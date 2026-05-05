@@ -12,6 +12,7 @@ from src.services.knowledge_graph.document_extractor import (
     DocumentGraphExtractor,
     GraphDocument,
 )
+from src.services.observability import service_observe
 
 logger = get_logger(__name__)
 
@@ -23,6 +24,10 @@ class KnowledgeGraphBuilder:
         """Initialize builder with a document extractor."""
         self._extractor = extractor or DocumentGraphExtractor()
 
+    @service_observe(
+        name="service.knowledge_graph.builder.build_from_documents",
+        component="knowledge_graph_builder",
+    )
     def build_from_documents(
         self,
         documents: list[GraphDocument],

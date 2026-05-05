@@ -9,6 +9,7 @@ from src.services.knowledge_graph.document_extractor import (
 from src.services.knowledge_graph.document_extractor import (
     GraphDocument as ExtractedGraphDocument,
 )
+from src.services.observability import service_observe
 
 
 class GraphDocumentAdapter:
@@ -18,6 +19,10 @@ class GraphDocumentAdapter:
         """Initialize adapter with strict document extractor."""
         self._extractor = extractor or DocumentGraphExtractor()
 
+    @service_observe(
+        name="service.knowledge_graph.graph_document_adapter.from_document",
+        component="graph_document_adapter",
+    )
     def from_document(
         self,
         document: ExtractedGraphDocument,

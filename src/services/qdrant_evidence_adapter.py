@@ -2,12 +2,17 @@ from typing import Any
 
 from src.models.evidence import Evidence, SourceType
 from src.services.document_chunker import REQUIRED_QDRANT_PAYLOAD_FIELDS
+from src.services.observability import service_observe
 
 
 class QdrantEvidenceAdapter:
     """Convert Qdrant chunk payloads into shared evidence objects."""
 
     @classmethod
+    @service_observe(
+        name="service.qdrant_evidence_adapter.from_payload",
+        component="qdrant_evidence_adapter",
+    )
     def from_payload(
         cls,
         point_id: str,
@@ -37,6 +42,10 @@ class QdrantEvidenceAdapter:
         )
 
     @staticmethod
+    @service_observe(
+        name="service.qdrant_evidence_adapter.validate_payload",
+        component="qdrant_evidence_adapter",
+    )
     def validate_payload(payload: dict[str, Any]) -> None:
         """Validate required Qdrant evidence citation fields."""
         missing_fields = [

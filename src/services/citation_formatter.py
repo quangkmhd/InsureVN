@@ -1,22 +1,25 @@
-from src.models.evidence import Evidence, Citation
 from src.core.logger import get_logger
+from src.models.evidence import Citation, Evidence
+from src.services.observability import service_observe
 
 logger = get_logger("citation_formatter")
 
+
 class CitationFormatter:
     @staticmethod
+    @service_observe(name="service.citation.format", component="citation_formatter")
     def format(evidence: Evidence) -> Citation:
         CitationFormatter.validate_required_fields(evidence)
-        
+
         citation = Citation(
             company_code=evidence.metadata["company_code"],
             document_id=evidence.metadata.get("document_id"),
             document_name=evidence.metadata.get("document_name"),
             source_file_path=evidence.metadata.get("source_file_path"),
             source_table_id=evidence.metadata.get("source_table_id"),
-            page=evidence.metadata.get("page")
+            page=evidence.metadata.get("page"),
         )
-        
+
         logger.info(
             f"Formatted citation for {citation.company_code}",
             extra={
@@ -24,13 +27,17 @@ class CitationFormatter:
                 "source_type": evidence.source_type.value,
                 "source_id": evidence.source_id,
                 "retrieved_by": evidence.retrieved_by,
-                "company_code": citation.company_code
-            }
+                "company_code": citation.company_code,
+            },
         )
-        
+
         return citation
 
     @staticmethod
+    @service_observe(
+        name="service.citation.validate_required_fields",
+        component="citation_formatter",
+    )
     def validate_required_fields(evidence: Evidence) -> None:
         required_keys = ["company_code"]
         for key in required_keys:
@@ -40,7 +47,7 @@ class CitationFormatter:
                     extra={
                         "component": "citation_formatter",
                         "source_id": evidence.source_id,
-                        "source_type": evidence.source_type.value
-                    }
+                        "source_type": evidence.source_type.value,
+                    },
                 )
                 raise ValueError(f"Missing required citation field: {key}")

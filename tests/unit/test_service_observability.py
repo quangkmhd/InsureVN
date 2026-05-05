@@ -1,0 +1,122 @@
+import logging
+from unittest.mock import MagicMock, patch
+
+from src.services.citation_formatter import CitationFormatter
+from src.services.document_chunker import DocumentChunker
+from src.services.evidence_adapters import (
+    ProfileEvidenceAdapter,
+    StructuredEvidenceAdapter,
+)
+from src.services.evidence_merger import EvidenceMerger
+from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
+from src.services.knowledge_graph.document_extractor import DocumentGraphExtractor
+from src.services.knowledge_graph.document_graph_retriever import DocumentGraphRetriever
+from src.services.knowledge_graph.evidence_adapter import GraphEvidenceAdapter
+from src.services.knowledge_graph.graph_document_adapter import GraphDocumentAdapter
+from src.services.knowledge_graph.neo4j_graph_retriever import Neo4jGraphRetriever
+from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
+from src.services.knowledge_graph.quality import GraphQualityValidator
+from src.services.knowledge_graph.retriever import NetworkxGraphPathRetriever
+from src.services.knowledge_graph.schema import (
+    build_chunk_id,
+    build_company_id,
+    build_document_id,
+    build_plan_id,
+)
+from src.services.knowledge_graph.serializer import GraphJsonSerializer
+from src.services.langchain_qdrant_adapter import LangChainQdrantAdapter
+from src.services.qdrant_collection_manager import QdrantCollectionManager
+from src.services.qdrant_evidence_adapter import QdrantEvidenceAdapter
+from src.services.qdrant_retriever import QdrantRetriever
+from src.services.retrieval_readiness import RetrievalReadinessReport
+
+SERVICE_ENTRYPOINTS = (
+    CitationFormatter.format,
+    CitationFormatter.validate_required_fields,
+    DocumentChunker.chunk_markdown,
+    DocumentChunker.validate_payload,
+    EvidenceMerger.merge,
+    ProfileEvidenceAdapter.from_profile_row,
+    StructuredEvidenceAdapter.from_mcp_result,
+    KnowledgeGraphBuilder.build_from_documents,
+    DocumentGraphExtractor.extract,
+    DocumentGraphRetriever.create_retriever,
+    GraphEvidenceAdapter.to_evidence,
+    GraphDocumentAdapter.from_document,
+    Neo4jGraphRetriever.retrieve,
+    Neo4jKnowledgeGraphStore.from_connection,
+    Neo4jKnowledgeGraphStore.ensure_schema,
+    Neo4jKnowledgeGraphStore.import_graph_documents,
+    GraphQualityValidator.validate,
+    NetworkxGraphPathRetriever.retrieve,
+    NetworkxGraphPathRetriever.explain_path,
+    GraphJsonSerializer.save,
+    GraphJsonSerializer.load,
+    LangChainQdrantAdapter.create_vector_store,
+    build_chunk_id,
+    build_company_id,
+    build_document_id,
+    build_plan_id,
+    QdrantCollectionManager.ensure_collection,
+    QdrantCollectionManager.ensure_payload_indexes,
+    QdrantCollectionManager.build_readiness_report,
+    QdrantEvidenceAdapter.from_payload,
+    QdrantEvidenceAdapter.validate_payload,
+    QdrantRetriever.setup_collection,
+    QdrantRetriever.index_chunks,
+    QdrantRetriever.retrieve,
+    QdrantRetriever.assert_production_ready,
+    RetrievalReadinessReport.assert_production_ready,
+)
+
+
+def test_service_entrypoints_are_langfuse_observed() -> None:
+    """Every service boundary should create a Langfuse observation."""
+    missing_observability = [
+        f"{entrypoint.__module__}.{entrypoint.__qualname__}"
+        for entrypoint in SERVICE_ENTRYPOINTS
+        if not hasattr(entrypoint, "__wrapped__")
+    ]
+
+    assert missing_observability == []
+
+
+def test_service_observe_logs_debug_and_updates_langfuse_span(caplog) -> None:
+    """Service observability should debug operations without leaking raw payloads."""
+    from src.services.observability import service_observe
+
+    @service_observe(name="unit-service-operation", component="unit_service")
+    def observed_service(payload: dict[str, str]) -> dict[str, int]:
+        return {"payload_size": len(payload)}
+
+    fake_client = MagicMock()
+    with (
+        patch("src.services.observability.get_client", return_value=fake_client),
+        caplog.at_level(logging.DEBUG, logger="src.services.unit_service"),
+    ):
+        result = observed_service({"secret": "do-not-log"})
+
+    assert result == {"payload_size": 1}
+    assert any(
+        record.message == "Service operation started"
+        and record.__dict__["operation"] == "unit-service-operation"
+        for record in caplog.records
+    )
+    assert any(
+        record.message == "Service operation completed"
+        and record.__dict__["operation"] == "unit-service-operation"
+        and "duration_ms" in record.__dict__
+        for record in caplog.records
+    )
+    fake_client.update_current_span.assert_any_call(
+        input={
+            "args": [{"type": "dict", "size": 1, "keys": ["secret"]}],
+            "kwargs": {},
+        },
+        metadata={
+            "component": "unit_service",
+            "operation": "unit-service-operation",
+            "function": "observed_service",
+        },
+    )
+    assert "do-not-log" not in caplog.text

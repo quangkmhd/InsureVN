@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.services.observability import service_observe
+
 
 class ProductionReadinessError(RuntimeError):
     """Raised when retrieval infrastructure is not production-ready."""
@@ -15,6 +17,10 @@ class RetrievalReadinessReport:
     missing_payload_indexes: list[str]
     dense_only_degraded: bool
 
+    @service_observe(
+        name="service.retrieval_readiness.assert_production_ready",
+        component="retrieval_readiness",
+    )
     def assert_production_ready(self) -> None:
         """Raise when the retrieval collection cannot satisfy production gates."""
         failures: list[str] = []

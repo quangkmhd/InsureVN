@@ -2,6 +2,7 @@ import time
 from typing import Any
 
 from src.services.knowledge_graph.retriever import GraphPath, GraphPathEdge
+from src.services.observability import service_observe
 
 READ_ONLY_PATH_QUERY = """
 MATCH path = (start)-[relationships*1..$max_hops]->(target)
@@ -28,6 +29,10 @@ class Neo4jGraphRetriever:
         """Initialize retriever with a Neo4jGraph-compatible object."""
         self._graph = graph
 
+    @service_observe(
+        name="service.knowledge_graph.neo4j_graph_retriever.retrieve",
+        component="neo4j_graph_retriever",
+    )
     def retrieve(
         self,
         start_entities: list[str],

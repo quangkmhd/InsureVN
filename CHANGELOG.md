@@ -2,18 +2,33 @@
 
 All notable changes to the InsureVN project will be documented in this file.
 
-## [Unreleased] - 2026-05-04
+## [Unreleased] - 2026-05-05
+
+### ✨ New Features
+
+- **Quad-Retrieval Engine**: Integrated Qdrant and Knowledge Graph retrieval systems to support advanced document exploration and multi-dimensional search within LangChain.
+- **Evidence Management System**: Built an end-to-end evidence architecture including adapters, mergers, citation formatters, and document chunk contracts.
+- **Knowledge Graph Foundation**: Implemented a SQLite-based builder and foundation for the application's document knowledge graph.
+- **Synthetic Schema Expansion**: Expanded the database schema with synthetic tables to enhance testing and simulation environments.
 
 ### 🔧 Improvements
 
 - **Standardized Agent Configuration**: Established a robust, prefix-based configuration architecture. Each agent now has dedicated, isolated parameters (e.g., `DATABASE_LLM_*`, `SEARCH_LLM_*`) managed through a centralized `Settings` registry, eliminating direct dependency on environment variables within agent logic.
 - **Configuration Isolation & Type Safety**: Implemented strict isolation between agent settings to prevent configuration leakage and ensured mandatory type casting for all parameters (e.g., temperature, top_p) at the configuration layer.
 - **Meaningful Naming Refactor**: Systematically renamed internal agent identifiers (e.g., `graph` -> `database_agent`) to align with domain-specific naming standards and improved global searchability within the codebase.
-- **Architectural Documentation Updates**: Updated `AGENTS.md` and `GEMINI.md` with formal **Configuration Standards** and **Naming Conventions**, providing clear guidelines for future agent development.
+- **Advanced Text Normalization**: Improved chunking accuracy and slug generation by switching to NFKD text normalization and stripping non-ASCII characters.
+- **Citation Traceability**: Added structured logging to the citation formatter to provide deeper visibility into AI evidence tracking.
+
+### 🐛 Fixes
+
+- Resolved formatting and logic issues in the Phase 01 evidence generation system.
+- Corrected linting and validation checks within the SQLite MCP server.
 
 ### 📝 Documentation
 
+- **Project Roadmaps**: Published structured blueprints for Phase 02 and Phase 03 agent workflows.
 - **Quad-Retrieval RAG Design**: Published a new technical specification for the Quad-Retrieval (Vector, Keyword, Graph, SQL) architecture in `docs/superpowers/specs/2026-05-04-quad-retrieval-rag-architecture.md`.
+- **RAG Architecture Updates**: Updated the RAG documentation with Gemini embedding integration support.
 
 ---
 

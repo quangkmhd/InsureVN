@@ -3,16 +3,12 @@ from unittest.mock import MagicMock, patch
 
 from src.services.citation_formatter import CitationFormatter
 from src.services.document_chunker import DocumentChunker
-from src.services.evidence_adapters import (
-    ProfileEvidenceAdapter,
-    StructuredEvidenceAdapter,
-)
 from src.services.evidence_merger import EvidenceMerger
 from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
 from src.services.knowledge_graph.document_extractor import DocumentGraphExtractor
 from src.services.knowledge_graph.document_graph_retriever import DocumentGraphRetriever
-from src.services.knowledge_graph.evidence_adapter import GraphEvidenceAdapter
 from src.services.knowledge_graph.graph_document_adapter import GraphDocumentAdapter
+from src.services.knowledge_graph.graph_evidence import GraphEvidenceMapper
 from src.services.knowledge_graph.neo4j_graph_retriever import Neo4jGraphRetriever
 from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
 from src.services.knowledge_graph.quality import GraphQualityValidator
@@ -24,11 +20,12 @@ from src.services.knowledge_graph.schema import (
     build_plan_id,
 )
 from src.services.knowledge_graph.serializer import GraphJsonSerializer
-from src.services.langchain_qdrant_adapter import LangChainQdrantAdapter
 from src.services.qdrant_collection_manager import QdrantCollectionManager
-from src.services.qdrant_evidence_adapter import QdrantEvidenceAdapter
+from src.services.qdrant_evidence import QdrantEvidenceMapper
 from src.services.qdrant_retriever import QdrantRetriever
+from src.services.qdrant_vector_store import QdrantVectorStoreFactory
 from src.services.retrieval_readiness import RetrievalReadinessReport
+from src.services.sqlite_evidence import SqliteEvidenceMapper, SqliteProfileMapper
 
 SERVICE_ENTRYPOINTS = (
     CitationFormatter.format,
@@ -36,12 +33,12 @@ SERVICE_ENTRYPOINTS = (
     DocumentChunker.chunk_markdown,
     DocumentChunker.validate_payload,
     EvidenceMerger.merge,
-    ProfileEvidenceAdapter.from_profile_row,
-    StructuredEvidenceAdapter.from_mcp_result,
+    SqliteProfileMapper.from_profile_row,
+    SqliteEvidenceMapper.from_mcp_result,
     KnowledgeGraphBuilder.build_from_documents,
     DocumentGraphExtractor.extract,
     DocumentGraphRetriever.create_retriever,
-    GraphEvidenceAdapter.to_evidence,
+    GraphEvidenceMapper.to_evidence,
     GraphDocumentAdapter.from_document,
     Neo4jGraphRetriever.retrieve,
     Neo4jKnowledgeGraphStore.from_connection,
@@ -52,7 +49,7 @@ SERVICE_ENTRYPOINTS = (
     NetworkxGraphPathRetriever.explain_path,
     GraphJsonSerializer.save,
     GraphJsonSerializer.load,
-    LangChainQdrantAdapter.create_vector_store,
+    QdrantVectorStoreFactory.create_vector_store,
     build_chunk_id,
     build_company_id,
     build_document_id,
@@ -60,11 +57,12 @@ SERVICE_ENTRYPOINTS = (
     QdrantCollectionManager.ensure_collection,
     QdrantCollectionManager.ensure_payload_indexes,
     QdrantCollectionManager.build_readiness_report,
-    QdrantEvidenceAdapter.from_payload,
-    QdrantEvidenceAdapter.validate_payload,
+    QdrantEvidenceMapper.from_payload,
+    QdrantEvidenceMapper.validate_payload,
     QdrantRetriever.setup_collection,
     QdrantRetriever.index_chunks,
     QdrantRetriever.retrieve,
+    QdrantRetriever.delete_documents_by_ids,
     QdrantRetriever.assert_production_ready,
     RetrievalReadinessReport.assert_production_ready,
 )

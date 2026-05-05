@@ -16,17 +16,17 @@ from langchain_qdrant import FastEmbedSparse, SparseEmbeddings
 from langchain_qdrant import RetrievalMode as LangChainQdrantRetrievalMode
 from qdrant_client import QdrantClient, models
 
+from src.core.config import settings
 from src.core.logger import get_logger
 from src.models.evidence import Evidence, HardFilters, RetrievalMode, RetrievalPlan
 from src.services.document_chunker import ChildChunk
-from src.services.qdrant_vector_store import QdrantVectorStoreFactory
 from src.services.observability import service_observe
 from src.services.qdrant_collection_manager import (
     QdrantCollectionConfig,
     QdrantCollectionManager,
 )
 from src.services.qdrant_evidence import QdrantEvidenceMapper
-from src.core.config import settings
+from src.services.qdrant_vector_store import QdrantVectorStoreFactory
 
 logger = get_logger("qdrant_retriever")
 
@@ -108,7 +108,9 @@ class QdrantRetriever:
         sparse_embedding_provider: SparseEmbeddings | None = None,
         sparse_model_name: str = settings.RAG_SPARSE_MODEL,
         keyword_enabled: bool = settings.RAG_REQUIRE_HYBRID_SEARCH,
-        allow_dense_only_degraded_mode: bool = settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE,
+        allow_dense_only_degraded_mode: bool = (
+            settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE
+        ),
         dense_vector_name: str = settings.RAG_DENSE_VECTOR_NAME,
         sparse_vector_name: str = settings.RAG_SPARSE_VECTOR_NAME,
     ) -> None:
@@ -263,6 +265,43 @@ class QdrantRetriever:
             },
         )
         return evidence_items
+
+    @service_observe(
+        name="service.qdrant_retriever.delete_documents_by_ids",
+        component="qdrant_retriever",
+    )
+    def delete_documents_by_ids(
+        self,
+        point_ids: list[int | str],
+        *,
+        wait: bool = True,
+    ) -> Any | None:
+        """Delete Qdrant document points by their point IDs.
+
+        Args:
+            point_ids: Qdrant point IDs to delete from the collection.
+            wait: Whether to wait until Qdrant applies the delete operation.
+
+        Returns:
+            Qdrant delete operation result, or `None` when no IDs are supplied.
+        """
+        if not point_ids:
+            return None
+
+        result = self.client.delete(
+            collection_name=self.collection_name,
+            points_selector=point_ids,
+            wait=wait,
+        )
+        logger.info(
+            "Deleted Qdrant documents by point IDs",
+            extra={
+                "component": "qdrant_retriever",
+                "collection_name": self.collection_name,
+                "deleted_point_count": len(point_ids),
+            },
+        )
+        return result
 
     @service_observe(
         name="service.qdrant_retriever.assert_production_ready",

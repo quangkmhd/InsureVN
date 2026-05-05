@@ -7,11 +7,11 @@ from src.services.observability import service_observe
 logger = get_logger("evidence_adapters")
 
 
-class StructuredEvidenceAdapter:
+class SqliteEvidenceMapper:
     @staticmethod
     @service_observe(
-        name="service.evidence_adapters.from_mcp_result",
-        component="structured_evidence_adapter",
+        name="service.sqlite_evidence.from_mcp_result",
+        component="sqlite_evidence",
     )
     def from_mcp_result(tool_name: str, row: dict[str, Any]) -> Evidence:
         source_id = row.get("source_table_id", row.get("id", "unknown"))
@@ -33,7 +33,7 @@ class StructuredEvidenceAdapter:
         logger.info(
             f"Converted MCP result to Evidence using {tool_name}",
             extra={
-                "component": "structured_evidence_adapter",
+                "component": "sqlite_evidence",
                 "source_type": SourceType.SQLITE_ROW.value,
                 "source_id": str(source_id),
                 "retrieved_by": "DatabaseAgent",
@@ -50,11 +50,11 @@ class StructuredEvidenceAdapter:
         )
 
 
-class ProfileEvidenceAdapter:
+class SqliteProfileMapper:
     @staticmethod
     @service_observe(
-        name="service.evidence_adapters.from_profile_row",
-        component="profile_evidence_adapter",
+        name="service.sqlite_evidence.from_profile_row",
+        component="sqlite_profile",
     )
     def from_profile_row(row: dict[str, Any]) -> Evidence:
         source_id = row.get("user_id", "unknown")
@@ -65,10 +65,10 @@ class ProfileEvidenceAdapter:
         logger.info(
             "Converted Profile row to Evidence",
             extra={
-                "component": "profile_evidence_adapter",
+                "component": "sqlite_profile",
                 "source_type": SourceType.SQLITE_ROW.value,
                 "source_id": str(source_id),
-                "retrieved_by": "ProfileAdapter",
+                "retrieved_by": "ProfileMapper",
             },
         )
 

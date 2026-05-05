@@ -1,6 +1,39 @@
 import unicodedata
 
+from langchain_core.embeddings import Embeddings
+
 from src.services.document_chunker import DocumentChunker
+
+
+class RecordingEmbeddings(Embeddings):
+    """Deterministic embeddings that record semantic splitter usage."""
+
+    def __init__(self) -> None:
+        """Initialize the call recorder."""
+        self.document_batches: list[list[str]] = []
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Return stable vectors for document texts."""
+        self.document_batches.append(texts)
+        return [[1.0, 0.0] for _ in texts]
+
+    def embed_query(self, _text: str) -> list[float]:
+        """Return a stable vector for query text."""
+        return [1.0, 0.0]
+
+
+def _metadata() -> dict:
+    return {
+        "company_code": "AIA",
+        "document_id": "doc-aia-health",
+        "document_type": "policy",
+        "document_name": "AIA Health Policy",
+        "product_line": "health",
+        "plan_code": "gold",
+        "source_path": "data/processed/aia/health.md",
+        "source_table_id": "documents:1",
+        "effective_date": "2026-01-01",
+    }
 
 
 def test_document_chunker_parses_parent_sections_and_child_chunks() -> None:
@@ -134,3 +167,56 @@ def test_document_chunker_adds_production_payload_lineage_fields() -> None:
         .child_chunks[0]
         .payload["content_hash"]
     )
+
+
+def test_document_chunker_uses_semantic_chunking_with_size_guard() -> None:
+    embeddings = RecordingEmbeddings()
+    markdown_text = (
+        "## Dieu tri noi tru\n\n"
+        + "Chi phi nam vien duoc chi tra theo gioi han chuong trinh. " * 8
+        + "Ho so boi thuong can co hoa don va chi dinh cua bac si. " * 8
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=120,
+        child_chunk_overlap=0,
+        chunking_strategy="hybrid_semantic",
+        semantic_embedding_provider=embeddings,
+        semantic_target_chars=10000,
+        semantic_max_chars=160,
+        semantic_min_chars=40,
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+
+    assert embeddings.document_batches
+    assert len(document_chunks.child_chunks) > 1
+    assert all(
+        len(child_chunk.text) <= 160 for child_chunk in document_chunks.child_chunks
+    )
+
+
+def test_document_chunker_splits_table_heavy_sections_with_repeated_header() -> None:
+    table_rows = "\n".join(
+        f"| {index} | Benh vien {index} | Ha Noi |" for index in range(1, 10)
+    )
+    markdown_text = (
+        "# Danh sach co so y te\n\n"
+        "| STT | Ten co so y te | Tinh thanh |\n"
+        "|---|---|---|\n"
+        f"{table_rows}\n"
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=120,
+        child_chunk_overlap=0,
+        chunking_strategy="hybrid_semantic",
+        table_chunk_chars=170,
+        table_line_ratio_threshold=0.4,
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
+
+    assert len(child_texts) > 1
+    assert all("| STT | Ten co so y te | Tinh thanh |" in text for text in child_texts)
+    assert any("Benh vien 1" in text for text in child_texts)
+    assert any("Benh vien 9" in text for text in child_texts)

@@ -19,13 +19,14 @@ from qdrant_client import QdrantClient, models
 from src.core.logger import get_logger
 from src.models.evidence import Evidence, HardFilters, RetrievalMode, RetrievalPlan
 from src.services.document_chunker import ChildChunk
-from src.services.langchain_qdrant_adapter import LangChainQdrantAdapter
+from src.services.qdrant_vector_store import QdrantVectorStoreFactory
 from src.services.observability import service_observe
 from src.services.qdrant_collection_manager import (
     QdrantCollectionConfig,
     QdrantCollectionManager,
 )
-from src.services.qdrant_evidence_adapter import QdrantEvidenceAdapter
+from src.services.qdrant_evidence import QdrantEvidenceMapper
+from src.core.config import settings
 
 logger = get_logger("qdrant_retriever")
 
@@ -47,6 +48,9 @@ class GoogleGenAIEmbeddingProvider(EmbeddingProvider):
     model_name: str
     google_api_key: str
     vector_size: int
+    batch_size: int = 1
+    document_task_type: str = "RETRIEVAL_DOCUMENT"
+    query_task_type: str = "RETRIEVAL_QUERY"
     _google_genai_embeddings: GoogleGenerativeAIEmbeddings = field(
         init=False,
         repr=False,
@@ -71,8 +75,8 @@ class GoogleGenAIEmbeddingProvider(EmbeddingProvider):
         """Embed documents into dense vectors."""
         return self._google_genai_embeddings.embed_documents(
             texts,
-            batch_size=1,
-            task_type="RETRIEVAL_DOCUMENT",
+            batch_size=self.batch_size,
+            task_type=self.document_task_type,
             output_dimensionality=self.vector_size,
         )
 
@@ -80,7 +84,7 @@ class GoogleGenAIEmbeddingProvider(EmbeddingProvider):
         """Embed query text into a dense vector."""
         return self._google_genai_embeddings.embed_query(
             text,
-            task_type="RETRIEVAL_QUERY",
+            task_type=self.query_task_type,
             output_dimensionality=self.vector_size,
         )
 
@@ -102,11 +106,11 @@ class QdrantRetriever:
         collection_name: str,
         embedding_provider: EmbeddingProvider,
         sparse_embedding_provider: SparseEmbeddings | None = None,
-        sparse_model_name: str = "Qdrant/bm25",
-        keyword_enabled: bool = True,
-        allow_dense_only_degraded_mode: bool = False,
-        dense_vector_name: str = "text_dense",
-        sparse_vector_name: str = "text_sparse",
+        sparse_model_name: str = settings.RAG_SPARSE_MODEL,
+        keyword_enabled: bool = settings.RAG_REQUIRE_HYBRID_SEARCH,
+        allow_dense_only_degraded_mode: bool = settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE,
+        dense_vector_name: str = settings.RAG_DENSE_VECTOR_NAME,
+        sparse_vector_name: str = settings.RAG_SPARSE_VECTOR_NAME,
     ) -> None:
         """Initialize the retriever.
 
@@ -132,7 +136,7 @@ class QdrantRetriever:
         self.allow_dense_only_degraded_mode = allow_dense_only_degraded_mode
         self.dense_vector_name = dense_vector_name
         self.sparse_vector_name = sparse_vector_name
-        self._langchain_qdrant_adapter = LangChainQdrantAdapter(
+        self._vector_store_factory = QdrantVectorStoreFactory(
             collection_name=collection_name,
             dense_vector_name=dense_vector_name,
             sparse_vector_name=sparse_vector_name,
@@ -229,7 +233,7 @@ class QdrantRetriever:
             top_k=top_k,
         )
         evidence_items = [
-            QdrantEvidenceAdapter.from_payload(
+            QdrantEvidenceMapper.from_payload(
                 point_id=result.payload.get("chunk_id", result.point_id),
                 payload={
                     **result.payload,
@@ -319,7 +323,7 @@ class QdrantRetriever:
             }
             else None
         )
-        return self._langchain_qdrant_adapter.create_vector_store(
+        return self._vector_store_factory.create_vector_store(
             client=self.client,
             embeddings=dense_embeddings,
             sparse_embeddings=sparse_embeddings,

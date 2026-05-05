@@ -2,6 +2,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 
 def _load_indexing_script():
@@ -130,6 +131,60 @@ def test_build_embedding_provider_uses_configured_google_provider(monkeypatch) -
         "google_api_key": "test-google-key",
         "vector_size": 768,
     }
+
+
+def test_build_chunks_passes_hybrid_semantic_configuration(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    script = _load_indexing_script()
+    markdown_path = tmp_path / "aia_health.md"
+    markdown_path.write_text("## Section\n\nSemantic text.", encoding="utf-8")
+    semantic_embedding_provider = object()
+    captured = {}
+
+    class FakeDocumentChunker:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+        def chunk_markdown(self, markdown_text, metadata):
+            captured["markdown_text"] = markdown_text
+            captured["metadata"] = metadata
+            return SimpleNamespace(child_chunks=["child-chunk"])
+
+    monkeypatch.setattr(script, "DocumentChunker", FakeDocumentChunker)
+
+    chunks = script.build_chunks(
+        document_paths=[markdown_path],
+        metadata={
+            "company_code": "AIA",
+            "document_id": "aia-health",
+            "document_type": "policy",
+            "document_name": "AIA Health Policy",
+            "product_line": "health",
+            "plan_code": "gold",
+            "source_table_id": "documents:1",
+            "effective_date": "2026-01-01",
+        },
+        child_chunk_chars=1200,
+        child_chunk_overlap=150,
+        chunking_strategy="hybrid_semantic",
+        semantic_embedding_provider=semantic_embedding_provider,
+        semantic_target_chars=1400,
+        semantic_max_chars=3500,
+        semantic_min_chars=350,
+        semantic_breakpoint_type="interquartile",
+        semantic_breakpoint_amount=1.5,
+        table_line_ratio_threshold=0.55,
+        table_chunk_chars=3500,
+    )
+
+    assert chunks == ["child-chunk"]
+    assert captured["chunking_strategy"] == "hybrid_semantic"
+    assert captured["semantic_embedding_provider"] is semantic_embedding_provider
+    assert captured["semantic_target_chars"] == 1400
+    assert captured["table_chunk_chars"] == 3500
+    assert captured["metadata"]["source_path"] == str(markdown_path)
 
 
 def test_build_sparse_embedding_provider_uses_langchain_fastembed(monkeypatch) -> None:

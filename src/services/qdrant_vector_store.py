@@ -7,7 +7,7 @@ from src.services.observability import service_observe
 
 
 @dataclass(frozen=True)
-class LangChainQdrantAdapter:
+class QdrantVectorStoreFactory:
     """Factory for LangChain's Qdrant vector store integration."""
 
     collection_name: str
@@ -15,8 +15,8 @@ class LangChainQdrantAdapter:
     sparse_vector_name: str
 
     @service_observe(
-        name="service.langchain_qdrant_adapter.create_vector_store",
-        component="langchain_qdrant_adapter",
+        name="service.qdrant_vector_store.create_vector_store",
+        component="qdrant_vector_store",
     )
     def create_vector_store(
         self,

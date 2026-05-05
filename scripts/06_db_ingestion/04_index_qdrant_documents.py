@@ -20,7 +20,12 @@ from qdrant_client import QdrantClient
 
 from src.core.config import settings
 from src.core.logger import get_logger
-from src.services.document_chunker import ChildChunk, DocumentChunker
+from src.services.document_chunker import (
+    ChildChunk,
+    ChunkingStrategy,
+    DocumentChunker,
+    SemanticBreakpointType,
+)
 from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRetriever
 
 logger = get_logger("qdrant_indexer")
@@ -32,6 +37,15 @@ def build_dry_run_report(
     metadata: dict[str, Any],
     child_chunk_chars: int,
     child_chunk_overlap: int,
+    chunking_strategy: ChunkingStrategy = "recursive",
+    semantic_embedding_provider: Embeddings | None = None,
+    semantic_target_chars: int = 1400,
+    semantic_max_chars: int = 3500,
+    semantic_min_chars: int = 350,
+    semantic_breakpoint_type: SemanticBreakpointType = "interquartile",
+    semantic_breakpoint_amount: float = 1.5,
+    table_line_ratio_threshold: float = 0.55,
+    table_chunk_chars: int = 3500,
 ) -> dict[str, Any]:
     """Build a dry-run indexing report for Markdown documents.
 
@@ -40,13 +54,31 @@ def build_dry_run_report(
         metadata: Shared document metadata. `source_path` is set per document.
         child_chunk_chars: Maximum child chunk size in characters.
         child_chunk_overlap: Character overlap between adjacent chunks.
+        chunking_strategy: Document chunking strategy.
+        semantic_embedding_provider: Optional embeddings for semantic chunking.
+        semantic_target_chars: Target semantic chunk size.
+        semantic_max_chars: Maximum semantic chunk size before fallback splitting.
+        semantic_min_chars: Minimum semantic chunk size.
+        semantic_breakpoint_type: Semantic breakpoint strategy.
+        semantic_breakpoint_amount: Semantic breakpoint threshold amount.
+        table_line_ratio_threshold: Ratio that marks table-heavy sections.
+        table_chunk_chars: Maximum table chunk size.
 
     Returns:
         JSON-serializable report with document, parent section, and chunk counts.
     """
-    chunker = DocumentChunker(
+    chunker = build_document_chunker(
         child_chunk_chars=child_chunk_chars,
         child_chunk_overlap=child_chunk_overlap,
+        chunking_strategy=chunking_strategy,
+        semantic_embedding_provider=semantic_embedding_provider,
+        semantic_target_chars=semantic_target_chars,
+        semantic_max_chars=semantic_max_chars,
+        semantic_min_chars=semantic_min_chars,
+        semantic_breakpoint_type=semantic_breakpoint_type,
+        semantic_breakpoint_amount=semantic_breakpoint_amount,
+        table_line_ratio_threshold=table_line_ratio_threshold,
+        table_chunk_chars=table_chunk_chars,
     )
     documents: list[dict[str, Any]] = []
     parent_section_count = 0
@@ -84,6 +116,7 @@ def build_dry_run_report(
         "chunk_count": chunk_count,
         "unique_chunk_count": len(seen_content_hashes),
         "skipped_duplicate_count": duplicate_chunk_count,
+        "chunking_strategy": chunking_strategy,
         "readiness_result": "not_checked_dry_run",
         "documents": documents,
     }
@@ -95,11 +128,29 @@ def build_chunks(
     metadata: dict[str, Any],
     child_chunk_chars: int,
     child_chunk_overlap: int,
+    chunking_strategy: ChunkingStrategy = "recursive",
+    semantic_embedding_provider: Embeddings | None = None,
+    semantic_target_chars: int = 1400,
+    semantic_max_chars: int = 3500,
+    semantic_min_chars: int = 350,
+    semantic_breakpoint_type: SemanticBreakpointType = "interquartile",
+    semantic_breakpoint_amount: float = 1.5,
+    table_line_ratio_threshold: float = 0.55,
+    table_chunk_chars: int = 3500,
 ) -> list[ChildChunk]:
     """Chunk Markdown documents for indexing."""
-    chunker = DocumentChunker(
+    chunker = build_document_chunker(
         child_chunk_chars=child_chunk_chars,
         child_chunk_overlap=child_chunk_overlap,
+        chunking_strategy=chunking_strategy,
+        semantic_embedding_provider=semantic_embedding_provider,
+        semantic_target_chars=semantic_target_chars,
+        semantic_max_chars=semantic_max_chars,
+        semantic_min_chars=semantic_min_chars,
+        semantic_breakpoint_type=semantic_breakpoint_type,
+        semantic_breakpoint_amount=semantic_breakpoint_amount,
+        table_line_ratio_threshold=table_line_ratio_threshold,
+        table_chunk_chars=table_chunk_chars,
     )
     chunks: list[ChildChunk] = []
     for document_path in document_paths:
@@ -110,6 +161,36 @@ def build_chunks(
         )
         chunks.extend(chunked_document.child_chunks)
     return chunks
+
+
+def build_document_chunker(
+    *,
+    child_chunk_chars: int,
+    child_chunk_overlap: int,
+    chunking_strategy: ChunkingStrategy,
+    semantic_embedding_provider: Embeddings | None,
+    semantic_target_chars: int,
+    semantic_max_chars: int,
+    semantic_min_chars: int,
+    semantic_breakpoint_type: SemanticBreakpointType,
+    semantic_breakpoint_amount: float,
+    table_line_ratio_threshold: float,
+    table_chunk_chars: int,
+) -> DocumentChunker:
+    """Build the configured document chunker."""
+    return DocumentChunker(
+        child_chunk_chars=child_chunk_chars,
+        child_chunk_overlap=child_chunk_overlap,
+        chunking_strategy=chunking_strategy,
+        semantic_embedding_provider=semantic_embedding_provider,
+        semantic_target_chars=semantic_target_chars,
+        semantic_max_chars=semantic_max_chars,
+        semantic_min_chars=semantic_min_chars,
+        semantic_breakpoint_type=semantic_breakpoint_type,
+        semantic_breakpoint_amount=semantic_breakpoint_amount,
+        table_line_ratio_threshold=table_line_ratio_threshold,
+        table_chunk_chars=table_chunk_chars,
+    )
 
 
 def build_embedding_provider(
@@ -161,6 +242,16 @@ def main() -> None:
 
     document_paths = [Path(document) for document in args.document]
     metadata = json.loads(Path(args.metadata_json).read_text(encoding="utf-8"))
+    chunking_kwargs = {
+        "chunking_strategy": settings.RAG_CHUNKING_STRATEGY,
+        "semantic_target_chars": settings.RAG_SEMANTIC_TARGET_CHARS,
+        "semantic_max_chars": settings.RAG_SEMANTIC_MAX_CHARS,
+        "semantic_min_chars": settings.RAG_SEMANTIC_MIN_CHARS,
+        "semantic_breakpoint_type": settings.RAG_SEMANTIC_BREAKPOINT_TYPE,
+        "semantic_breakpoint_amount": settings.RAG_SEMANTIC_BREAKPOINT_AMOUNT,
+        "table_line_ratio_threshold": settings.RAG_TABLE_LINE_RATIO_THRESHOLD,
+        "table_chunk_chars": settings.RAG_TABLE_CHUNK_MAX_CHARS,
+    }
 
     if args.dry_run:
         report = build_dry_run_report(
@@ -168,25 +259,29 @@ def main() -> None:
             metadata=metadata,
             child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
             child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
+            **chunking_kwargs,
         )
         print(json.dumps(report, ensure_ascii=False))
         return
 
+    embedding_provider = build_embedding_provider(
+        provider=settings.RAG_EMBEDDING_PROVIDER,
+        model_name=settings.RAG_EMBEDDING_MODEL,
+        google_api_key=settings.GOOGLE_API_KEY,
+        vector_size=settings.RAG_DENSE_VECTOR_SIZE,
+    )
     chunks = build_chunks(
         document_paths=document_paths,
         metadata=metadata,
         child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
         child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
+        semantic_embedding_provider=embedding_provider,
+        **chunking_kwargs,
     )
     retriever = QdrantRetriever(
         client=QdrantClient(url=settings.RAG_QDRANT_URL),
         collection_name=settings.RAG_QDRANT_COLLECTION,
-        embedding_provider=build_embedding_provider(
-            provider=settings.RAG_EMBEDDING_PROVIDER,
-            model_name=settings.RAG_EMBEDDING_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
-            vector_size=settings.RAG_DENSE_VECTOR_SIZE,
-        ),
+        embedding_provider=embedding_provider,
         sparse_embedding_provider=build_sparse_embedding_provider(
             settings.RAG_SPARSE_MODEL
         ),

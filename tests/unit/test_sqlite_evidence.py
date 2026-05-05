@@ -1,9 +1,9 @@
 import pytest
-from src.services.evidence_adapters import StructuredEvidenceAdapter, ProfileEvidenceAdapter
+from src.services.sqlite_evidence import SqliteEvidenceMapper, SqliteProfileMapper
 from src.models.evidence import SourceType
 
-def test_structured_evidence_adapter(mcp_result_fixture):
-    evidence = StructuredEvidenceAdapter.from_mcp_result("search_benefits", mcp_result_fixture)
+def test_sqlite_evidence_mapper(mcp_result_fixture):
+    evidence = SqliteEvidenceMapper.from_mcp_result("search_benefits", mcp_result_fixture)
     
     assert evidence.source_type == SourceType.SQLITE_ROW
     assert evidence.source_id == "benefits_1"
@@ -11,8 +11,8 @@ def test_structured_evidence_adapter(mcp_result_fixture):
     assert evidence.metadata["company_code"] == "C01"
     assert evidence.metadata["tool_name"] == "search_benefits"
 
-def test_profile_evidence_adapter(profile_row_fixture):
-    evidence = ProfileEvidenceAdapter.from_profile_row(profile_row_fixture)
+def test_sqlite_profile_mapper(profile_row_fixture):
+    evidence = SqliteProfileMapper.from_profile_row(profile_row_fixture)
     
     assert evidence.source_type == SourceType.SQLITE_ROW
     assert evidence.source_id == "U123"

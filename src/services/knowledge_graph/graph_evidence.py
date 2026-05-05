@@ -7,12 +7,12 @@ from src.services.knowledge_graph.retriever import GraphPath
 from src.services.observability import service_observe
 
 
-class GraphEvidenceAdapter:
+class GraphEvidenceMapper:
     """Adapt graph paths into Evidence(source_type='graph_triple')."""
 
     @service_observe(
-        name="service.knowledge_graph.evidence_adapter.to_evidence",
-        component="graph_evidence_adapter",
+        name="service.knowledge_graph.graph_evidence.to_evidence",
+        component="graph_evidence",
     )
     def to_evidence(self, paths: list[GraphPath]) -> list[Evidence]:
         """Convert traversal paths to Evidence records."""

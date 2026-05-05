@@ -4,7 +4,7 @@ from langchain_qdrant.sparse_embeddings import SparseVector
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams
 
-from src.services.langchain_qdrant_adapter import LangChainQdrantAdapter
+from src.services.qdrant_vector_store import QdrantVectorStoreFactory
 
 
 class FakeEmbeddings(Embeddings):
@@ -27,7 +27,7 @@ class FakeSparseEmbeddings(SparseEmbeddings):
         return SparseVector(indices=[1], values=[1.0])
 
 
-def test_langchain_qdrant_adapter_creates_hybrid_vector_store() -> None:
+def test_qdrant_vector_store_factory_creates_hybrid_vector_store() -> None:
     client = QdrantClient(":memory:")
     client.create_collection(
         collection_name="insurevn_chunks",
@@ -40,13 +40,13 @@ def test_langchain_qdrant_adapter_creates_hybrid_vector_store() -> None:
             ),
         },
     )
-    adapter = LangChainQdrantAdapter(
+    factory = QdrantVectorStoreFactory(
         collection_name="insurevn_chunks",
         dense_vector_name="text_dense",
         sparse_vector_name="text_sparse",
     )
 
-    vector_store = adapter.create_vector_store(
+    vector_store = factory.create_vector_store(
         client=client,
         embeddings=FakeEmbeddings(),
         sparse_embeddings=FakeSparseEmbeddings(),

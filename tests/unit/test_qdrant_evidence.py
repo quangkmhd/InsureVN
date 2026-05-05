@@ -1,10 +1,10 @@
 import pytest
 
 from src.models.evidence import SourceType
-from src.services.qdrant_evidence_adapter import QdrantEvidenceAdapter
+from src.services.qdrant_evidence import QdrantEvidenceMapper
 
 
-def test_qdrant_evidence_adapter_preserves_required_citations() -> None:
+def test_qdrant_evidence_mapper_preserves_required_citations() -> None:
     payload = {
         "company_code": "AIA",
         "document_id": "doc-aia-health",
@@ -28,7 +28,7 @@ def test_qdrant_evidence_adapter_preserves_required_citations() -> None:
         "parent_text": "Thoi gian cho cua benh dac biet la 90 ngay.",
     }
 
-    evidence = QdrantEvidenceAdapter.from_payload(
+    evidence = QdrantEvidenceMapper.from_payload(
         point_id="doc-aia-health:waiting-period:3",
         payload=payload,
         score=0.87,
@@ -47,7 +47,7 @@ def test_qdrant_evidence_adapter_preserves_required_citations() -> None:
     assert evidence.metadata["fusion_score"] == 0.87
 
 
-def test_qdrant_evidence_adapter_rejects_missing_required_payload_fields() -> None:
+def test_qdrant_evidence_mapper_rejects_missing_required_payload_fields() -> None:
     payload = {
         "company_code": "AIA",
         "document_id": "doc-aia-health",
@@ -67,14 +67,14 @@ def test_qdrant_evidence_adapter_rejects_missing_required_payload_fields() -> No
     }
 
     with pytest.raises(ValueError, match="page_number"):
-        QdrantEvidenceAdapter.from_payload(
+        QdrantEvidenceMapper.from_payload(
             point_id="doc-aia-health:waiting-period:3",
             payload=payload,
             score=0.87,
         )
 
 
-def test_qdrant_evidence_adapter_requires_production_lineage_fields() -> None:
+def test_qdrant_evidence_mapper_requires_production_lineage_fields() -> None:
     payload = {
         "company_code": "AIA",
         "document_id": "doc-aia-health",
@@ -94,7 +94,7 @@ def test_qdrant_evidence_adapter_requires_production_lineage_fields() -> None:
     }
 
     with pytest.raises(ValueError, match="ingestion_version"):
-        QdrantEvidenceAdapter.from_payload(
+        QdrantEvidenceMapper.from_payload(
             point_id="doc-aia-health:waiting-period:3",
             payload=payload,
             score=0.87,

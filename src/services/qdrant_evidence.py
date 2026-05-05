@@ -5,13 +5,13 @@ from src.services.document_chunker import REQUIRED_QDRANT_PAYLOAD_FIELDS
 from src.services.observability import service_observe
 
 
-class QdrantEvidenceAdapter:
+class QdrantEvidenceMapper:
     """Convert Qdrant chunk payloads into shared evidence objects."""
 
     @classmethod
     @service_observe(
-        name="service.qdrant_evidence_adapter.from_payload",
-        component="qdrant_evidence_adapter",
+        name="service.qdrant_evidence.from_payload",
+        component="qdrant_evidence",
     )
     def from_payload(
         cls,

@@ -24,6 +24,13 @@ It automates the full insurance lifecycle: policy explanation, claim processing,
 
 ---
 
+## 2.1 Implementation Memory
+
+- In `src/`, all `import` and `from ... import ...` statements must stay at the top of the file. Do not place imports inside `def`, class methods, or runtime branches unless there is a documented unavoidable reason.
+- Implementation priority: use supported Deep Agents primitives first, then LangChain, then LangGraph, and only then write custom/self-built code.
+
+---
+
 ## 3. Coding Standards
 
 - **Style**: PEP 8, enforced by `ruff`

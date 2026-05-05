@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
+from time import perf_counter
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from langfuse import observe
 
 from api.routes import health
-from core.config import settings
 from core.logger import get_logger
 
 # Initialize logger
@@ -40,6 +41,41 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    @observe(name="fastapi-request")
+    async def log_http_request(request: Request, call_next):
+        """Trace and log every FastAPI request."""
+        start_time = perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            duration_ms = round((perf_counter() - start_time) * 1000, 2)
+            logger.error(
+                "HTTP request failed",
+                extra={
+                    "component": "http",
+                    "method": request.method,
+                    "path": request.url.path,
+                    "duration_ms": duration_ms,
+                    "error_type": type(exc).__name__,
+                },
+                exc_info=True,
+            )
+            raise
+
+        duration_ms = round((perf_counter() - start_time) * 1000, 2)
+        logger.info(
+            "HTTP request completed",
+            extra={
+                "component": "http",
+                "method": request.method,
+                "path": request.url.path,
+                "status_code": response.status_code,
+                "duration_ms": duration_ms,
+            },
+        )
+        return response
 
     # Register routers
     app.include_router(health.router)

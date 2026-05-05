@@ -5,37 +5,50 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+try:
+    from langfuse import get_client
+except ImportError:
+    get_client = None
+
+
+STANDARD_LOG_ATTRS = {
+    "args",
+    "asctime",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "module",
+    "msecs",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "thread",
+    "threadName",
+    "message",
+}
+
+
+def _extra_attributes(record: logging.LogRecord) -> dict:
+    return {
+        key: value
+        for key, value in record.__dict__.items()
+        if key not in STANDARD_LOG_ATTRS and not key.startswith("_")
+    }
+
 
 class JsonFormatter(logging.Formatter):
     """Production-grade JSON formatter for logs."""
 
     def format(self, record):
-        # Standard attributes to exclude from metadata
-        standard_attrs = {
-            "args",
-            "asctime",
-            "created",
-            "exc_info",
-            "exc_text",
-            "filename",
-            "funcName",
-            "levelname",
-            "levelno",
-            "lineno",
-            "module",
-            "msecs",
-            "msg",
-            "name",
-            "pathname",
-            "process",
-            "processName",
-            "relativeCreated",
-            "stack_info",
-            "thread",
-            "threadName",
-            "message",
-        }
-
         log_record = {
             "timestamp": datetime.fromtimestamp(record.created).isoformat(),
             "level": record.levelname,
@@ -48,11 +61,57 @@ class JsonFormatter(logging.Formatter):
             log_record["exception"] = self.formatException(record.exc_info)
 
         # Automatically add all "extra" attributes
-        for key, value in record.__dict__.items():
-            if key not in standard_attrs and not key.startswith("_"):
-                log_record[key] = value
+        log_record.update(_extra_attributes(record))
 
         return json.dumps(log_record, ensure_ascii=False)
+
+
+class LangfuseLogHandler(logging.Handler):
+    """Mirror Python log records into Langfuse as span observations."""
+
+    _ignored_prefixes = ("langfuse", "httpx", "httpcore", "urllib3")
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if get_client is None or record.name.startswith(self._ignored_prefixes):
+            return
+
+        try:
+            langfuse_client = get_client()
+            message = record.getMessage()
+            metadata = {
+                "logger": record.name,
+                "level": record.levelname,
+                "pathname": record.pathname,
+                "lineno": record.lineno,
+                "function": record.funcName,
+                **_extra_attributes(record),
+            }
+            if record.exc_info:
+                metadata["exception"] = self.format(record)
+
+            with langfuse_client.start_as_current_observation(
+                as_type="span",
+                name=f"log.{record.name}",
+            ) as observation:
+                observation.update(
+                    input={"message": message},
+                    output=None,
+                    level=self._langfuse_level(record.levelno),
+                    status_message=message[:500],
+                    metadata=metadata,
+                )
+        except Exception:
+            self.handleError(record)
+
+    @staticmethod
+    def _langfuse_level(levelno: int) -> str:
+        if levelno >= logging.ERROR:
+            return "ERROR"
+        if levelno >= logging.WARNING:
+            return "WARNING"
+        if levelno <= logging.DEBUG:
+            return "DEBUG"
+        return "DEFAULT"
 
 
 def get_logger(
@@ -80,6 +139,9 @@ def get_logger(
         console_handler = logging.StreamHandler(stream or sys.stderr)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
+
+        langfuse_handler = LangfuseLogHandler(level=level)
+        logger.addHandler(langfuse_handler)
 
         # File handler with rotation (prevents disk full)
         if log_file:

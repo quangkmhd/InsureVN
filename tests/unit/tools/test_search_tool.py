@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from langchain_core.tools import BaseTool
+
 from src.tools.search_tool import search_web
 
 
@@ -9,6 +10,10 @@ def test_search_web_is_tool():
     assert isinstance(search_web, BaseTool)
     assert search_web.name == "search_web"
     assert "query" in search_web.args
+
+
+def test_search_web_function_is_langfuse_observed():
+    assert hasattr(search_web.func, "__wrapped__")
 
 
 def test_search_web_invoke():

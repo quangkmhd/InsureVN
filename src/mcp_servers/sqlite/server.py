@@ -8,7 +8,8 @@ from core.config import settings
 from core.database import get_db_connection
 from core.logger import get_logger
 
-os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_HOST)
+os.environ.setdefault("LANGFUSE_BASE_URL", settings.LANGFUSE_BASE_URL)
+os.environ.setdefault("LANGFUSE_HOST", settings.LANGFUSE_BASE_URL)
 
 # Initialize logger for MCP (logs to stderr to avoid breaking stdio protocol)
 logger = get_logger(

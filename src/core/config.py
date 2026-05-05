@@ -28,7 +28,11 @@ class Settings:
         # Langfuse Tracing
         self.LANGFUSE_PUBLIC_KEY: str = os.getenv("LANGFUSE_PUBLIC_KEY", "")
         self.LANGFUSE_SECRET_KEY: str = os.getenv("LANGFUSE_SECRET_KEY", "")
-        self.LANGFUSE_HOST: str = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
+        self.LANGFUSE_BASE_URL: str = os.getenv(
+            "LANGFUSE_BASE_URL",
+            os.getenv("LANGFUSE_HOST", "http://localhost:3000"),
+        )
+        self.LANGFUSE_HOST: str = self.LANGFUSE_BASE_URL
 
         # LLM Configuration
         self.LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")
@@ -38,14 +42,14 @@ class Settings:
 
         # Database Agent Specific
         self.DATABASE_LLM_PROVIDER: str = os.getenv(
-            "DATABASE_LLM_PROVIDER", self.LLM_PROVIDER
+            "DATABASE_LLM_PROVIDER", "ollama"
         )
-        self.DATABASE_LLM_MODEL: str = os.getenv("DATABASE_LLM_MODEL", self.LLM_MODEL)
-        self.DATABASE_LLM_API_KEY: str = os.getenv(
-            "DATABASE_LLM_API_KEY", self.LLM_API_KEY
+        self.DATABASE_LLM_MODEL: str = os.getenv(
+            "DATABASE_LLM_MODEL", "gemma4:31b-cloud"
         )
+        self.DATABASE_LLM_API_KEY: str = os.getenv("DATABASE_LLM_API_KEY", "")
         self.DATABASE_LLM_BASE_URL: str = os.getenv(
-            "DATABASE_LLM_BASE_URL", self.LLM_BASE_URL
+            "DATABASE_LLM_BASE_URL", "http://localhost:11434"
         )
         self.DATABASE_LLM_TEMPERATURE: float = float(
             os.getenv("DATABASE_LLM_TEMPERATURE", "1.0")
@@ -58,13 +62,11 @@ class Settings:
             "SEARCH_TAVILY_API_KEY", os.getenv("TAVILY_API_KEY", "")
         )
         self.SEARCH_MAX_RESULTS: int = int(os.getenv("SEARCH_MAX_RESULTS", "50"))
-        self.SEARCH_LLM_PROVIDER: str = os.getenv(
-            "SEARCH_LLM_PROVIDER", self.LLM_PROVIDER
-        )
-        self.SEARCH_LLM_MODEL: str = os.getenv("SEARCH_LLM_MODEL", self.LLM_MODEL)
-        self.SEARCH_LLM_API_KEY: str = os.getenv("SEARCH_LLM_API_KEY", self.LLM_API_KEY)
+        self.SEARCH_LLM_PROVIDER: str = os.getenv("SEARCH_LLM_PROVIDER", "ollama")
+        self.SEARCH_LLM_MODEL: str = os.getenv("SEARCH_LLM_MODEL", "gemma4:31b-cloud")
+        self.SEARCH_LLM_API_KEY: str = os.getenv("SEARCH_LLM_API_KEY", "")
         self.SEARCH_LLM_BASE_URL: str = os.getenv(
-            "SEARCH_LLM_BASE_URL", self.LLM_BASE_URL
+            "SEARCH_LLM_BASE_URL", "http://localhost:11434"
         )
         self.SEARCH_LLM_TEMPERATURE: float = float(
             os.getenv("SEARCH_LLM_TEMPERATURE", "0.7")

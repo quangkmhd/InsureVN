@@ -3,6 +3,7 @@ from typing import Any
 
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.tools import tool
+from langfuse import observe
 
 from core.config import settings
 from core.logger import get_logger
@@ -11,6 +12,7 @@ logger = get_logger(__name__)
 
 
 @tool
+@observe(name="search-web")
 def search_web(query: str) -> Any:
     """Search the web for accurate information regarding insurance, competitors, 
     market trends, or any other query.

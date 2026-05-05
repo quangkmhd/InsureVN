@@ -18,3 +18,19 @@ async def test_health_check_endpoint():
     assert "project" in data
     assert "version" in data
     assert data["project"] == "InsureVN"
+
+
+@pytest.mark.asyncio
+async def test_health_check_endpoint_logs_request(caplog):
+    """Every API request should emit a structured log for Langfuse mirroring."""
+    with caplog.at_level("INFO", logger="bootstrap"):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            await ac.get("/health")
+
+    assert any(
+        record.message == "HTTP request completed"
+        and getattr(record, "path", None) == "/health"
+        for record in caplog.records
+    )

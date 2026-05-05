@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from typing import Any
 
 from langchain.agents import create_agent
@@ -17,8 +18,20 @@ logger = get_logger(__name__)
 
 
 class DatabaseAgent:
-    def __init__(self, database_agent: Any, prompt_version: int | None = None):
-        self.database_agent = database_agent
+    """Database query agent backed by LangChain and SQLite MCP tools."""
+
+    def __init__(
+        self,
+        database_agent_executor: Any,
+        prompt_version: int | None = None,
+    ) -> None:
+        """Initialize the database agent wrapper.
+
+        Args:
+            database_agent_executor: LangChain executor for database tool calls.
+            prompt_version: Langfuse prompt version used by the executor.
+        """
+        self.database_agent_executor = database_agent_executor
         self.prompt_version = prompt_version
 
     @classmethod
@@ -28,79 +41,80 @@ class DatabaseAgent:
 
         sqlite_mcp_tools = await get_sqlite_mcp_tools()
 
-        init_kwargs: dict[str, Any] = {
+        database_agent_model_config: dict[str, Any] = {
             "temperature": settings.DATABASE_LLM_TEMPERATURE,
             "top_p": settings.DATABASE_LLM_TOP_P,
             "top_k": settings.DATABASE_LLM_TOP_K,
         }
 
         if settings.DATABASE_LLM_API_KEY:
-            init_kwargs["api_key"] = settings.DATABASE_LLM_API_KEY
+            database_agent_model_config["api_key"] = settings.DATABASE_LLM_API_KEY
         if settings.DATABASE_LLM_BASE_URL:
-            init_kwargs["base_url"] = settings.DATABASE_LLM_BASE_URL
+            database_agent_model_config["base_url"] = settings.DATABASE_LLM_BASE_URL
 
-        is_ollama = (settings.DATABASE_LLM_PROVIDER == "ollama") or (
+        database_agent_uses_ollama = (settings.DATABASE_LLM_PROVIDER == "ollama") or (
             settings.DATABASE_LLM_MODEL
             and "ollama" in settings.DATABASE_LLM_MODEL.lower()
         )
-        if is_ollama and settings.DATABASE_LLM_API_KEY:
-            init_kwargs["client_kwargs"] = {
+        if database_agent_uses_ollama and settings.DATABASE_LLM_API_KEY:
+            database_agent_model_config["client_kwargs"] = {
                 "headers": {"Authorization": f"Bearer {settings.DATABASE_LLM_API_KEY}"}
             }
 
         database_agent_llm = init_chat_model(
             settings.DATABASE_LLM_MODEL,
             model_provider=settings.DATABASE_LLM_PROVIDER,
-            **init_kwargs,
+            **database_agent_model_config,
         )
 
         # Prompt Management: fetch from Langfuse with fallback
-        FALLBACK_PROMPT = (
+        fallback_system_prompt = (
             "You are the DatabaseAgent for the InsureVN system.\n"
-            "Your sole responsibility is to query the SQLite database using the provided tools "
-            "to answer the user's question accurately.\n\n"
+            "Your sole responsibility is to query the SQLite database using the "
+            "provided tools to answer the user's question accurately.\n\n"
             "GUIDELINES:\n"
-            "1. THINK STEP-BY-STEP: Before calling any tool or providing a final answer, "
-            "always explain your reasoning. What data do you need? Which tool is best? "
-            "How will you use the results?\n"
+            "1. THINK STEP-BY-STEP: Before calling any tool or providing a final "
+            "answer, always explain your reasoning. What data do you need? Which "
+            "tool is best? How will you use the results?\n"
             "2. DATA DRIVEN: Only answer based on the data returned by the tools. "
             "If no data is found, state that clearly. Do not make up facts.\n"
-            "3. ACCURACY: If the user's question is ambiguous, query for broad information first "
-            "before narrowing down."
+            "3. ACCURACY: If the user's question is ambiguous, query for broad "
+            "information first before narrowing down."
         )
         try:
-            prompt = get_client().get_prompt(
+            langfuse_system_prompt = get_client().get_prompt(
                 "database-agent-system", label="production"
             )
-            system_prompt = prompt.compile()
+            system_prompt = langfuse_system_prompt.compile()
             logger.info(
-                f"Loaded prompt from Langfuse: database-agent-system v{prompt.version}"
+                "Loaded prompt from Langfuse: database-agent-system "
+                f"v{langfuse_system_prompt.version}"
             )
-        except Exception as e:
-            logger.warning(f"Failed to fetch prompt from Langfuse, using fallback: {e}")
-            system_prompt = FALLBACK_PROMPT
+        except Exception as exc:
+            logger.warning(
+                "Failed to fetch prompt from Langfuse, using fallback: %s", exc
+            )
+            system_prompt = fallback_system_prompt
 
         # Trigger Thinking: Include <|think|> token at the start of the system prompt
         if not system_prompt.startswith("<|think|>"):
             system_prompt = f"<|think|>\n{system_prompt}"
 
-        database_agent = create_agent(
+        database_agent_executor = create_agent(
             database_agent_llm, tools=sqlite_mcp_tools, system_prompt=system_prompt
         )
         logger.info("DatabaseAgent initialized successfully")
 
         # Get version if loaded from Langfuse
         prompt_version = None
-        try:
+        with suppress(Exception):
             prompt_version = (
                 get_client()
                 .get_prompt("database-agent-system", label="production")
                 .version
             )
-        except Exception:
-            pass
 
-        return cls(database_agent, prompt_version=prompt_version)
+        return cls(database_agent_executor, prompt_version=prompt_version)
 
     async def invoke(self, user_query: str, config: dict | None = None) -> str:
         """Invoke the agent with a query."""
@@ -136,7 +150,7 @@ class DatabaseAgent:
                 session_id=session_id,
                 tags=["database_agent"],
             ):
-                agent_execution_result = await self.database_agent.ainvoke(
+                agent_execution_result = await self.database_agent_executor.ainvoke(
                     agent_execution_inputs, config=invoke_config
                 )
 

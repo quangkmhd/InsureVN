@@ -12,7 +12,7 @@ def test_strip_thinking_logic():
     content_with_thought = (
         "<|channel>thought\\nThis is some reasoning.<channel|>The final answer is 42."
     )
-    # Standardize the content for testing (handling the escaped newline if it comes like that)
+    # Standardize escaped newlines from serialized model output.
     content_with_thought = content_with_thought.replace("\\n", "\n")
 
     # Regex to match: <|channel>thought\n[Internal reasoning]<channel|>
@@ -39,7 +39,7 @@ def test_strip_thinking_logic():
 async def test_database_agent_config_parameters(
     mock_langfuse_client, mock_init_chat, mock_get_tools
 ):
-    """Verify that the agent initializes with the correct sampling parameters and prepends <|think|>."""
+    """Verify model sampling parameters and the thinking-token prefix."""
     mock_get_tools.return_value = []
     mock_init_chat.return_value = MagicMock()
 
@@ -69,12 +69,15 @@ async def test_database_agent_config_parameters(
 async def test_database_agent_invoke_strips_thinking():
     """Verify that invoke strips thinking tokens from the result."""
     mock_agent_executor = AsyncMock()
-    thought_content = "<|channel>thought\nI should query tables.\n<channel|>The tables are companies, documents."
+    thought_content = (
+        "<|channel>thought\nI should query tables.\n<channel|>"
+        "The tables are companies, documents."
+    )
     mock_agent_executor.ainvoke.return_value = {
         "messages": [MagicMock(content=thought_content)]
     }
 
-    agent = DatabaseAgent(database_agent=mock_agent_executor)
+    agent = DatabaseAgent(database_agent_executor=mock_agent_executor)
     result = await agent.invoke("What tables?")
 
     assert result == "The tables are companies, documents."

@@ -1,21 +1,27 @@
 """Index processed Markdown policy documents into Qdrant."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from langchain_core.embeddings import Embeddings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_qdrant import FastEmbedSparse, SparseEmbeddings
 from qdrant_client import QdrantClient
 
 from src.core.config import settings
 from src.core.logger import get_logger
 from src.services.document_chunker import ChildChunk, DocumentChunker
-from src.services.qdrant_retriever import HashingEmbeddingProvider, QdrantRetriever
+from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRetriever
 
 logger = get_logger("qdrant_indexer")
 
@@ -111,6 +117,7 @@ def build_embedding_provider(
     provider: str,
     model_name: str,
     google_api_key: str,
+    vector_size: int,
 ) -> Embeddings:
     """Build the configured embedding provider.
 
@@ -118,6 +125,7 @@ def build_embedding_provider(
         provider: Embedding provider configured by `RAG_EMBEDDING_PROVIDER`.
         model_name: Embedding model configured by `RAG_EMBEDDING_MODEL`.
         google_api_key: Google API key for Gemini embedding providers.
+        vector_size: Dense vector dimension configured by `RAG_DENSE_VECTOR_SIZE`.
 
     Returns:
         Embedding provider for indexing and retrieval.
@@ -126,15 +134,14 @@ def build_embedding_provider(
         ValueError: If the configured model is not implemented in this phase.
     """
     if provider == "google_genai":
-        return GoogleGenerativeAIEmbeddings(
-            model=model_name,
+        return GoogleGenAIEmbeddingProvider(
+            model_name=model_name,
             google_api_key=google_api_key,
+            vector_size=vector_size,
         )
-    if provider == "hashing":
-        return HashingEmbeddingProvider()
     raise ValueError(
         "Unsupported RAG_EMBEDDING_PROVIDER. "
-        "Use 'google_genai' for production or 'hashing' for local tests."
+        "Use 'google_genai' with GOOGLE_API_KEY configured."
     )
 
 
@@ -178,6 +185,7 @@ def main() -> None:
             provider=settings.RAG_EMBEDDING_PROVIDER,
             model_name=settings.RAG_EMBEDDING_MODEL,
             google_api_key=settings.GOOGLE_API_KEY,
+            vector_size=settings.RAG_DENSE_VECTOR_SIZE,
         ),
         sparse_embedding_provider=build_sparse_embedding_provider(
             settings.RAG_SPARSE_MODEL

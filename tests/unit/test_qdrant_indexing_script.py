@@ -1,4 +1,6 @@
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -14,6 +16,26 @@ def _load_indexing_script():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def test_indexing_script_help_runs_from_project_root() -> None:
+    script_path = (
+        Path(__file__).resolve().parents[2]
+        / "scripts"
+        / "06_db_ingestion"
+        / "04_index_qdrant_documents.py"
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(script_path), "--help"],
+        cwd=Path(__file__).resolve().parents[2],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Index processed Markdown policy documents into Qdrant" in result.stdout
 
 
 def test_dry_run_report_counts_parent_sections_and_child_chunks(tmp_path) -> None:
@@ -81,30 +103,32 @@ def test_dry_run_report_counts_duplicate_chunks(tmp_path) -> None:
     assert report["skipped_duplicate_count"] == 2
 
 
-def test_build_embedding_provider_uses_langchain_google_embeddings(monkeypatch) -> None:
+def test_build_embedding_provider_uses_configured_google_provider(monkeypatch) -> None:
     script = _load_indexing_script()
     captured = {}
 
-    class FakeGoogleGenerativeAIEmbeddings:
+    class FakeGoogleGenAIEmbeddingProvider:
         def __init__(self, **kwargs) -> None:
             captured.update(kwargs)
 
     monkeypatch.setattr(
         script,
-        "GoogleGenerativeAIEmbeddings",
-        FakeGoogleGenerativeAIEmbeddings,
+        "GoogleGenAIEmbeddingProvider",
+        FakeGoogleGenAIEmbeddingProvider,
     )
 
     provider = script.build_embedding_provider(
         provider="google_genai",
         model_name="gemini-embedding-2-preview",
         google_api_key="test-google-key",
+        vector_size=768,
     )
 
-    assert isinstance(provider, FakeGoogleGenerativeAIEmbeddings)
+    assert isinstance(provider, FakeGoogleGenAIEmbeddingProvider)
     assert captured == {
-        "model": "gemini-embedding-2-preview",
+        "model_name": "gemini-embedding-2-preview",
         "google_api_key": "test-google-key",
+        "vector_size": 768,
     }
 
 
@@ -132,8 +156,11 @@ def test_build_embedding_provider_rejects_unimplemented_provider() -> None:
             provider="custom",
             model_name="custom-model",
             google_api_key="",
+            vector_size=768,
         )
     except ValueError as exc:
-        assert "Unsupported RAG_EMBEDDING_PROVIDER" in str(exc)
+        message = str(exc)
+        assert "Unsupported RAG_EMBEDDING_PROVIDER" in message
+        assert "google_genai" in message
     else:
         raise AssertionError("Unsupported embedding providers must fail explicitly.")

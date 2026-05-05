@@ -6,11 +6,12 @@ import hashlib
 import re
 import time
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_qdrant import FastEmbedSparse, SparseEmbeddings
 from langchain_qdrant import RetrievalMode as LangChainQdrantRetrievalMode
 from qdrant_client import QdrantClient, models
@@ -38,40 +39,50 @@ class EmbeddingProvider(Embeddings):
 
     vector_size: int
 
-    def embed(self, text: str) -> list[float]:
-        """Embed text into a dense vector."""
-
 
 @dataclass(frozen=True)
-class HashingEmbeddingProvider(EmbeddingProvider):
-    """Deterministic token-hashing embedding provider for local tests."""
+class GoogleGenAIEmbeddingProvider(EmbeddingProvider):
+    """Google Generative AI embedding provider with explicit vector sizing."""
 
-    vector_size: int = 384
+    model_name: str
+    google_api_key: str
+    vector_size: int
+    _google_genai_embeddings: GoogleGenerativeAIEmbeddings = field(
+        init=False,
+        repr=False,
+        compare=False,
+    )
+
+    def __post_init__(self) -> None:
+        """Initialize the underlying LangChain Google embedding client."""
+        if not self.google_api_key:
+            raise ValueError("GOOGLE_API_KEY is required for Google GenAI embeddings.")
+        object.__setattr__(
+            self,
+            "_google_genai_embeddings",
+            GoogleGenerativeAIEmbeddings(
+                model=self.model_name,
+                google_api_key=self.google_api_key,
+                output_dimensionality=self.vector_size,
+            ),
+        )
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed documents into dense vectors."""
-        return [self.embed(text) for text in texts]
+        return self._google_genai_embeddings.embed_documents(
+            texts,
+            batch_size=1,
+            task_type="RETRIEVAL_DOCUMENT",
+            output_dimensionality=self.vector_size,
+        )
 
     def embed_query(self, text: str) -> list[float]:
         """Embed query text into a dense vector."""
-        return self.embed(text)
-
-    def embed(self, text: str) -> list[float]:
-        """Embed text with normalized token hashes.
-
-        This is intentionally simple and deterministic. Production deployments should
-        inject a real multilingual embedding provider.
-        """
-        vector = [0.0] * self.vector_size
-        for token in _tokenize(text):
-            digest = hashlib.md5(token.encode("utf-8")).hexdigest()
-            index = int(digest, 16) % self.vector_size
-            vector[index] += 1.0
-
-        norm = sum(value * value for value in vector) ** 0.5
-        if norm == 0:
-            return vector
-        return [value / norm for value in vector]
+        return self._google_genai_embeddings.embed_query(
+            text,
+            task_type="RETRIEVAL_QUERY",
+            output_dimensionality=self.vector_size,
+        )
 
 
 @dataclass(frozen=True)
@@ -349,10 +360,6 @@ def normalize_vietnamese_text(text: str) -> str:
     normalized = unicodedata.normalize("NFKD", text)
     ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
     return re.sub(r"\s+", " ", ascii_text.lower()).strip()
-
-
-def _tokenize(text: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+", normalize_vietnamese_text(text))
 
 
 def _field_condition(key: str, values: list[str]) -> models.FieldCondition:

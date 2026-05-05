@@ -91,6 +91,7 @@ class Settings:
         self.RAG_EMBEDDING_MODEL: str = os.getenv(
             "RAG_EMBEDDING_MODEL", "gemini-embedding-2-preview"
         )
+        self.RAG_DENSE_VECTOR_SIZE: int = int(os.getenv("RAG_DENSE_VECTOR_SIZE", "768"))
         self.RAG_SPARSE_MODEL: str = os.getenv("RAG_SPARSE_MODEL", "Qdrant/bm25")
         self.RAG_VIETNAMESE_SEGMENTER: str = os.getenv(
             "RAG_VIETNAMESE_SEGMENTER", "underthesea"

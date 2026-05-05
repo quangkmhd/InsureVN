@@ -63,6 +63,9 @@ line-ending = "auto"
 testpaths = ["tests"]
 asyncio_mode = "auto"
 pythonpath = ["."]
+markers = [
+    "real_api: tests that call external provider APIs using credentials from .env",
+]
 
 [tool.pyright]
 include = ["src"]

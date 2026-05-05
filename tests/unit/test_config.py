@@ -37,3 +37,41 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 4500
     assert settings.RAG_RETRIEVAL_TOP_K == 8
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is True
+
+
+def test_langfuse_settings_prefer_current_base_url(monkeypatch) -> None:
+    """Verify Langfuse uses the current SDK base URL setting."""
+    monkeypatch.setenv("LANGFUSE_BASE_URL", "http://langfuse.local:3000")
+    monkeypatch.setenv("LANGFUSE_HOST", "http://legacy-langfuse.local:3000")
+
+    settings = Settings()
+
+    assert settings.LANGFUSE_BASE_URL == "http://langfuse.local:3000"
+    assert settings.LANGFUSE_HOST == "http://langfuse.local:3000"
+
+
+def test_agent_llm_settings_do_not_inherit_global_llm_config(monkeypatch) -> None:
+    """Verify agent-owned settings remain isolated from global LLM settings."""
+    monkeypatch.setenv("LLM_PROVIDER", "nvidia")
+    monkeypatch.setenv("LLM_MODEL", "global-model")
+    monkeypatch.setenv("LLM_API_KEY", "global-key")
+    monkeypatch.setenv("LLM_BASE_URL", "https://global.example")
+    monkeypatch.delenv("DATABASE_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("DATABASE_LLM_MODEL", raising=False)
+    monkeypatch.delenv("DATABASE_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("DATABASE_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("SEARCH_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("SEARCH_LLM_MODEL", raising=False)
+    monkeypatch.delenv("SEARCH_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("SEARCH_LLM_BASE_URL", raising=False)
+
+    settings = Settings()
+
+    assert settings.DATABASE_LLM_PROVIDER == "ollama"
+    assert settings.DATABASE_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.DATABASE_LLM_API_KEY == ""
+    assert settings.DATABASE_LLM_BASE_URL == "http://localhost:11434"
+    assert settings.SEARCH_LLM_PROVIDER == "ollama"
+    assert settings.SEARCH_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.SEARCH_LLM_API_KEY == ""
+    assert settings.SEARCH_LLM_BASE_URL == "http://localhost:11434"

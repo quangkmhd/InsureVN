@@ -98,6 +98,16 @@ class Settings:
             "RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", default=False
         )
 
+        # Knowledge Graph
+        self.GRAPH_JSON_PATH: str = os.getenv(
+            "GRAPH_JSON_PATH",
+            "data/processed/knowledge_graph/insurevn_graph.json",
+        )
+        self.GRAPH_MAX_HOPS: int = int(os.getenv("GRAPH_MAX_HOPS", "2"))
+        self.GRAPH_RELOAD_ON_STARTUP: bool = _env_bool(
+            "GRAPH_RELOAD_ON_STARTUP", default=True
+        )
+
     @property
     def DATABASE_URL(self) -> str:  # noqa: N802
         return f"sqlite:///{self.SQLITE_DB_PATH}"

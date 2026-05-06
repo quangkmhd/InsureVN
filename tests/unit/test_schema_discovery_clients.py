@@ -3,12 +3,19 @@ import json
 import httpx
 import pytest
 
-from src.services.knowledge_graph.insurance_graph_schema_discovery import (
+import sys
+from pathlib import Path
+
+# Add scripts directory to path to allow importing from the 07_knowledge_graph folder
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.append(str(REPO_ROOT / "scripts" / "07_knowledge_graph"))
+
+from schema_discovery.discovery import (
     AggregatedSchemaItem,
     SchemaDiscoveryChunk,
     SchemaDiscoveryProviderSlot,
 )
-from src.services.knowledge_graph.insurance_graph_schema_discovery_clients import (
+from schema_discovery.discovery_clients import (
     HttpSchemaDiscoveryClient,
 )
 

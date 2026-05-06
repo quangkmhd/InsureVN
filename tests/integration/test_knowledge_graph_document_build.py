@@ -20,8 +20,8 @@ def _load_build_script():
     script_path = (
         Path(__file__).resolve().parents[2]
         / "scripts"
-        / "04_extraction"
-        / "05_build_knowledge_graph.py"
+        / "07_knowledge_graph"
+        / "04_build_knowledge_graph.py"
     )
     spec = importlib.util.spec_from_file_location("build_knowledge_graph", script_path)
     module = importlib.util.module_from_spec(spec)

@@ -478,3 +478,32 @@ def test_document_chunker_updates_langfuse_with_chunking_summary() -> None:
     assert chunking_metadata["chunk_length_max"] == max(
         len(child_chunk.text) for child_chunk in document_chunks.child_chunks
     )
+
+
+def test_document_chunker_captures_pre_heading_preamble() -> None:
+    markdown_text = """AIA logo featuring a stylized mountain.
+
+SỐNG KHỎE HƠN, LÂU HƠN
+
+## Quyen loi nam vien
+
+Chi tra chi phi nam vien.
+"""
+    chunker = DocumentChunker(child_chunk_chars=200, child_chunk_overlap=20)
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+
+    headings = [section.heading for section in document_chunks.parent_sections]
+    all_chunk_text = " ".join(
+        child_chunk.text for child_chunk in document_chunks.child_chunks
+    )
+    assert (
+        "AIA Health Policy" in headings
+        or "Introduction" in headings
+        or any(
+            "AIA logo" in section.text
+            for section in document_chunks.parent_sections
+        )
+    )
+    assert "SỐNG KHỎE HƠN" in all_chunk_text
+    assert "AIA logo" in all_chunk_text

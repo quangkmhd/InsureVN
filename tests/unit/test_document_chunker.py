@@ -288,6 +288,115 @@ def test_document_chunker_splits_table_heavy_sections_with_repeated_header() -> 
     assert any("Benh vien 9" in text for text in child_texts)
 
 
+def test_document_chunker_keeps_table_and_interpretation_together() -> None:
+    markdown_text = (
+        "### THƯƠNG TẬT TOÀN BỘ\n\n"
+        "| | |\n"
+        "|---|---|\n"
+        "| 1. Mù hoặc mất hoàn toàn hai mắt..... | 100% |\n"
+        "| 2. Hỏng toàn bộ chức năng nhai và nói..... | 100% |\n"
+        "\n\n"
+        "**Diễn giải dữ liệu:**\n"
+        "Quyền lợi bảo hiểm được chi trả ở mức 100% đối với các trường hợp "
+        "thương tật toàn bộ nêu trong bảng.\n"
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=180,
+        child_chunk_overlap=0,
+        chunking_strategy="hybrid_semantic",
+        table_chunk_chars=1200,
+        table_line_ratio_threshold=0.4,
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
+
+    assert any(
+        "| 1. Mù hoặc mất hoàn toàn hai mắt..... | 100% |" in text
+        and "**Diễn giải dữ liệu:**" in text
+        for text in child_texts
+    )
+    assert not any(
+        "**Diễn giải dữ liệu:**" in text and "|" not in text for text in child_texts
+    )
+
+
+def test_document_chunker_repeats_interpretation_for_split_table_chunks() -> None:
+    table_rows = "\n".join(
+        f"| {index}. Tổn thương chi tiết {index}..... | {index * 5}% |"
+        for index in range(1, 7)
+    )
+    markdown_text = (
+        "### THƯƠNG TẬT TẠM THỜI\n\n"
+        "| Tổn thương | Tỷ lệ |\n"
+        "|---|---|\n"
+        f"{table_rows}\n"
+        "\n\n"
+        "**Diễn giải dữ liệu:**\n"
+        "Các tỷ lệ chi trả trong bảng được áp dụng theo từng tổn thương tương ứng.\n"
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=180,
+        child_chunk_overlap=0,
+        chunking_strategy="hybrid_semantic",
+        table_chunk_chars=360,
+        table_line_ratio_threshold=0.4,
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
+
+    assert len(child_texts) > 1
+    assert all("| Tổn thương | Tỷ lệ |" in text for text in child_texts)
+    assert all("**Diễn giải dữ liệu:**" in text for text in child_texts)
+    assert not any(
+        "**Diễn giải dữ liệu:**" in text and "|" not in text for text in child_texts
+    )
+
+
+def test_document_chunker_keeps_interpreted_table_pair_in_mixed_section() -> None:
+    long_intro = "Đoạn mô tả quyền lợi trước bảng cần được giữ lại. " * 12
+    long_table_row = (
+        '<b>Bao gồm:</b> <ul style="list-style-type: none"> '
+        "<li>Phí khám, tư vấn, xét nghiệm và chẩn đoán</li> "
+        "<li>Chẩn đoán hình ảnh theo chỉ định</li> "
+        "<li>Cạo vôi răng tối đa 2 lần/năm</li> "
+        "<li>Nhổ răng, điều trị tủy răng</li> "
+        "<li>Bọc răng, loại trừ implant</li> </ul>"
+    )
+    markdown_text = (
+        "### Quyền lợi bảo hiểm\n\n"
+        f"{long_intro}\n\n"
+        "| Quyền lợi | Hạn mức |\n"
+        "|---|---|\n"
+        "| Điều trị nội trú | 100.000.000 đồng |\n"
+        f"| {long_table_row} | AIA Việt Nam chi trả 80% chi phí y tế |\n"
+        "\n\n"
+        "**Diễn giải dữ liệu:**\n"
+        "Quyền lợi điều trị nội trú có hạn mức 100.000.000 đồng. "
+        "Các dịch vụ nha khoa trong bảng được chi trả 80% chi phí y tế.\n"
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=300,
+        child_chunk_overlap=0,
+        chunking_strategy="hybrid_semantic",
+        table_chunk_chars=1800,
+        table_line_ratio_threshold=0.55,
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
+
+    assert any("Đoạn mô tả quyền lợi trước bảng" in text for text in child_texts)
+    assert any(
+        "Bọc răng, loại trừ implant" in text and "**Diễn giải dữ liệu:**" in text
+        for text in child_texts
+    )
+    assert not any(
+        "**Diễn giải dữ liệu:**" in text and "|" not in text for text in child_texts
+    )
+
+
 def test_document_chunker_updates_langfuse_with_chunking_summary() -> None:
     fake_langfuse_client = MagicMock()
     markdown_text = (

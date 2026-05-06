@@ -33,6 +33,10 @@ REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "content_hash",
     "ingestion_version",
 )
+INTERPRETATION_MARKER_RE = re.compile(
+    r"^\s*(?:\*\*)?Diễn giải dữ liệu:(?:\*\*)?",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -71,6 +75,7 @@ class ChunkingMetrics:
     empty_section_count: int = 0
     recursive_section_count: int = 0
     semantic_section_count: int = 0
+    interpreted_table_section_count: int = 0
     table_heavy_section_count: int = 0
     fallback_chunk_count: int = 0
 
@@ -296,6 +301,13 @@ class DocumentChunker:
             if chunking_metrics is not None:
                 chunking_metrics.table_heavy_section_count += 1
             return self._split_table_heavy_text(normalized_text)
+        if self._contains_interpreted_table_pair(normalized_text):
+            if chunking_metrics is not None:
+                chunking_metrics.interpreted_table_section_count += 1
+            return self._split_table_heavy_text(
+                normalized_text,
+                preserve_pending_text=True,
+            )
         if self._uses_semantic_chunking():
             if chunking_metrics is not None:
                 chunking_metrics.semantic_section_count += 1
@@ -362,6 +374,9 @@ class DocumentChunker:
             "empty_section_count": chunking_metrics.empty_section_count,
             "recursive_section_count": chunking_metrics.recursive_section_count,
             "semantic_section_count": chunking_metrics.semantic_section_count,
+            "interpreted_table_section_count": (
+                chunking_metrics.interpreted_table_section_count
+            ),
             "table_heavy_section_count": chunking_metrics.table_heavy_section_count,
             "fallback_chunk_count": chunking_metrics.fallback_chunk_count,
             "chunk_length_min": min(chunk_lengths) if chunk_lengths else 0,
@@ -394,7 +409,12 @@ class DocumentChunker:
             >= self.table_line_ratio_threshold
         )
 
-    def _split_table_heavy_text(self, text: str) -> list[str]:
+    def _split_table_heavy_text(
+        self,
+        text: str,
+        *,
+        preserve_pending_text: bool = False,
+    ) -> list[str]:
         chunks: list[str] = []
         pending_text_lines: list[str] = []
         current_heading = ""
@@ -412,15 +432,24 @@ class DocumentChunker:
                 while index < len(lines) and self._is_table_line(lines[index]):
                     table_lines.append(lines[index])
                     index += 1
+                interpretation_lines, index = self._read_table_interpretation(
+                    lines,
+                    index,
+                )
 
                 context_prefix = self._table_context_prefix(
                     pending_text_lines,
                     fallback_heading=current_heading,
                 )
+                if preserve_pending_text:
+                    pending_text = "\n".join(pending_text_lines).strip()
+                    if pending_text:
+                        chunks.extend(self._split_recursively(pending_text))
                 chunks.extend(
                     self._split_table_block(
                         table_lines=table_lines,
                         context_prefix=context_prefix,
+                        interpretation_lines=interpretation_lines,
                     )
                 )
                 pending_text_lines = []
@@ -440,6 +469,7 @@ class DocumentChunker:
         *,
         table_lines: list[str],
         context_prefix: str,
+        interpretation_lines: list[str] | None = None,
     ) -> list[str]:
         if not table_lines:
             return []
@@ -448,8 +478,9 @@ class DocumentChunker:
         rows = table_lines[row_start_index:]
         base_lines = [context_prefix] if context_prefix else []
         base_lines.extend(header_lines)
+        suffix_lines = list(interpretation_lines or [])
         if not rows:
-            return ["\n".join(base_lines)]
+            return [self._join_table_chunk(base_lines, suffix_lines)]
 
         chunks: list[str] = []
         current_lines = list(base_lines)
@@ -458,17 +489,66 @@ class DocumentChunker:
         for row in rows:
             candidate_lines = [*current_lines, row]
             if (
-                len("\n".join(candidate_lines)) > self.table_chunk_chars
+                len(self._join_table_chunk(candidate_lines, suffix_lines))
+                > self.table_chunk_chars
                 and len(current_lines) > base_line_count
             ):
-                chunks.append("\n".join(current_lines))
+                chunks.append(self._join_table_chunk(current_lines, suffix_lines))
                 current_lines = [*base_lines, row]
             else:
                 current_lines = candidate_lines
 
         if len(current_lines) > base_line_count:
-            chunks.append("\n".join(current_lines))
+            chunks.append(self._join_table_chunk(current_lines, suffix_lines))
         return chunks
+
+    def _read_table_interpretation(
+        self,
+        lines: list[str],
+        start_index: int,
+    ) -> tuple[list[str], int]:
+        spacer_lines: list[str] = []
+        index = start_index
+        while index < len(lines) and not lines[index].strip():
+            spacer_lines.append(lines[index])
+            index += 1
+
+        if index >= len(lines) or not self._is_interpretation_marker_line(lines[index]):
+            return [], start_index
+
+        interpretation_lines = [*spacer_lines, lines[index]]
+        index += 1
+        while index < len(lines):
+            line = lines[index]
+            if self._is_heading_line(line) or self._is_table_line(line):
+                break
+            interpretation_lines.append(line)
+            index += 1
+        return interpretation_lines, index
+
+    def _contains_interpreted_table_pair(self, text: str) -> bool:
+        lines = text.splitlines()
+        index = 0
+        while index < len(lines):
+            if self._is_table_line(lines[index]):
+                while index < len(lines) and self._is_table_line(lines[index]):
+                    index += 1
+                interpretation_lines, _ = self._read_table_interpretation(
+                    lines,
+                    index,
+                )
+                if interpretation_lines:
+                    return True
+                continue
+            index += 1
+        return False
+
+    @staticmethod
+    def _join_table_chunk(
+        table_lines: list[str],
+        interpretation_lines: list[str],
+    ) -> str:
+        return "\n".join([*table_lines, *interpretation_lines])
 
     def _table_header(self, table_lines: list[str]) -> tuple[list[str], int]:
         header_lines = [table_lines[0]]
@@ -501,6 +581,14 @@ class DocumentChunker:
     @staticmethod
     def _is_table_line(line: str) -> bool:
         return line.lstrip().startswith("|")
+
+    @staticmethod
+    def _is_heading_line(line: str) -> bool:
+        return bool(re.match(r"^(#{1,6})\s+(.+?)\s*$", line))
+
+    @staticmethod
+    def _is_interpretation_marker_line(line: str) -> bool:
+        return bool(INTERPRETATION_MARKER_RE.match(line))
 
     @staticmethod
     def _is_table_separator_line(line: str) -> bool:

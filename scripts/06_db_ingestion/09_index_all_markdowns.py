@@ -35,8 +35,12 @@ from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRe
 logger = get_logger("health_markdown_rag_indexer")
 
 HEALTH_INSURANCE_DATA_DIR = PROJECT_ROOT / "data" / "health_insurance"
-DEFAULT_MARKDOWN_DIR = HEALTH_INSURANCE_DATA_DIR / "health_insurance_markdowns"
-DEFAULT_TABLE_MAPPING_PATH = DEFAULT_MARKDOWN_DIR / "table_mapping.json"
+DEFAULT_MARKDOWN_DIR = (
+    HEALTH_INSURANCE_DATA_DIR / "health_insurance_markdowns_interpreted_cleaned"
+)
+DEFAULT_TABLE_MAPPING_PATH = (
+    HEALTH_INSURANCE_DATA_DIR / "health_insurance_markdowns" / "table_mapping.json"
+)
 DEFAULT_CHUNK_EXPORT_PATH = (
     PROJECT_ROOT
     / "data"
@@ -44,7 +48,7 @@ DEFAULT_CHUNK_EXPORT_PATH = (
     / "qdrant_chunks"
     / "health_insurance_chunks.json"
 )
-DEFAULT_INGESTION_VERSION = "health_insurance_markdowns_v1"
+DEFAULT_INGESTION_VERSION = "health_insurance_markdowns_interpreted_cleaned_v1"
 
 COMPANY_CODE_BY_PROVIDER = {
     "aia.com.vn": "AIA",

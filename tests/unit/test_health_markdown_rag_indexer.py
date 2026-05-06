@@ -62,6 +62,15 @@ def test_build_document_metadata_uses_path_and_table_mapping(tmp_path) -> None:
     assert metadata["table_files"] == ["table_p4_n1.json"]
 
 
+def test_default_indexer_paths_target_interpreted_cleaned_markdowns() -> None:
+    script = _load_indexer_script()
+
+    assert script.DEFAULT_MARKDOWN_DIR.name == (
+        "health_insurance_markdowns_interpreted_cleaned"
+    )
+    assert script.DEFAULT_TABLE_MAPPING_PATH.parent.name == "health_insurance_markdowns"
+
+
 def test_run_indexing_pipeline_indexes_qdrant_and_imports_neo4j(tmp_path) -> None:
     script = _load_indexer_script()
     markdown_dir = tmp_path / "health_insurance_markdowns"

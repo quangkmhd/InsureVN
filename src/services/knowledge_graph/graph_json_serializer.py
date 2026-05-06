@@ -15,7 +15,7 @@ class GraphJsonSerializer:
     """Persist and load graph JSON while preserving attributes."""
 
     @service_observe(
-        name="service.knowledge_graph.serializer.save",
+        name="service.knowledge_graph.graph_json_serializer.save",
         component="graph_json_serializer",
     )
     def save(self, graph: nx.DiGraph, path: Path) -> None:
@@ -27,7 +27,7 @@ class GraphJsonSerializer:
         )
 
     @service_observe(
-        name="service.knowledge_graph.serializer.load",
+        name="service.knowledge_graph.graph_json_serializer.load",
         component="graph_json_serializer",
     )
     def load(self, path: Path) -> nx.DiGraph:

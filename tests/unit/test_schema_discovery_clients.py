@@ -3,12 +3,12 @@ import json
 import httpx
 import pytest
 
-from src.services.knowledge_graph.schema_discovery import (
+from src.services.knowledge_graph.insurance_graph_schema_discovery import (
     AggregatedSchemaItem,
     SchemaDiscoveryChunk,
     SchemaDiscoveryProviderSlot,
 )
-from src.services.knowledge_graph.schema_discovery_clients import (
+from src.services.knowledge_graph.insurance_graph_schema_discovery_clients import (
     HttpSchemaDiscoveryClient,
 )
 

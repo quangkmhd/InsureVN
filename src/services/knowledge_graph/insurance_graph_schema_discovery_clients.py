@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
-from src.services.knowledge_graph.schema_discovery import (
+from src.services.knowledge_graph.insurance_graph_schema_discovery import (
     AggregatedSchemaItem,
     SchemaCanonicalizationMap,
     SchemaChunkDiscoveryResult,
@@ -187,7 +187,7 @@ class HttpSchemaDiscoveryClient:
         self._timeout_seconds = timeout_seconds
 
     @service_observe(
-        name="service.knowledge_graph.schema_discovery_clients.discover_chunk_schema",
+        name="service.knowledge_graph.insurance_graph_schema_discovery_clients.discover_chunk_schema",
         component="schema_discovery_client",
     )
     async def discover_chunk_schema(
@@ -229,7 +229,7 @@ class HttpSchemaDiscoveryClient:
         )
 
     @service_observe(
-        name="service.knowledge_graph.schema_discovery_clients.canonicalize",
+        name="service.knowledge_graph.insurance_graph_schema_discovery_clients.canonicalize",
         component="schema_discovery_client",
     )
     async def canonicalize_schema_labels(

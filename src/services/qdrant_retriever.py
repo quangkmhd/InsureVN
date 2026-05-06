@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import re
 import time
-import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,6 +17,7 @@ from qdrant_client import QdrantClient, models
 
 from src.core.config import settings
 from src.core.logger import get_logger
+from src.core.vietnamese_text import transliterate_vietnamese
 from src.models.evidence import Evidence, HardFilters, RetrievalMode, RetrievalPlan
 from src.services.document_chunker import ChildChunk
 from src.services.observability import service_observe
@@ -400,8 +400,7 @@ class QdrantRetriever:
 
 def normalize_vietnamese_text(text: str) -> str:
     """Normalize Vietnamese text for keyword matching."""
-    normalized = unicodedata.normalize("NFKD", text)
-    ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+    ascii_text = transliterate_vietnamese(text)
     return re.sub(r"\s+", " ", ascii_text.lower()).strip()
 
 

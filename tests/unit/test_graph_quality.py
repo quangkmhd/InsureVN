@@ -4,17 +4,18 @@ import logging
 
 import networkx as nx
 
-from src.services.knowledge_graph.quality import GraphQualityValidator
+from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
 
 
 def test_quality_validator_detects_orphans_and_invalid_relationships() -> None:
-    """Catch orphan nodes and relationships outside the allowed schema."""
     graph = nx.DiGraph()
-    graph.add_node("plan:AIA:gold", entity_type="Plan", document_id="doc-1")
+    graph.add_node(
+        "policy:aia:gold", entity_type="InsurancePolicy", document_id="doc-1"
+    )
     graph.add_node("benefit:inpatient", entity_type="Benefit", document_id="doc-1")
     graph.add_node("orphan:node", entity_type="Benefit", document_id="doc-1")
     graph.add_edge(
-        "plan:AIA:gold",
+        "policy:aia:gold",
         "benefit:inpatient",
         relationship_type="MAKES_UP",
         document_id="doc-1",
@@ -34,24 +35,27 @@ def test_quality_validator_detects_orphans_and_invalid_relationships() -> None:
 
 
 def test_quality_validator_detects_missing_lineage_and_low_confidence() -> None:
-    """Catch missing document lineage, dangling chunks, and weak triples."""
     graph = nx.DiGraph()
-    graph.add_node("plan:AIA:gold", entity_type="Plan")
-    graph.add_node("exclusion:pre_existing_condition", entity_type="Exclusion")
-    graph.add_node("chunk:missing_doc:99", entity_type="Chunk", document_id="missing")
+    graph.add_node("policy:aia:gold", entity_type="InsurancePolicy")
+    graph.add_node("exclusion:pre_existing", entity_type="Exclusion")
+    graph.add_node(
+        "source_chunk:missing_doc:99",
+        entity_type="SourceChunk",
+        document_id="missing",
+    )
     graph.add_edge(
-        "plan:AIA:gold",
-        "exclusion:pre_existing_condition",
-        relationship_type="EXCLUDES",
+        "policy:aia:gold",
+        "exclusion:pre_existing",
+        relationship_type="HAS_EXCLUSION",
         confidence=0.4,
     )
     graph.add_edge(
-        "chunk:missing_doc:99",
-        "exclusion:pre_existing_condition",
-        relationship_type="MENTIONED_IN",
+        "source_chunk:missing_doc:99",
+        "exclusion:pre_existing",
+        relationship_type="CONTAINS",
         document_id="missing",
         source_path="missing.md",
-        chunk_id="chunk:missing_doc:99",
+        source_chunk_id="source_chunk:missing_doc:99",
         confidence=0.95,
     )
 
@@ -63,26 +67,25 @@ def test_quality_validator_detects_missing_lineage_and_low_confidence() -> None:
 
     assert report.is_valid is False
     assert report.missing_document_lineage == [
-        "plan:AIA:gold->exclusion:pre_existing_condition"
+        "policy:aia:gold->exclusion:pre_existing"
     ]
-    assert report.low_confidence_edges == [
-        "plan:AIA:gold->exclusion:pre_existing_condition"
-    ]
-    assert report.dangling_chunk_references == ["chunk:missing_doc:99"]
+    assert report.low_confidence_edges == ["policy:aia:gold->exclusion:pre_existing"]
+    assert report.dangling_chunk_references == ["source_chunk:missing_doc:99"]
 
 
-def test_quality_validator_detects_chunk_id_missing_from_graph() -> None:
-    """Catch edges that cite a chunk ID absent from graph chunk nodes."""
+def test_quality_validator_allows_chunk_lineage_without_chunk_nodes() -> None:
     graph = nx.DiGraph()
-    graph.add_node("plan:AIA:gold", entity_type="Plan", document_id="doc-1")
-    graph.add_node("exclusion:pre_existing_condition", entity_type="Exclusion")
+    graph.add_node(
+        "policy:aia:gold", entity_type="InsurancePolicy", document_id="doc-1"
+    )
+    graph.add_node("exclusion:pre_existing", entity_type="Exclusion")
     graph.add_edge(
-        "plan:AIA:gold",
-        "exclusion:pre_existing_condition",
-        relationship_type="EXCLUDES",
+        "policy:aia:gold",
+        "exclusion:pre_existing",
+        relationship_type="HAS_EXCLUSION",
         document_id="doc-1",
         source_path="policy.md",
-        chunk_id="chunk:doc-1:999",
+        source_chunk_id="source_chunk:doc-1:999",
         confidence=0.95,
     )
 
@@ -92,19 +95,26 @@ def test_quality_validator_detects_chunk_id_missing_from_graph() -> None:
         chunk_counts={"doc-1": 1},
     )
 
-    assert report.is_valid is False
-    assert report.dangling_chunk_references == ["chunk:doc-1:999"]
+    assert report.is_valid is True
+    assert report.dangling_chunk_references == []
 
 
 def test_quality_validator_logs_required_quality_metadata(caplog) -> None:
-    """Emit graph quality metadata for observability."""
     graph = nx.DiGraph()
-    graph.add_node("document:doc-1", entity_type="Document", document_id="doc-1")
-    graph.add_node("company:AIA", entity_type="Company", document_id="doc-1")
+    graph.add_node(
+        "insurance_document:doc-1",
+        entity_type="InsuranceDocument",
+        document_id="doc-1",
+    )
+    graph.add_node(
+        "insurance_company:AIA",
+        entity_type="InsuranceCompany",
+        document_id="doc-1",
+    )
     graph.add_edge(
-        "document:doc-1",
-        "company:AIA",
-        relationship_type="DOCUMENT_DEFINES",
+        "insurance_document:doc-1",
+        "insurance_company:AIA",
+        relationship_type="DEFINES",
         document_id="doc-1",
         source_path="policy.md",
         confidence=1.0,
@@ -120,10 +130,10 @@ def test_quality_validator_logs_required_quality_metadata(caplog) -> None:
     record = next(
         item
         for item in caplog.records
-        if getattr(item, "component", "") == "graph_quality"
+        if getattr(item, "component", "") == "graph_quality_validator"
     )
     assert record.node_count == 2
     assert record.edge_count == 1
     assert record.orphan_count == 0
-    assert record.entity_type_counts["Document"] == 1
-    assert record.relationship_type_counts["DOCUMENT_DEFINES"] == 1
+    assert record.entity_type_counts["InsuranceDocument"] == 1
+    assert record.relationship_type_counts["DEFINES"] == 1

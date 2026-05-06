@@ -8,7 +8,6 @@ import argparse
 import json
 import re
 import sys
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,13 +22,16 @@ from qdrant_client import QdrantClient
 
 from src.core.config import settings
 from src.core.logger import get_logger
+from src.core.vietnamese_text import slugify_vietnamese, transliterate_vietnamese
 from src.services.document_chunker import ChildChunk, DocumentChunker
-from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
-from src.services.knowledge_graph.document_extractor import GraphDocument
-from src.services.knowledge_graph.graph_document_adapter import GraphDocumentAdapter
+from src.services.knowledge_graph.graph_json_serializer import GraphJsonSerializer
+from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
+from src.services.knowledge_graph.llm_graph_document_extractor import (
+    DocumentGraphExtractor,
+    GraphDocument,
+)
 from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
-from src.services.knowledge_graph.quality import GraphQualityValidator
-from src.services.knowledge_graph.serializer import GraphJsonSerializer
+from src.services.knowledge_graph.networkx_graph_builder import NetworkxGraphBuilder
 from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRetriever
 
 logger = get_logger("health_markdown_rag_indexer")
@@ -198,7 +200,7 @@ def run_indexing_pipeline(
     limit: int | None = None,
     qdrant_retriever: Any | None = None,
     neo4j_store: Any | None = None,
-    graph_adapter: Any | None = None,
+    graph_extractor: Any | None = None,
     chunking_strategy: str | None = None,
     semantic_embedding_provider: Embeddings | None = None,
 ) -> dict[str, Any]:
@@ -220,10 +222,17 @@ def run_indexing_pipeline(
         ingestion_version=ingestion_version,
         chunker=chunker,
     )
-    graph_documents = build_graph_documents(
-        documents=index_inputs.graph_documents,
-        chunks=index_inputs.graph_chunks,
-        graph_adapter=graph_adapter or GraphDocumentAdapter(),
+    needs_graph_documents = graph_json_path is not None or (
+        not dry_run and not skip_neo4j
+    )
+    graph_documents = (
+        build_graph_documents(
+            documents=index_inputs.graph_documents,
+            chunks=index_inputs.graph_chunks,
+            graph_extractor=graph_extractor or DocumentGraphExtractor(),
+        )
+        if needs_graph_documents
+        else []
     )
 
     if chunk_export_path is not None and not dry_run:
@@ -232,7 +241,8 @@ def run_indexing_pipeline(
     graph_report: dict[str, Any] | None = None
     if graph_json_path is not None:
         graph_report = build_and_maybe_write_graph_json(
-            documents=index_inputs.graph_documents,
+            graph_documents=graph_documents,
+            source_documents=index_inputs.graph_documents,
             chunks=index_inputs.graph_chunks,
             graph_json_path=graph_json_path,
             dry_run=dry_run,
@@ -343,24 +353,32 @@ def build_graph_documents(
     *,
     documents: list[GraphDocument],
     chunks: list[dict[str, Any]],
-    graph_adapter: Any,
+    graph_extractor: Any,
 ) -> list[Any]:
     """Convert extracted document/chunk data to LangChain graph documents."""
-    return [graph_adapter.from_document(document, chunks) for document in documents]
+    graph_documents: list[Any] = []
+    for document in documents:
+        converted_documents = graph_extractor.extract(document, chunks)
+        if isinstance(converted_documents, list):
+            graph_documents.extend(converted_documents)
+        else:
+            graph_documents.append(converted_documents)
+    return graph_documents
 
 
 def build_and_maybe_write_graph_json(
     *,
-    documents: list[GraphDocument],
+    graph_documents: list[Any],
+    source_documents: list[GraphDocument],
     chunks: list[dict[str, Any]],
     graph_json_path: Path,
     dry_run: bool,
 ) -> dict[str, Any]:
     """Build a NetworkX graph quality report and optionally persist graph JSON."""
-    graph = KnowledgeGraphBuilder().build_from_documents(documents, chunks)
+    graph = NetworkxGraphBuilder().build_from_graph_documents(graph_documents)
     report = GraphQualityValidator().validate(
         graph,
-        document_counts=document_counts(documents),
+        document_counts=document_counts(source_documents),
         chunk_counts=chunk_counts(chunks),
     )
     if not dry_run:
@@ -428,15 +446,12 @@ def readable_document_name(stem: str) -> str:
 
 def stable_identifier(value: str) -> str:
     """Build a deterministic identifier from a relative file path."""
-    normalized_value = unicodedata.normalize("NFKD", value)
-    ascii_value = normalized_value.encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"[^a-zA-Z0-9]+", "_", ascii_value.lower()).strip("_") or "unknown"
+    return slugify_vietnamese(value, separator="_", fallback="unknown")
 
 
 def normalized_lookup_text(value: str) -> str:
     """Normalize Vietnamese text for simple filename classification."""
-    normalized_value = unicodedata.normalize("NFKD", value)
-    ascii_value = normalized_value.encode("ascii", "ignore").decode("ascii")
+    ascii_value = transliterate_vietnamese(value)
     normalized_value = re.sub(r"[^a-zA-Z0-9]+", " ", ascii_value.lower()).strip()
     return re.sub(r"\s+", " ", normalized_value)
 

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import networkx as nx
 
 from src.core.logger import get_logger
-from src.services.knowledge_graph.document_extractor import (
+from src.services.knowledge_graph.insurance_graph_schema import (
     ALLOWED_RELATIONSHIP_TYPES,
 )
 from src.services.observability import service_observe
@@ -39,8 +39,8 @@ class GraphQualityValidator:
         self._min_confidence = min_confidence
 
     @service_observe(
-        name="service.knowledge_graph.quality.validate",
-        component="graph_quality",
+        name="service.knowledge_graph.graph_quality_validator.validate",
+        component="graph_quality_validator",
     )
     def validate(
         self,
@@ -61,12 +61,6 @@ class GraphQualityValidator:
         low_confidence: list[str] = []
         invalid_relationships: list[str] = []
         relationship_type_counts: dict[str, int] = {}
-        chunk_node_ids = {
-            node_id
-            for node_id, attributes in graph.nodes(data=True)
-            if attributes.get("entity_type") == "Chunk"
-        }
-
         for source_id, target_id, attributes in graph.edges(data=True):
             edge_id = f"{source_id}->{target_id}"
             relationship_type = str(attributes.get("relationship_type", ""))
@@ -75,15 +69,15 @@ class GraphQualityValidator:
             )
             if relationship_type not in ALLOWED_RELATIONSHIP_TYPES:
                 invalid_relationships.append(relationship_type)
-            if not attributes.get("document_id") or not attributes.get("source_path"):
+            document_id = attributes.get("source_document_id") or attributes.get(
+                "document_id"
+            )
+            if not document_id or not attributes.get("source_path"):
                 missing_lineage.append(edge_id)
             if float(attributes.get("confidence", 0.0)) < self._min_confidence:
                 low_confidence.append(edge_id)
-            chunk_id = attributes.get("chunk_id")
-            document_id = attributes.get("document_id")
-            if chunk_id and (
-                document_id not in chunk_counts or str(chunk_id) not in chunk_node_ids
-            ):
+            chunk_id = attributes.get("source_chunk_id") or attributes.get("chunk_id")
+            if chunk_id and document_id not in chunk_counts:
                 dangling_chunks.append(str(chunk_id))
 
         entity_type_counts: dict[str, int] = {}
@@ -97,7 +91,10 @@ class GraphQualityValidator:
             if (
                 document_id
                 and document_id not in known_documents
-                and attributes.get("entity_type") == "Chunk"
+                and (
+                    attributes.get("entity_type") in {"Chunk", "SourceChunk"}
+                    or str(node_id).startswith("source_chunk:")
+                )
             ):
                 dangling_chunks.append(node_id)
 
@@ -127,7 +124,7 @@ class GraphQualityValidator:
         logger.info(
             "validated knowledge graph quality",
             extra={
-                "component": "graph_quality",
+                "component": "graph_quality_validator",
                 "node_count": report.node_count,
                 "edge_count": report.edge_count,
                 "entity_type_counts": report.entity_type_counts,

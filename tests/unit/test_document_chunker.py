@@ -111,6 +111,44 @@ def test_document_chunker_normalizes_unicode_to_nfc() -> None:
     assert unicodedata.is_normalized("NFC", child_text)
 
 
+def test_document_chunker_slugifies_vietnamese_d_letter() -> None:
+    chunker = DocumentChunker(child_chunk_chars=120, child_chunk_overlap=0)
+
+    document_chunks = chunker.chunk_markdown(
+        "## Điều trị nội trú\n\nChi trả chi phí điều trị nội trú.",
+        metadata=_metadata(),
+    )
+
+    parent_section = document_chunks.parent_sections[0]
+    child_chunk = document_chunks.child_chunks[0]
+    assert parent_section.section_id == "doc-aia-health:dieu-tri-noi-tru:0"
+    assert child_chunk.chunk_id == "doc-aia-health:dieu-tri-noi-tru:0:chunk:0"
+    assert child_chunk.payload["section_type"] == "dieu_tri_noi_tru"
+
+
+def test_document_chunker_generates_unique_chunk_ids_for_repeated_headings() -> None:
+    markdown_text = """### An tâm trọn đời
+
+Bảo vệ từ 30 ngày tuổi đến 100 tuổi.
+
+### An tâm trọn đời
+
+| Quyền lợi | Cơ bản | Nâng cao |
+|---|---|---|
+| STBH | 150.000.000 | 350.000.000 |
+"""
+    chunker = DocumentChunker(child_chunk_chars=200, child_chunk_overlap=0)
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+
+    chunk_ids = [child_chunk.chunk_id for child_chunk in document_chunks.child_chunks]
+    assert len(chunk_ids) == len(set(chunk_ids))
+    assert chunk_ids == [
+        "doc-aia-health:an-tam-tron-doi:0:chunk:0",
+        "doc-aia-health:an-tam-tron-doi:1:chunk:0",
+    ]
+
+
 def test_document_chunker_validates_required_payload_fields() -> None:
     chunker = DocumentChunker()
 

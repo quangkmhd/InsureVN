@@ -4,22 +4,20 @@ from unittest.mock import MagicMock, patch
 from src.services.citation_formatter import CitationFormatter
 from src.services.document_chunker import DocumentChunker
 from src.services.evidence_merger import EvidenceMerger
-from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
-from src.services.knowledge_graph.document_extractor import DocumentGraphExtractor
-from src.services.knowledge_graph.document_graph_retriever import DocumentGraphRetriever
-from src.services.knowledge_graph.graph_document_adapter import GraphDocumentAdapter
-from src.services.knowledge_graph.graph_evidence import GraphEvidenceMapper
-from src.services.knowledge_graph.neo4j_graph_retriever import Neo4jGraphRetriever
-from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
-from src.services.knowledge_graph.quality import GraphQualityValidator
-from src.services.knowledge_graph.retriever import NetworkxGraphPathRetriever
-from src.services.knowledge_graph.schema import (
+from src.services.knowledge_graph.graph_json_serializer import GraphJsonSerializer
+from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
+from src.services.knowledge_graph.insurance_graph_schema import (
     build_chunk_id,
     build_company_id,
     build_document_id,
     build_plan_id,
 )
-from src.services.knowledge_graph.serializer import GraphJsonSerializer
+from src.services.knowledge_graph.llm_graph_document_extractor import (
+    DocumentGraphExtractor,
+)
+from src.services.knowledge_graph.neo4j_cypher_qa import Neo4jCypherQAService
+from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
+from src.services.knowledge_graph.networkx_graph_builder import NetworkxGraphBuilder
 from src.services.qdrant_collection_manager import QdrantCollectionManager
 from src.services.qdrant_evidence import QdrantEvidenceMapper
 from src.services.qdrant_retriever import QdrantRetriever
@@ -35,18 +33,13 @@ SERVICE_ENTRYPOINTS = (
     EvidenceMerger.merge,
     SqliteProfileMapper.from_profile_row,
     SqliteEvidenceMapper.from_mcp_result,
-    KnowledgeGraphBuilder.build_from_documents,
+    NetworkxGraphBuilder.build_from_documents,
     DocumentGraphExtractor.extract,
-    DocumentGraphRetriever.create_retriever,
-    GraphEvidenceMapper.to_evidence,
-    GraphDocumentAdapter.from_document,
-    Neo4jGraphRetriever.retrieve,
+    Neo4jCypherQAService.invoke,
     Neo4jKnowledgeGraphStore.from_connection,
     Neo4jKnowledgeGraphStore.ensure_schema,
     Neo4jKnowledgeGraphStore.import_graph_documents,
     GraphQualityValidator.validate,
-    NetworkxGraphPathRetriever.retrieve,
-    NetworkxGraphPathRetriever.explain_path,
     GraphJsonSerializer.save,
     GraphJsonSerializer.load,
     QdrantVectorStoreFactory.create_vector_store,

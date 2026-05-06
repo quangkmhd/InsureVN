@@ -15,7 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.core.config import settings  # noqa: E402
 from src.core.logger import get_logger  # noqa: E402
-from src.services.knowledge_graph.schema_discovery import (  # noqa: E402
+from src.services.knowledge_graph.insurance_graph_schema_discovery import (  # noqa: E402
     MarkdownSchemaDiscoveryChunker,
     SchemaDiscoveryAggregator,
     SchemaDiscoveryCanonicalizer,
@@ -27,7 +27,7 @@ from src.services.knowledge_graph.schema_discovery import (  # noqa: E402
     write_schema_discovery_markdown_report,
     write_summary_json,
 )
-from src.services.knowledge_graph.schema_discovery_clients import (  # noqa: E402
+from src.services.knowledge_graph.insurance_graph_schema_discovery_clients import (  # noqa: E402
     HttpSchemaDiscoveryClient,
 )
 
@@ -176,7 +176,7 @@ async def _main_async(args: argparse.Namespace) -> None:
     logger.info(
         "completed schema discovery",
         extra={
-            "component": "schema_discovery",
+            "component": "insurance_graph_schema_discovery",
             "file_count": len(markdown_files),
             "chunk_count": len(chunks),
             "result_count": len(results),

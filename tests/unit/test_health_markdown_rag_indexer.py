@@ -108,18 +108,20 @@ def test_run_indexing_pipeline_indexes_qdrant_and_imports_neo4j(tmp_path) -> Non
         def import_graph_documents(self, graph_documents) -> None:
             self.graph_documents.extend(graph_documents)
 
-    class FakeGraphAdapter:
-        def from_document(self, document, chunks):
-            return SimpleNamespace(
-                document_id=document.document_id,
-                chunk_count=len(
-                    [
-                        chunk
-                        for chunk in chunks
-                        if chunk["document_id"] == document.document_id
-                    ]
-                ),
-            )
+    class FakeGraphExtractor:
+        def extract(self, document, chunks):
+            return [
+                SimpleNamespace(
+                    document_id=document.document_id,
+                    chunk_count=len(
+                        [
+                            chunk
+                            for chunk in chunks
+                            if chunk["document_id"] == document.document_id
+                        ]
+                    ),
+                )
+            ]
 
     qdrant_retriever = FakeQdrantRetriever()
     neo4j_store = FakeNeo4jStore()
@@ -131,7 +133,7 @@ def test_run_indexing_pipeline_indexes_qdrant_and_imports_neo4j(tmp_path) -> Non
         recreate_qdrant=True,
         qdrant_retriever=qdrant_retriever,
         neo4j_store=neo4j_store,
-        graph_adapter=FakeGraphAdapter(),
+        graph_extractor=FakeGraphExtractor(),
         chunking_strategy="recursive",
     )
 
@@ -142,7 +144,40 @@ def test_run_indexing_pipeline_indexes_qdrant_and_imports_neo4j(tmp_path) -> Non
     assert qdrant_retriever.recreate is True
     assert neo4j_store.schema_ensured is True
     assert len(neo4j_store.graph_documents) == 1
+    assert neo4j_store.graph_documents[0].chunk_count == len(
+        qdrant_retriever.indexed_chunks
+    )
     assert any(
         chunk.payload["content_type"] in {"mixed", "table"}
         for chunk in qdrant_retriever.indexed_chunks
     )
+
+
+def test_run_indexing_pipeline_skips_graph_extraction_when_graph_outputs_disabled(
+    tmp_path,
+) -> None:
+    script = _load_indexer_script()
+    markdown_dir = tmp_path / "health_insurance_markdowns"
+    markdown_path = markdown_dir / "bic.vn" / "policy" / "policy.md"
+    markdown_path.parent.mkdir(parents=True)
+    markdown_path.write_text("## Quy tac\n\nNoi dung.", encoding="utf-8")
+
+    class FailingGraphExtractor:
+        def extract(self, _document, _chunks):
+            raise AssertionError("graph extraction should not run")
+
+    report = script.run_indexing_pipeline(
+        markdown_dir=markdown_dir,
+        table_mapping_path=None,
+        ingestion_version="test-v1",
+        dry_run=True,
+        skip_qdrant=True,
+        skip_neo4j=True,
+        graph_json_path=None,
+        graph_extractor=FailingGraphExtractor(),
+        chunking_strategy="recursive",
+    )
+
+    assert report["document_count"] == 1
+    assert report["graph_document_count"] == 0
+    assert report["neo4j_imported"] is False

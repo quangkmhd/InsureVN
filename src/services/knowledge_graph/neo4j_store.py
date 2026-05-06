@@ -2,7 +2,9 @@ from typing import Any
 
 from langchain_neo4j import Neo4jGraph
 
-from src.services.knowledge_graph.schema import NEO4J_UNIQUENESS_CONSTRAINTS
+from src.services.knowledge_graph.insurance_graph_schema import (
+    NEO4J_UNIQUENESS_CONSTRAINTS,
+)
 from src.services.observability import service_observe
 
 

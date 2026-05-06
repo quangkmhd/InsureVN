@@ -184,6 +184,47 @@ class Settings:
         self.GRAPH_MIN_CONFIDENCE: float = float(
             os.getenv("GRAPH_MIN_CONFIDENCE", "0.75")
         )
+        self.KG_EXTRACTION_LLM_PROVIDER: str = os.getenv(
+            "KG_EXTRACTION_LLM_PROVIDER", "ollama"
+        )
+        self.KG_EXTRACTION_LLM_MODEL: str = os.getenv(
+            "KG_EXTRACTION_LLM_MODEL", "gemma4:31b-cloud"
+        )
+        self.KG_EXTRACTION_LLM_API_KEY: str = os.getenv("KG_EXTRACTION_LLM_API_KEY", "")
+        self.KG_EXTRACTION_LLM_BASE_URL: str = os.getenv(
+            "KG_EXTRACTION_LLM_BASE_URL", "http://localhost:11434"
+        )
+        self.KG_EXTRACTION_LLM_TEMPERATURE: float = float(
+            os.getenv("KG_EXTRACTION_LLM_TEMPERATURE", "0.0")
+        )
+        self.KG_EXTRACTION_LLM_TOP_P: float = float(
+            os.getenv("KG_EXTRACTION_LLM_TOP_P", "0.95")
+        )
+        self.KG_EXTRACTION_LLM_TOP_K: int = int(
+            os.getenv("KG_EXTRACTION_LLM_TOP_K", "64")
+        )
+        self.KG_EXTRACTION_MAX_RETRIES: int = int(
+            os.getenv("KG_EXTRACTION_MAX_RETRIES", "2")
+        )
+        self.KG_CYPHER_QA_LLM_PROVIDER: str = os.getenv(
+            "KG_CYPHER_QA_LLM_PROVIDER", "ollama"
+        )
+        self.KG_CYPHER_QA_LLM_MODEL: str = os.getenv(
+            "KG_CYPHER_QA_LLM_MODEL", "gemma4:31b-cloud"
+        )
+        self.KG_CYPHER_QA_LLM_API_KEY: str = os.getenv("KG_CYPHER_QA_LLM_API_KEY", "")
+        self.KG_CYPHER_QA_LLM_BASE_URL: str = os.getenv(
+            "KG_CYPHER_QA_LLM_BASE_URL", "http://localhost:11434"
+        )
+        self.KG_CYPHER_QA_LLM_TEMPERATURE: float = float(
+            os.getenv("KG_CYPHER_QA_LLM_TEMPERATURE", "0.0")
+        )
+        self.KG_CYPHER_QA_LLM_TOP_P: float = float(
+            os.getenv("KG_CYPHER_QA_LLM_TOP_P", "0.95")
+        )
+        self.KG_CYPHER_QA_LLM_TOP_K: int = int(
+            os.getenv("KG_CYPHER_QA_LLM_TOP_K", "64")
+        )
 
         # Knowledge graph schema discovery
         schema_discovery_ollama_base_urls = _env_csv(

@@ -70,6 +70,14 @@ def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("GRAPH_EAGER_START_K", raising=False)
     monkeypatch.delenv("GRAPH_EAGER_MAX_DEPTH", raising=False)
     monkeypatch.delenv("GRAPH_MIN_CONFIDENCE", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_MODEL", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_TEMPERATURE", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_MAX_RETRIES", raising=False)
+    monkeypatch.delenv("KG_CYPHER_QA_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("KG_CYPHER_QA_LLM_MODEL", raising=False)
 
     settings = Settings()
 
@@ -81,6 +89,14 @@ def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.GRAPH_EAGER_START_K == 1
     assert settings.GRAPH_EAGER_MAX_DEPTH == 2
     assert settings.GRAPH_MIN_CONFIDENCE == 0.75
+    assert settings.KG_EXTRACTION_LLM_PROVIDER == "ollama"
+    assert settings.KG_EXTRACTION_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.KG_EXTRACTION_LLM_API_KEY == ""
+    assert settings.KG_EXTRACTION_LLM_BASE_URL == "http://localhost:11434"
+    assert settings.KG_EXTRACTION_LLM_TEMPERATURE == 0.0
+    assert settings.KG_EXTRACTION_MAX_RETRIES == 2
+    assert settings.KG_CYPHER_QA_LLM_PROVIDER == "ollama"
+    assert settings.KG_CYPHER_QA_LLM_MODEL == "gemma4:31b-cloud"
 
 
 def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
@@ -88,6 +104,8 @@ def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("GRAPH_EAGER_START_K", "2")
     monkeypatch.setenv("GRAPH_EAGER_MAX_DEPTH", "3")
     monkeypatch.setenv("GRAPH_MIN_CONFIDENCE", "0.82")
+    monkeypatch.setenv("KG_EXTRACTION_LLM_TEMPERATURE", "0.2")
+    monkeypatch.setenv("KG_EXTRACTION_MAX_RETRIES", "4")
 
     settings = Settings()
 
@@ -95,6 +113,8 @@ def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
     assert settings.GRAPH_EAGER_START_K == 2
     assert settings.GRAPH_EAGER_MAX_DEPTH == 3
     assert settings.GRAPH_MIN_CONFIDENCE == 0.82
+    assert settings.KG_EXTRACTION_LLM_TEMPERATURE == 0.2
+    assert settings.KG_EXTRACTION_MAX_RETRIES == 4
 
 
 def test_schema_discovery_provider_settings_cast_env_values(monkeypatch) -> None:
@@ -152,6 +172,14 @@ def test_agent_llm_settings_do_not_inherit_global_llm_config(monkeypatch) -> Non
     monkeypatch.delenv("SEARCH_LLM_MODEL", raising=False)
     monkeypatch.delenv("SEARCH_LLM_API_KEY", raising=False)
     monkeypatch.delenv("SEARCH_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_MODEL", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("KG_EXTRACTION_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("KG_CYPHER_QA_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("KG_CYPHER_QA_LLM_MODEL", raising=False)
+    monkeypatch.delenv("KG_CYPHER_QA_LLM_API_KEY", raising=False)
+    monkeypatch.delenv("KG_CYPHER_QA_LLM_BASE_URL", raising=False)
 
     settings = Settings()
 
@@ -163,3 +191,11 @@ def test_agent_llm_settings_do_not_inherit_global_llm_config(monkeypatch) -> Non
     assert settings.SEARCH_LLM_MODEL == "gemma4:31b-cloud"
     assert settings.SEARCH_LLM_API_KEY == ""
     assert settings.SEARCH_LLM_BASE_URL == "http://localhost:11434"
+    assert settings.KG_EXTRACTION_LLM_PROVIDER == "ollama"
+    assert settings.KG_EXTRACTION_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.KG_EXTRACTION_LLM_API_KEY == ""
+    assert settings.KG_EXTRACTION_LLM_BASE_URL == "http://localhost:11434"
+    assert settings.KG_CYPHER_QA_LLM_PROVIDER == "ollama"
+    assert settings.KG_CYPHER_QA_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.KG_CYPHER_QA_LLM_API_KEY == ""
+    assert settings.KG_CYPHER_QA_LLM_BASE_URL == "http://localhost:11434"

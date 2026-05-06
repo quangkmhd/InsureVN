@@ -1,5 +1,7 @@
 """Build the document-derived InsureVN knowledge graph JSON."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
@@ -13,10 +15,18 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.core.config import settings  # noqa: E402
-from src.services.knowledge_graph.builder import KnowledgeGraphBuilder  # noqa: E402
-from src.services.knowledge_graph.document_extractor import GraphDocument  # noqa: E402
-from src.services.knowledge_graph.quality import GraphQualityValidator  # noqa: E402
-from src.services.knowledge_graph.serializer import GraphJsonSerializer  # noqa: E402
+from src.services.knowledge_graph.graph_json_serializer import (
+    GraphJsonSerializer,  # noqa: E402
+)
+from src.services.knowledge_graph.graph_quality_validator import (
+    GraphQualityValidator,  # noqa: E402
+)
+from src.services.knowledge_graph.llm_graph_document_extractor import (
+    GraphDocument,  # noqa: E402
+)
+from src.services.knowledge_graph.networkx_graph_builder import (
+    NetworkxGraphBuilder,  # noqa: E402
+)
 
 
 def main() -> None:
@@ -55,7 +65,7 @@ def main() -> None:
 
     chunks = _load_chunks(args.qdrant_payload_export_path)
     documents = _load_documents(args.input_document_path, chunks)
-    graph = KnowledgeGraphBuilder().build_from_documents(documents, chunks)
+    graph = NetworkxGraphBuilder().build_from_documents(documents, chunks)
     report = GraphQualityValidator().validate(
         graph,
         document_counts=_document_counts(documents),

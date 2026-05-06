@@ -10,6 +10,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
+from src.core.vietnamese_text import slugify_vietnamese
 from src.services.observability import add_current_service_metadata, service_observe
 
 ChunkingStrategy = Literal["recursive", "hybrid_semantic"]
@@ -185,10 +186,7 @@ class DocumentChunker:
                     chunk_index=chunk_index,
                 )
                 self.validate_payload(payload)
-                chunk_id = (
-                    f"{metadata['document_id']}:"
-                    f"{self._slugify(parent_section.heading)}:{chunk_index}"
-                )
+                chunk_id = f"{parent_section.section_id}:chunk:{chunk_index}"
                 child_chunks.append(
                     ChildChunk(
                         chunk_id=chunk_id,
@@ -653,10 +651,7 @@ class DocumentChunker:
 
     @staticmethod
     def _slugify(value: str) -> str:
-        normalized_value = unicodedata.normalize("NFKD", value)
-        ascii_value = normalized_value.encode("ascii", "ignore").decode("ascii")
-        slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_value.lower()).strip("-")
-        return slug or "section"
+        return slugify_vietnamese(value)
 
 
 def _qdrant_payload_metadata(metadata: dict[str, Any]) -> dict[str, Any]:

@@ -1,171 +1,119 @@
-"""Unit tests for document-derived knowledge graph building."""
+"""Unit tests for LangChain graph document diagnostics."""
 
 import logging
 
 import networkx as nx
+from langchain_core.documents import Document
+from langchain_neo4j.graphs.graph_document import (
+    GraphDocument as LangChainGraphDocument,
+)
+from langchain_neo4j.graphs.graph_document import Node, Relationship
 
-from src.services.knowledge_graph.builder import KnowledgeGraphBuilder
-from src.services.knowledge_graph.document_extractor import GraphDocument
+from src.services.knowledge_graph.llm_graph_document_extractor import GraphDocument
+from src.services.knowledge_graph.networkx_graph_builder import NetworkxGraphBuilder
 
 
-def test_builder_no_longer_exposes_sqlite_primary_construction() -> None:
-    """Prevent KnowledgeGraph from being built from SQLite topology."""
-    assert not hasattr(KnowledgeGraphBuilder(), "build_from_sqlite")
+class FakeGraphExtractor:
+    def __init__(self, graph_documents: list[LangChainGraphDocument]) -> None:
+        self.graph_documents = graph_documents
+        self.calls = []
+
+    def extract(self, document, chunks):
+        self.calls.append((document, chunks))
+        return self.graph_documents
 
 
-def test_build_from_documents_creates_stable_document_and_chunk_nodes() -> None:
-    """Build graph nodes from documents and Qdrant chunk payloads."""
-    documents = [
-        GraphDocument(
-            document_id="aia_health_2026",
-            document_name="AIA Health 2026 Policy Wording",
-            company_code="AIA",
-            source_path="data/processed/aia_health_2026.md",
-            text="""
-            ## Plan: Gold
-            Benefits:
-            - Inpatient care
-            Exclusions:
-            - Pre-existing condition
-            """,
-        )
-    ]
-    chunks = [
-        {
-            "document_id": "aia_health_2026",
-            "chunk_index": 12,
-            "company_code": "AIA",
-            "document_name": "AIA Health 2026 Policy Wording",
-            "plan_code": "gold",
-            "section_type": "exclusions",
-            "page_number": 7,
-            "source_path": "data/processed/aia_health_2026.md",
-            "text": "Exclusions: Pre-existing condition.",
-        }
-    ]
-
-    graph = KnowledgeGraphBuilder().build_from_documents(documents, chunks)
-
-    assert isinstance(graph, nx.DiGraph)
-    assert graph.nodes["company:AIA"]["entity_type"] == "Company"
-    assert graph.nodes["document:aia_health_2026"]["entity_type"] == "Document"
-    assert graph.nodes["plan:AIA:gold"]["entity_type"] == "Plan"
-    assert graph.nodes["chunk:aia_health_2026:12"] == {
-        "entity_type": "Chunk",
-        "document_id": "aia_health_2026",
-        "chunk_index": 12,
-        "company_code": "AIA",
-        "document_name": "AIA Health 2026 Policy Wording",
-        "plan_code": "gold",
-        "section_type": "exclusions",
-        "source_path": "data/processed/aia_health_2026.md",
-    }
-    assert (
-        "document:aia_health_2026",
-        "chunk:aia_health_2026:12",
-    ) in graph.edges
-    assert (
-        graph.edges[
-            "document:aia_health_2026",
-            "chunk:aia_health_2026:12",
-        ]["relationship_type"]
-        == "DOCUMENT_CONTAINS"
+def _sample_graph_document(
+    *,
+    relationship_type: str = "HAS_BENEFIT",
+) -> LangChainGraphDocument:
+    policy = Node(
+        id="policy:aia:gold",
+        type="InsurancePolicy",
+        properties={"name": "AIA Gold"},
+    )
+    benefit = Node(
+        id="benefit:noitru",
+        type="Benefit",
+        properties={"name": "Noi tru"},
+    )
+    return LangChainGraphDocument(
+        nodes=[policy, benefit],
+        relationships=[
+            Relationship(
+                source=policy,
+                target=benefit,
+                type=relationship_type,
+                properties={
+                    "source_document_id": "doc-1",
+                    "source_path": "policy.md",
+                    "confidence": 0.82,
+                },
+            )
+        ],
+        source=Document(page_content="AIA Gold co quyen loi noi tru."),
     )
 
 
-def test_build_from_documents_creates_chunks_without_plan_blocks() -> None:
-    """Vietnamese Markdown without English Plan blocks still gets chunk graph nodes."""
-    documents = [
-        GraphDocument(
-            document_id="aia_health_terms",
-            document_name="Quy tac bao hiem suc khoe",
-            company_code="AIA",
-            source_path="data/processed/aia_health_terms.md",
-            text="## QUYEN LOI BAO HIEM\n\nNguoi duoc bao hiem duoc chi tra.",
-        )
-    ]
-    chunks = [
-        {
-            "document_id": "aia_health_terms",
-            "chunk_index": 0,
-            "company_code": "AIA",
-            "document_name": "Quy tac bao hiem suc khoe",
-            "section_type": "quyen_loi_bao_hiem",
-            "source_path": "data/processed/aia_health_terms.md",
-            "text": "Nguoi duoc bao hiem duoc chi tra.",
-        }
-    ]
-
-    graph = KnowledgeGraphBuilder().build_from_documents(documents, chunks)
-
-    assert "chunk:aia_health_terms:0" in graph.nodes
-    assert (
-        "document:aia_health_terms",
-        "chunk:aia_health_terms:0",
-    ) in graph.edges
+def test_builder_no_longer_exposes_sqlite_primary_construction() -> None:
+    assert not hasattr(NetworkxGraphBuilder(), "build_from_sqlite")
 
 
-def test_build_from_documents_rejects_invalid_relationship_types() -> None:
-    """Only strict GraphRAG relationship types can enter the graph."""
-    documents = [
-        GraphDocument(
-            document_id="aia_health_2026",
-            document_name="AIA Health 2026 Policy Wording",
-            company_code="AIA",
-            source_path="data/processed/aia_health_2026.md",
-            text="""
-            ## Plan: Gold
-            Benefits:
-            - Inpatient care
-            """,
-        )
-    ]
+def test_build_from_graph_documents_creates_networkx_diagnostic_graph() -> None:
+    graph = NetworkxGraphBuilder().build_from_graph_documents(
+        [_sample_graph_document()]
+    )
 
-    graph = KnowledgeGraphBuilder().build_from_documents(documents, chunks=[])
+    assert isinstance(graph, nx.DiGraph)
+    assert graph.nodes["policy:aia:gold"]["entity_type"] == "InsurancePolicy"
+    assert graph.nodes["benefit:noitru"]["entity_type"] == "Benefit"
+    assert graph.edges["policy:aia:gold", "benefit:noitru"]["relationship_type"] == (
+        "HAS_BENEFIT"
+    )
+    assert graph.edges["policy:aia:gold", "benefit:noitru"]["confidence"] == 0.82
 
-    relationship_types = {
-        attributes["relationship_type"] for _, _, attributes in graph.edges(data=True)
-    }
-    assert relationship_types <= {
-        "DOCUMENT_DEFINES",
-        "OFFERS",
-        "INCLUDES",
-        "EXCLUDES",
-        "APPLIES_TO",
-        "HAS_WAITING_PERIOD",
-        "USES_NETWORK",
-        "DOCUMENT_CONTAINS",
-        "MENTIONED_IN",
-    }
-    assert ("company:AIA", "plan:AIA:gold") in graph.edges
-    assert ("plan:AIA:gold", "benefit:AIA:gold:inpatient_care") in graph.edges
+
+def test_build_from_graph_documents_filters_invalid_schema_types() -> None:
+    graph = NetworkxGraphBuilder().build_from_graph_documents(
+        [_sample_graph_document(relationship_type="MAKES_UP")]
+    )
+
+    assert list(graph.edges) == []
+    assert "policy:aia:gold" in graph.nodes
+    assert "benefit:noitru" in graph.nodes
+
+
+def test_build_from_documents_uses_langchain_extractor() -> None:
+    source_document = GraphDocument(
+        document_id="doc-1",
+        document_name="Policy",
+        company_code="AIA",
+        source_path="policy.md",
+        text="Noi dung.",
+    )
+    chunks = [{"document_id": "doc-1", "text": "Noi dung."}]
+    extractor = FakeGraphExtractor([_sample_graph_document()])
+
+    graph = NetworkxGraphBuilder(extractor=extractor).build_from_documents(
+        [source_document],
+        chunks,
+    )
+
+    assert extractor.calls == [(source_document, chunks)]
+    assert graph.number_of_nodes() == 2
+    assert graph.number_of_edges() == 1
 
 
 def test_builder_logs_required_observability_metadata(caplog) -> None:
-    """Emit required JSON log metadata after graph construction."""
-    documents = [
-        GraphDocument(
-            document_id="aia_health_2026",
-            document_name="AIA Health 2026 Policy Wording",
-            company_code="AIA",
-            source_path="data/processed/aia_health_2026.md",
-            text="""
-            ## Plan: Gold
-            Benefits:
-            - Inpatient care
-            """,
-        )
-    ]
-
     with caplog.at_level(logging.INFO):
-        KnowledgeGraphBuilder().build_from_documents(documents, chunks=[])
+        NetworkxGraphBuilder().build_from_graph_documents([_sample_graph_document()])
 
     record = next(
         item
         for item in caplog.records
-        if getattr(item, "component", "") == "knowledge_graph_builder"
+        if getattr(item, "component", "") == "networkx_graph_builder"
     )
-    assert record.node_count == 4
-    assert record.edge_count == 3
-    assert record.entity_type_counts["Plan"] == 1
-    assert record.relationship_type_counts["INCLUDES"] == 1
+    assert record.node_count == 2
+    assert record.edge_count == 1
+    assert record.entity_type_counts["InsurancePolicy"] == 1
+    assert record.relationship_type_counts["HAS_BENEFIT"] == 1

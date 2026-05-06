@@ -33,6 +33,10 @@ Hệ thống được xây dựng trên một quy trình 6 giai đoạn nghiêm 
 - **Mục tiêu:** Đẩy dữ liệu đồng bộ vào SQL, Vector DB và Graph DB.
 - **Thành tựu:** Xây dựng nền tảng **Hybrid RAG** mạnh mẽ, tạo sự liên kết giữa SQL, Vector (Qdrant) và Graph (Neo4j).
 
+### Giai đoạn 7: Xây dựng Knowledge Graph (Knowledge Graph)
+- **Mục tiêu:** Khám phá schema, chuẩn hóa và xây dựng đồ thị tri thức từ tài liệu.
+- **Thành tựu:** Tự động hóa việc khám phá schema thực tế từ dữ liệu, giúp xây dựng Knowledge Graph chính xác và có thể mở rộng.
+
 ---
 
 ## 2. Liên kết Nhật ký Mã nguồn
@@ -74,6 +78,15 @@ Nhật ký này chỉ ghi tiến độ xử lý dữ liệu theo 6 giai đoạn 
 | `05_training_eval/02_train_gemma4.py` | Huấn luyện mô hình Gemma4. |
 | `06_db_ingestion/02_ingest_with_mapping.py` | Đẩy dữ liệu vào SQL dựa trên mapping AI. |
 | `06_db_ingestion/09_index_all_markdowns.py` | Pipeline đẩy dữ liệu đồng thời vào Vector & Graph. |
+| `06_db_ingestion/04_index_qdrant_documents.py` | Index tài liệu vào Qdrant. |
+
+### 4.4. Knowledge Graph Discovery & Build
+| Script | Công dụng |
+| :--- | :--- |
+| `07_knowledge_graph/01_discover_schema.py` | Khám phá candidate schema từ Markdown. |
+| `07_knowledge_graph/02_canonicalize_schema.py` | Chuẩn hóa schema labels bằng AI. |
+| `07_knowledge_graph/03_select_schema_v1.py` | Tổng hợp và chọn lọc Schema V1 chính thức. |
+| `07_knowledge_graph/04_build_knowledge_graph.py` | Script chính xây dựng đồ thị từ dữ liệu. |
 
 ---
 

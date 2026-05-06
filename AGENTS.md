@@ -128,6 +128,7 @@ InsureVN/
 │   ├── 04_extraction/        # OCR, JSON extraction, Knowledge Graph schema/build
 │   ├── 05_training_eval/     # VLM fine-tuning (Oumi, Gemma4)
 │   ├── 06_db_ingestion/      # SQLite, Qdrant, Graph ingestion/indexing
+│   ├── 07_knowledge_graph/   # Knowledge Graph discovery, canonicalization, and build
 │   └── 06_ipynb/             # Research and training notebooks
 │
 ├── database/                 # Local database files
@@ -355,7 +356,7 @@ This is a **production-grade product**, not an MVP. Build with:
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-06 2:34pm GMT+7
+# [InsureVN] recent context, 2026-05-06 3:04pm GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE

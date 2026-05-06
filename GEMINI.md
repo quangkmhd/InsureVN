@@ -128,6 +128,7 @@ InsureVN/
 │   ├── 04_extraction/        # OCR, JSON extraction, Knowledge Graph schema/build
 │   ├── 05_training_eval/     # VLM fine-tuning (Oumi, Gemma4)
 │   ├── 06_db_ingestion/      # SQLite, Qdrant, Graph ingestion/indexing
+│   ├── 07_knowledge_graph/   # Knowledge Graph discovery, canonicalization, and build
 │   └── 06_ipynb/             # Research and training notebooks
 │
 ├── database/                 # Local database files

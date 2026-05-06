@@ -15,7 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from src.core.config import settings  # noqa: E402
 from src.core.logger import get_logger  # noqa: E402
-from src.services.knowledge_graph.insurance_graph_schema_discovery import (  # noqa: E402
+from schema_discovery.discovery import (  # noqa: E402
     MarkdownSchemaDiscoveryChunker,
     SchemaDiscoveryAggregator,
     SchemaDiscoveryCanonicalizer,
@@ -27,7 +27,7 @@ from src.services.knowledge_graph.insurance_graph_schema_discovery import (  # n
     write_schema_discovery_markdown_report,
     write_summary_json,
 )
-from src.services.knowledge_graph.insurance_graph_schema_discovery_clients import (  # noqa: E402
+from schema_discovery.discovery_clients import (  # noqa: E402
     HttpSchemaDiscoveryClient,
 )
 

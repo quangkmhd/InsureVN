@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
-from src.services.knowledge_graph.insurance_graph_schema_discovery import (
+from .discovery import (
     AggregatedSchemaItem,
     SchemaCanonicalizationMap,
     SchemaChunkDiscoveryResult,

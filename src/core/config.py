@@ -103,8 +103,8 @@ class Settings:
         self.RAG_VIETNAMESE_SEGMENTER: str = os.getenv(
             "RAG_VIETNAMESE_SEGMENTER", "underthesea"
         )
-        self.RAG_CHILD_CHUNK_TOKENS: int = int(
-            os.getenv("RAG_CHILD_CHUNK_TOKENS", "1200")
+        self.RAG_CHILD_CHUNK_MAX_CHARS: int = int(
+            os.getenv("RAG_CHILD_CHUNK_MAX_CHARS", "1200")
         )
         self.RAG_CHILD_CHUNK_OVERLAP: int = int(
             os.getenv("RAG_CHILD_CHUNK_OVERLAP", "150")

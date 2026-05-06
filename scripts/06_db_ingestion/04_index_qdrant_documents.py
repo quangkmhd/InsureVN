@@ -305,7 +305,7 @@ def main() -> None:
         report = build_dry_run_report(
             document_paths=document_paths,
             metadata=metadata,
-            child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
+            child_chunk_chars=settings.RAG_CHILD_CHUNK_MAX_CHARS,
             child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
             mapping_data=mapping_data,
             **chunking_kwargs,
@@ -322,7 +322,7 @@ def main() -> None:
     chunks = build_chunks(
         document_paths=document_paths,
         metadata=metadata,
-        child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
+        child_chunk_chars=settings.RAG_CHILD_CHUNK_MAX_CHARS,
         child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
         semantic_embedding_provider=embedding_provider,
         mapping_data=mapping_data,

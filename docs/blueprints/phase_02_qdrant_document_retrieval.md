@@ -145,7 +145,7 @@ Existing project packages used in this phase:
 2. Implement `DocumentChunker` with stable IDs, NFC normalization, parent/child contracts, and citation payload generation.
 3. Write failing Qdrant collection tests requiring `text_dense`, `text_sparse`, payload indexes, and readiness failure when sparse vectors are missing.
 4. Implement `QdrantCollectionManager` using `qdrant-client` collection and index APIs.
-5. Add config fields with explicit ownership: `RAG_QDRANT_URL`, `RAG_QDRANT_API_KEY`, `RAG_QDRANT_COLLECTION`, `RAG_DENSE_VECTOR_NAME`, `RAG_SPARSE_VECTOR_NAME`, `RAG_EMBEDDING_PROVIDER`, `RAG_EMBEDDING_MODEL`, `RAG_SPARSE_MODEL`, `RAG_CHILD_CHUNK_TOKENS`, `RAG_CHILD_CHUNK_OVERLAP`, `RAG_PARENT_SECTION_MAX_CHARS`, `RAG_RETRIEVAL_TOP_K`, `RAG_RETRIEVAL_TIMEOUT_SECONDS`, `RAG_REQUIRE_HYBRID_SEARCH`.
+5. Add config fields with explicit ownership: `RAG_QDRANT_URL`, `RAG_QDRANT_API_KEY`, `RAG_QDRANT_COLLECTION`, `RAG_DENSE_VECTOR_NAME`, `RAG_SPARSE_VECTOR_NAME`, `RAG_EMBEDDING_PROVIDER`, `RAG_EMBEDDING_MODEL`, `RAG_SPARSE_MODEL`, `RAG_CHILD_CHUNK_MAX_CHARS`, `RAG_CHILD_CHUNK_OVERLAP`, `RAG_PARENT_SECTION_MAX_CHARS`, `RAG_RETRIEVAL_TOP_K`, `RAG_RETRIEVAL_TIMEOUT_SECONDS`, `RAG_REQUIRE_HYBRID_SEARCH`.
 6. Write failing evidence adapter tests for missing citation fields, score preservation, parent-section text, and invalid source lineage.
 7. Implement `QdrantEvidenceAdapter` using the shared `Evidence` model from Phase 01.
 8. Write failing hybrid retrieval tests for exact policy codes, Vietnamese legal terms, disease/drug names, and semantic paraphrases.

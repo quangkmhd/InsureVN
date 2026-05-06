@@ -10,7 +10,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_EMBEDDING_PROVIDER", raising=False)
     monkeypatch.delenv("RAG_DENSE_VECTOR_SIZE", raising=False)
     monkeypatch.delenv("RAG_SPARSE_MODEL", raising=False)
-    monkeypatch.delenv("RAG_CHILD_CHUNK_TOKENS", raising=False)
+    monkeypatch.delenv("RAG_CHILD_CHUNK_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_OVERLAP", raising=False)
     monkeypatch.delenv("RAG_PARENT_SECTION_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TOP_K", raising=False)
@@ -29,8 +29,8 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.RAG_EMBEDDING_MODEL == "gemini-embedding-2-preview"
     assert settings.RAG_DENSE_VECTOR_SIZE == 768
     assert settings.RAG_SPARSE_MODEL == "Qdrant/bm25"
-    assert isinstance(settings.RAG_CHILD_CHUNK_TOKENS, int)
-    assert settings.RAG_CHILD_CHUNK_TOKENS == 1200
+    assert isinstance(settings.RAG_CHILD_CHUNK_MAX_CHARS, int)
+    assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 1200
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 150
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 6000
     assert settings.RAG_RETRIEVAL_TOP_K == 5
@@ -40,7 +40,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
 
 
 def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
-    monkeypatch.setenv("RAG_CHILD_CHUNK_TOKENS", "900")
+    monkeypatch.setenv("RAG_CHILD_CHUNK_MAX_CHARS", "900")
     monkeypatch.setenv("RAG_CHILD_CHUNK_OVERLAP", "90")
     monkeypatch.setenv("RAG_PARENT_SECTION_MAX_CHARS", "4500")
     monkeypatch.setenv("RAG_DENSE_VECTOR_SIZE", "512")
@@ -51,7 +51,7 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
 
     settings = Settings()
 
-    assert settings.RAG_CHILD_CHUNK_TOKENS == 900
+    assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 900
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 90
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 4500
     assert settings.RAG_DENSE_VECTOR_SIZE == 512

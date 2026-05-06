@@ -289,7 +289,7 @@ def build_document_chunker(
 ) -> DocumentChunker:
     """Build the configured Markdown chunker for indexing."""
     return DocumentChunker(
-        child_chunk_chars=settings.RAG_CHILD_CHUNK_TOKENS,
+        child_chunk_chars=settings.RAG_CHILD_CHUNK_MAX_CHARS,
         child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
         chunking_strategy=chunking_strategy,
         semantic_embedding_provider=semantic_embedding_provider,

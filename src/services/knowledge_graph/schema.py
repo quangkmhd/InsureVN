@@ -38,7 +38,6 @@ REQUIRED_RELATIONSHIP_PROPERTIES = {
     "source_document_id",
     "source_chunk_id",
     "source_path",
-    "page_number",
     "section_type",
     "confidence",
     "extraction_method",

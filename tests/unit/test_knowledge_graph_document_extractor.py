@@ -144,6 +144,8 @@ def test_extracts_document_grounded_relationships_with_citations() -> None:
         ].confidence
         >= 0.8
     )
+    assert all(not hasattr(edge, "page_number") for edge in extraction.edges)
+    assert "page_number" not in extraction.nodes["chunk:aia_health_2026:12"]
 
 
 def test_extracts_plan_scoped_sections_without_cross_plan_contamination() -> None:

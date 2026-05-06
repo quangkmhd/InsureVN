@@ -36,7 +36,6 @@ class GraphEvidenceMapper:
                                 "document_id": edge.attributes.get("document_id"),
                                 "source_path": edge.attributes.get("source_path"),
                                 "chunk_id": edge.attributes.get("chunk_id"),
-                                "page_number": edge.attributes.get("page_number"),
                                 "section_type": edge.attributes.get("section_type"),
                             }
                             for edge in path.edges

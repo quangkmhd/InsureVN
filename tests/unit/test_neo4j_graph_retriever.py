@@ -33,6 +33,7 @@ def test_neo4j_graph_retriever_uses_read_only_parameterized_template() -> None:
     assert "MATCH path =" in query
     assert "DELETE" not in query
     assert "SET " not in query
+    assert "page_number" not in query
     assert params == {
         "start_entities": ["plan:AIA:gold"],
         "relation_types": ["EXCLUDES"],
@@ -43,3 +44,4 @@ def test_neo4j_graph_retriever_uses_read_only_parameterized_template() -> None:
         "exclusion:AIA:gold:pre_existing_condition",
     ]
     assert paths[0].edges[0].relationship_type == "EXCLUDES"
+    assert "page_number" not in paths[0].edges[0].attributes

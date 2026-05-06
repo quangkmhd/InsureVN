@@ -38,3 +38,7 @@ def test_graph_document_adapter_builds_langchain_graph_document_contract() -> No
     assert "plan:AIA:gold" in node_ids
     assert "DOCUMENT_DEFINES" in relationship_types
     assert "OFFERS" in relationship_types
+    assert all(
+        "page_number" not in relationship.properties
+        for relationship in graph_document.relationships
+    )

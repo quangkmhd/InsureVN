@@ -15,6 +15,13 @@ def _env_bool(name: str, *, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _env_csv(name: str, *, default: list[str] | None = None) -> list[str]:
+    value = os.getenv(name)
+    if value is None:
+        return list(default or [])
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 class Settings:
     """Typed application settings loaded from environment variables."""
 
@@ -176,6 +183,80 @@ class Settings:
         self.GRAPH_EAGER_MAX_DEPTH: int = int(os.getenv("GRAPH_EAGER_MAX_DEPTH", "2"))
         self.GRAPH_MIN_CONFIDENCE: float = float(
             os.getenv("GRAPH_MIN_CONFIDENCE", "0.75")
+        )
+
+        # Knowledge graph schema discovery
+        schema_discovery_ollama_base_urls = _env_csv(
+            "KG_SCHEMA_DISCOVERY_OLLAMA_BASE_URLS"
+        )
+        schema_discovery_ollama_base_url = os.getenv(
+            "KG_SCHEMA_DISCOVERY_OLLAMA_BASE_URL",
+            "",
+        ).strip()
+        if not schema_discovery_ollama_base_urls and schema_discovery_ollama_base_url:
+            schema_discovery_ollama_base_urls = [schema_discovery_ollama_base_url]
+        self.KG_SCHEMA_DISCOVERY_OLLAMA_BASE_URLS: list[str] = _env_csv(
+            "KG_SCHEMA_DISCOVERY_OLLAMA_BASE_URLS",
+            default=schema_discovery_ollama_base_urls or ["http://localhost:11434"],
+        )
+        self.KG_SCHEMA_DISCOVERY_OLLAMA_API_KEYS: list[str] = _env_csv(
+            "KG_SCHEMA_DISCOVERY_OLLAMA_API_KEYS",
+        )
+        self.KG_SCHEMA_DISCOVERY_OLLAMA_MODEL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_OLLAMA_MODEL",
+            self.LLM_MODEL,
+        )
+        self.KG_SCHEMA_DISCOVERY_OPENROUTER_API_KEYS: list[str] = _env_csv(
+            "KG_SCHEMA_DISCOVERY_OPENROUTER_API_KEYS",
+            default=_env_csv("OPENROUTER_API_KEY"),
+        )
+        self.KG_SCHEMA_DISCOVERY_OPENROUTER_MODEL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_OPENROUTER_MODEL",
+            "google/gemini-2.5-flash",
+        )
+        self.KG_SCHEMA_DISCOVERY_OPENROUTER_BASE_URL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_OPENROUTER_BASE_URL",
+            "https://openrouter.ai/api/v1/chat/completions",
+        )
+        self.KG_SCHEMA_DISCOVERY_NVIDIA_API_KEYS: list[str] = _env_csv(
+            "KG_SCHEMA_DISCOVERY_NVIDIA_API_KEYS",
+            default=_env_csv("NVIDIA_API_KEY"),
+        )
+        self.KG_SCHEMA_DISCOVERY_NVIDIA_MODEL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_NVIDIA_MODEL",
+            "meta/llama-3.3-70b-instruct",
+        )
+        self.KG_SCHEMA_DISCOVERY_NVIDIA_BASE_URL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_NVIDIA_BASE_URL",
+            "https://integrate.api.nvidia.com/v1/chat/completions",
+        )
+        self.KG_SCHEMA_DISCOVERY_GEMINI_API_KEYS: list[str] = _env_csv(
+            "KG_SCHEMA_DISCOVERY_GEMINI_API_KEYS",
+            default=_env_csv("GEMINI_API_KEY"),
+        )
+        self.KG_SCHEMA_DISCOVERY_GEMINI_MODEL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_GEMINI_MODEL",
+            "gemini-2.5-flash",
+        )
+        self.KG_SCHEMA_DISCOVERY_GEMINI_BASE_URL: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_GEMINI_BASE_URL",
+            "https://generativelanguage.googleapis.com/v1beta",
+        )
+        self.KG_SCHEMA_DISCOVERY_MAX_CONCURRENCY: int = int(
+            os.getenv("KG_SCHEMA_DISCOVERY_MAX_CONCURRENCY", "20")
+        )
+        self.KG_SCHEMA_DISCOVERY_CHUNK_CHARS: int = int(
+            os.getenv("KG_SCHEMA_DISCOVERY_CHUNK_CHARS", "12000")
+        )
+        self.KG_SCHEMA_DISCOVERY_CHUNK_OVERLAP: int = int(
+            os.getenv("KG_SCHEMA_DISCOVERY_CHUNK_OVERLAP", "500")
+        )
+        self.KG_SCHEMA_DISCOVERY_ATTEMPT_TIMEOUT_SECONDS: float = float(
+            os.getenv("KG_SCHEMA_DISCOVERY_ATTEMPT_TIMEOUT_SECONDS", "90.0")
+        )
+        self.KG_SCHEMA_DISCOVERY_OUTPUT_DIR: str = os.getenv(
+            "KG_SCHEMA_DISCOVERY_OUTPUT_DIR",
+            "data/processed/knowledge_graph/schema_discovery",
         )
 
     @property

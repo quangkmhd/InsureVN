@@ -41,7 +41,6 @@ class GraphEdge:
     source_path: str
     confidence: float
     chunk_id: str | None = None
-    page_number: int | None = None
     section_type: str | None = None
 
 
@@ -144,9 +143,6 @@ class DocumentGraphExtractor:
                     "Conditions",
                 )
             )
-
-        if not plan_blocks:
-            return GraphExtraction(nodes=nodes, edges=edges)
 
         self._extract_glossary(nodes, document)
         self._extract_chunks(
@@ -324,6 +320,7 @@ class DocumentGraphExtractor:
         condition_ids: list[str],
     ) -> None:
         known_mentions = exclusion_ids + condition_ids
+        document_node_id = f"document:{_stable_slug(document.document_id)}"
         for chunk in chunks:
             if chunk.get("document_id") != document.document_id:
                 continue
@@ -336,9 +333,19 @@ class DocumentGraphExtractor:
                 "document_name": chunk.get("document_name"),
                 "plan_code": chunk.get("plan_code"),
                 "section_type": chunk.get("section_type"),
-                "page_number": chunk.get("page_number"),
                 "source_path": chunk.get("source_path"),
             }
+            edges.append(
+                _edge(
+                    document_node_id,
+                    chunk_id,
+                    "DOCUMENT_CONTAINS",
+                    document,
+                    confidence=1.0,
+                    chunk_id=chunk_id,
+                    section_type=chunk.get("section_type"),
+                )
+            )
             chunk_text = str(chunk.get("text", "")).lower()
             chunk_plan_code = chunk.get("plan_code")
             for target_id in known_mentions:
@@ -355,7 +362,6 @@ class DocumentGraphExtractor:
                             document,
                             confidence=0.95,
                             chunk_id=chunk_id,
-                            page_number=chunk.get("page_number"),
                             section_type=chunk.get("section_type"),
                         )
                     )
@@ -434,7 +440,6 @@ def _edge(
     *,
     confidence: float,
     chunk_id: str | None = None,
-    page_number: int | None = None,
     section_type: str | None = None,
 ) -> GraphEdge:
     return GraphEdge(
@@ -445,7 +450,6 @@ def _edge(
         source_path=document.source_path,
         confidence=confidence,
         chunk_id=chunk_id,
-        page_number=page_number,
         section_type=section_type,
     )
 

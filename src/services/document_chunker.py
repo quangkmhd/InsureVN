@@ -240,6 +240,21 @@ class DocumentChunker:
                 )
             ]
 
+        # Add preamble if there's text before the first heading
+        first_match = heading_matches[0]
+        if first_match.start() > 0:
+            preamble_text = markdown_text[: first_match.start()].strip()
+            if preamble_text:
+                sections.append(
+                    ParentSection(
+                        section_id=f"{metadata['document_id']}:preamble:0",
+                        heading=str(metadata["document_name"]),
+                        level=1,
+                        text=preamble_text,
+                        metadata=metadata,
+                    )
+                )
+
         for index, match in enumerate(heading_matches):
             next_start = (
                 heading_matches[index + 1].start()
@@ -516,9 +531,12 @@ class DocumentChunker:
         content_hash = sha256(
             unicodedata.normalize("NFC", child_text).encode("utf-8")
         ).hexdigest()
+        content_type = self._content_type(child_text)
         return {
             **metadata,
             "section_type": self._section_type(parent_section.heading),
+            "content_type": content_type,
+            "has_table": content_type in {"mixed", "table"},
             "chunk_index": chunk_index,
             "parent_section_id": parent_section.section_id,
             "text": child_text,
@@ -530,6 +548,20 @@ class DocumentChunker:
     @staticmethod
     def _section_type(heading: str) -> str:
         return DocumentChunker._slugify(heading).replace("-", "_")
+
+    @staticmethod
+    def _content_type(text: str) -> str:
+        nonblank_lines = [line for line in text.splitlines() if line.strip()]
+        if not nonblank_lines:
+            return "text"
+        table_line_count = sum(
+            1 for line in nonblank_lines if DocumentChunker._is_table_line(line)
+        )
+        if table_line_count == 0:
+            return "text"
+        if table_line_count == len(nonblank_lines):
+            return "table"
+        return "mixed"
 
     @staticmethod
     def _slugify(value: str) -> str:

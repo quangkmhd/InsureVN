@@ -77,6 +77,7 @@ def test_qdrant_collection_manager_creates_required_payload_indexes() -> None:
     assert indexed_fields == set(QDRANT_FILTER_PAYLOAD_INDEX_FIELDS)
     assert indexed_fields == {
         "metadata.company_code",
+        "metadata.content_type",
         "metadata.document_id",
         "metadata.document_type",
         "metadata.product_line",

@@ -177,6 +177,26 @@ def test_document_chunker_omits_unreliable_page_number_payload() -> None:
     assert "page_number" not in payload
 
 
+def test_document_chunker_marks_table_payload_content_type() -> None:
+    markdown_text = (
+        "## Bang quyen loi\n\n"
+        "| Quyen loi | Han muc |\n"
+        "|---|---|\n"
+        "| Nam vien | 10000000 |\n"
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=200,
+        child_chunk_overlap=0,
+        table_line_ratio_threshold=0.4,
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+
+    payload = document_chunks.child_chunks[0].payload
+    assert payload["content_type"] == "mixed"
+    assert payload["has_table"] is True
+
+
 def test_document_chunker_adds_production_payload_lineage_fields() -> None:
     markdown_text = "## Thoi gian cho\n\nBenh dac biet co thoi gian cho 90 ngay."
     metadata = {

@@ -97,6 +97,36 @@ def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
     assert settings.GRAPH_MIN_CONFIDENCE == 0.82
 
 
+def test_schema_discovery_provider_settings_cast_env_values(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "KG_SCHEMA_DISCOVERY_OLLAMA_BASE_URLS",
+        "http://ollama-1:11434,http://ollama-2:11434",
+    )
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_OLLAMA_API_KEYS", "ol-1,ol-2")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_OPENROUTER_API_KEYS", "or-1,or-2")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_NVIDIA_API_KEYS", "nv-1,nv-2,nv-3")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_GEMINI_API_KEYS", "gm-1")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_MAX_CONCURRENCY", "8")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_CHUNK_CHARS", "9000")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_CHUNK_OVERLAP", "300")
+    monkeypatch.setenv("KG_SCHEMA_DISCOVERY_ATTEMPT_TIMEOUT_SECONDS", "45.5")
+
+    settings = Settings()
+
+    assert settings.KG_SCHEMA_DISCOVERY_OLLAMA_BASE_URLS == [
+        "http://ollama-1:11434",
+        "http://ollama-2:11434",
+    ]
+    assert settings.KG_SCHEMA_DISCOVERY_OLLAMA_API_KEYS == ["ol-1", "ol-2"]
+    assert settings.KG_SCHEMA_DISCOVERY_OPENROUTER_API_KEYS == ["or-1", "or-2"]
+    assert settings.KG_SCHEMA_DISCOVERY_NVIDIA_API_KEYS == ["nv-1", "nv-2", "nv-3"]
+    assert settings.KG_SCHEMA_DISCOVERY_GEMINI_API_KEYS == ["gm-1"]
+    assert settings.KG_SCHEMA_DISCOVERY_MAX_CONCURRENCY == 8
+    assert settings.KG_SCHEMA_DISCOVERY_CHUNK_CHARS == 9000
+    assert settings.KG_SCHEMA_DISCOVERY_CHUNK_OVERLAP == 300
+    assert settings.KG_SCHEMA_DISCOVERY_ATTEMPT_TIMEOUT_SECONDS == 45.5
+
+
 def test_langfuse_settings_prefer_current_base_url(monkeypatch) -> None:
     """Verify Langfuse uses the current SDK base URL setting."""
     monkeypatch.setenv("LANGFUSE_BASE_URL", "http://langfuse.local:3000")

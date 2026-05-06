@@ -47,7 +47,6 @@ class GraphDocumentAdapter:
                     "source_document_id": edge.document_id,
                     "source_chunk_id": edge.chunk_id,
                     "source_path": edge.source_path,
-                    "page_number": edge.page_number,
                     "section_type": edge.section_type,
                     "confidence": edge.confidence,
                     "extraction_method": "deterministic_document_extractor",

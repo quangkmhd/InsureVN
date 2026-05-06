@@ -58,9 +58,51 @@ def test_build_from_documents_creates_stable_document_and_chunk_nodes() -> None:
         "document_name": "AIA Health 2026 Policy Wording",
         "plan_code": "gold",
         "section_type": "exclusions",
-        "page_number": 7,
         "source_path": "data/processed/aia_health_2026.md",
     }
+    assert (
+        "document:aia_health_2026",
+        "chunk:aia_health_2026:12",
+    ) in graph.edges
+    assert (
+        graph.edges[
+            "document:aia_health_2026",
+            "chunk:aia_health_2026:12",
+        ]["relationship_type"]
+        == "DOCUMENT_CONTAINS"
+    )
+
+
+def test_build_from_documents_creates_chunks_without_plan_blocks() -> None:
+    """Vietnamese Markdown without English Plan blocks still gets chunk graph nodes."""
+    documents = [
+        GraphDocument(
+            document_id="aia_health_terms",
+            document_name="Quy tac bao hiem suc khoe",
+            company_code="AIA",
+            source_path="data/processed/aia_health_terms.md",
+            text="## QUYEN LOI BAO HIEM\n\nNguoi duoc bao hiem duoc chi tra.",
+        )
+    ]
+    chunks = [
+        {
+            "document_id": "aia_health_terms",
+            "chunk_index": 0,
+            "company_code": "AIA",
+            "document_name": "Quy tac bao hiem suc khoe",
+            "section_type": "quyen_loi_bao_hiem",
+            "source_path": "data/processed/aia_health_terms.md",
+            "text": "Nguoi duoc bao hiem duoc chi tra.",
+        }
+    ]
+
+    graph = KnowledgeGraphBuilder().build_from_documents(documents, chunks)
+
+    assert "chunk:aia_health_terms:0" in graph.nodes
+    assert (
+        "document:aia_health_terms",
+        "chunk:aia_health_terms:0",
+    ) in graph.edges
 
 
 def test_build_from_documents_rejects_invalid_relationship_types() -> None:
@@ -92,6 +134,7 @@ def test_build_from_documents_rejects_invalid_relationship_types() -> None:
         "APPLIES_TO",
         "HAS_WAITING_PERIOD",
         "USES_NETWORK",
+        "DOCUMENT_CONTAINS",
         "MENTIONED_IN",
     }
     assert ("company:AIA", "plan:AIA:gold") in graph.edges

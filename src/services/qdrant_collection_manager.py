@@ -8,6 +8,7 @@ from src.services.retrieval_readiness import RetrievalReadinessReport
 
 QDRANT_FILTER_PAYLOAD_INDEX_FIELDS = (
     "metadata.company_code",
+    "metadata.content_type",
     "metadata.document_id",
     "metadata.document_type",
     "metadata.product_line",

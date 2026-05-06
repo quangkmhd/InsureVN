@@ -2,6 +2,7 @@ from src.services.knowledge_graph.schema import (
     ALLOWED_NODE_LABELS,
     ALLOWED_RELATIONSHIP_TYPES,
     NEO4J_UNIQUENESS_CONSTRAINTS,
+    REQUIRED_RELATIONSHIP_PROPERTIES,
     build_chunk_id,
     build_company_id,
     build_document_id,
@@ -53,3 +54,7 @@ def test_knowledge_graph_schema_defines_neo4j_uniqueness_constraints() -> None:
     assert ("Document", "id") in NEO4J_UNIQUENESS_CONSTRAINTS
     assert ("Plan", "id") in NEO4J_UNIQUENESS_CONSTRAINTS
     assert ("Chunk", "id") in NEO4J_UNIQUENESS_CONSTRAINTS
+
+
+def test_knowledge_graph_schema_does_not_require_unreliable_page_number() -> None:
+    assert "page_number" not in REQUIRED_RELATIONSHIP_PROPERTIES

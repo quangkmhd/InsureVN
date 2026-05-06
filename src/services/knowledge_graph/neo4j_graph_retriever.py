@@ -16,7 +16,6 @@ RETURN
   last(relationships).source_document_id AS document_id,
   last(relationships).source_path AS source_path,
   last(relationships).source_chunk_id AS chunk_id,
-  last(relationships).page_number AS page_number,
   last(relationships).section_type AS section_type,
   last(relationships).confidence AS confidence
 """
@@ -62,7 +61,6 @@ class Neo4jGraphRetriever:
                             "document_id": record.get("document_id"),
                             "source_path": record.get("source_path"),
                             "chunk_id": record.get("chunk_id"),
-                            "page_number": record.get("page_number"),
                             "section_type": record.get("section_type"),
                             "confidence": record.get("confidence", 0.0),
                         },

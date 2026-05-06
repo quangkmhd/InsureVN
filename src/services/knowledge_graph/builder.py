@@ -58,7 +58,6 @@ class KnowledgeGraphBuilder:
                     source_path=edge.source_path,
                     confidence=edge.confidence,
                     chunk_id=edge.chunk_id,
-                    page_number=edge.page_number,
                     section_type=edge.section_type,
                 )
         logger.info(

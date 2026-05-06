@@ -2,14 +2,14 @@
 
 ## Status
 
-Reviewed. All sections complete. Supersedes `docs/multi_agent_system_architecture_design.md` for agent architecture decisions. The older document remains as historical reference for the original agent brainstorm, but this spec is the canonical source for implementation. 
-**See also:** `docs/superpowers/specs/2026-05-04-quad-retrieval-rag-architecture.md` for deep-dive into the LangGraph Ensemble Retrieval methodology.
+Reviewed. All sections complete. Supersedes `docs/architecture/historical/2026-04-28-multi-agent-system-architecture-strategy.md` for agent architecture decisions. The older document remains as historical reference for the original agent brainstorm, but this spec is the canonical source for implementation. 
+**See also:** `docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md` for deep-dive into the LangGraph Ensemble Retrieval methodology.
 
 ## Decision Log
 
 | Question | Decision |
 |---|---|
-| Which RAG product scope should be covered first: Policy Q&A, Claim Advisory, or Product Comparison? | Cover all three and solve all 100 scenarios in `docs/customer_intent_scenarios_100_questions.md`. |
+| Which RAG product scope should be covered first: Policy Q&A, Claim Advisory, or Product Comparison? | Cover all three and solve all 100 scenarios in `docs/product/customer_intent_scenarios_100_questions.md`. |
 | Production posture: local-first, hybrid, or accuracy-first cloud? | Hybrid production. Use local/small models for cheaper tasks and stronger models for hard/final reasoning. |
 | First product target: balanced assistant, claim-safe advisor, or comparison engine? | Cover all three target areas. |
 | Build order: foundation first, user-flow first, or claim first? | Foundation first. |
@@ -139,7 +139,7 @@ The current codebase uses `langchain.agents.create_agent` (simple ReAct loop) fo
 
 ### Deferred agents (post-foundation)
 
-The following agents from `docs/multi_agent_system_architecture_design.md` are explicitly deferred:
+The following agents from `docs/architecture/historical/2026-04-28-multi-agent-system-architecture-strategy.md` are explicitly deferred:
 
 - `Medical Translation & Mapping Agent` (ICD-10 codes): deferred. ClaimAgent handles symptom-to-condition mapping via prompt instructions in v1.
 - `Underwriting Assistant Agent`: deferred. Not needed until pre-purchase risk assessment flow is built.

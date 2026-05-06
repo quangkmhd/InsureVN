@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Apply `tdd-workflow` for every code change.
 
-> **Phase Mapping:** This is Blueprint Phase 01 = Design Spec Phase 1 (Evidence Foundation + Benchmark Fixtures). See `docs/2026-05-03-insurevn-multi-agent-platform-design.md` Section 5, Phase 1.
+> **Phase Mapping:** This is Blueprint Phase 01 = Design Spec Phase 1 (Evidence Foundation + Benchmark Fixtures). See `docs/architecture/2026-05-03-multi-agent-platform-design.md` Section 5, Phase 1.
 
 ### Dependencies
 
@@ -72,7 +72,7 @@ No new external packages required. Uses existing `pydantic`, `langchain`, `langf
 **Input:**
 - Existing MCP tool result dictionaries from tools such as `search_benefits`, `get_premium_quotes`, `search_waiting_periods`, and `search_claim_payouts`.
 - Synthetic user/profile rows.
-- Customer intent questions from `docs/customer_intent_scenarios_100_questions.md`.
+- Customer intent questions from `docs/product/customer_intent_scenarios_100_questions.md`.
 
 **Output:**
 - Normalized `Evidence` objects with `source_type`, `source_id`, `content`, `metadata`, `confidence`, and `retrieved_by`.

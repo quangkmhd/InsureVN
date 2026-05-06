@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This document outlines the advanced Retrieval-Augmented Generation (RAG) architecture for InsureVN. Inspired by the logic of frameworks like LightRAG (which uses Graph + Vector dual-level retrieval), this architecture is strictly implemented using **LangChain** and **LangGraph** to maintain enterprise control, structured data supremacy, and high precision required in the insurance domain as defined in [2026-05-03-insurevn-multi-agent-platform-design.md](./2026-05-03-insurevn-multi-agent-platform-design.md).
+This document outlines the advanced Retrieval-Augmented Generation (RAG) architecture for InsureVN. Inspired by the logic of frameworks like LightRAG (which uses Graph + Vector dual-level retrieval), this architecture is strictly implemented using **LangChain** and **LangGraph** to maintain enterprise control, structured data supremacy, and high precision required in the insurance domain as defined in [2026-05-03-multi-agent-platform-design.md](./2026-05-03-multi-agent-platform-design.md).
 
 The retrieval engine relies on **4 Pillars of Retrieval** (Quad-Retrieval) combined via LangChain's `EnsembleRetriever` (or similar reciprocal rank fusion mechanisms) to gather evidence before synthesis.
 

@@ -57,7 +57,7 @@ Cách tôi giải quyết là tách rõ dữ liệu có cấu trúc và không c
 | Tỷ lệ chi trả claim                |       551 |
 | Test modules                          |        45 |
 
-Nguồn số liệu: [docs/sqlite_database_schema_specification.md](docs/sqlite_database_schema_specification.md)
+Nguồn số liệu: [docs/database/sqlite_database_schema_specification.md](docs/database/sqlite_database_schema_specification.md)
 
 ## Kiến trúc hệ thống
 
@@ -84,7 +84,7 @@ Tôi thiết kế retrieval theo hướng evidence-first thay vì chỉ gọi LL
 - Knowledge Graph cho quan hệ nhiều bước giữa công ty, gói, quyền lợi và điều khoản.
 - EvidenceMerger hợp nhất bằng chứng, rerank, phát hiện xung đột và chuẩn hóa citation.
 
-Tài liệu liên quan: [docs/2026-05-04-quad-retrieval-rag-architecture.md](docs/2026-05-04-quad-retrieval-rag-architecture.md) và [docs/work_log/ensemble_retriever_log.md](docs/work_log/ensemble_retriever_log.md).
+Tài liệu liên quan: [docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md) và [docs/work_log/ensemble_retriever_log.md](docs/work_log/ensemble_retriever_log.md).
 
 ### Agent và MCP
 
@@ -97,9 +97,9 @@ Phần agent hiện tập trung vào structured data specialist:
 
 Tài liệu liên quan:
 
-- [docs/database_agent.md](docs/database_agent.md)
-- [docs/mcp_insurevn_db_reference.md](docs/mcp_insurevn_db_reference.md)
-- [docs/langfuse_integration.md](docs/langfuse_integration.md)
+- [docs/database/database_agent.md](docs/database/database_agent.md)
+- [docs/database/mcp_insurevn_db_reference.md](docs/database/mcp_insurevn_db_reference.md)
+- [docs/observability/langfuse_integration.md](docs/observability/langfuse_integration.md)
 
 ## Công nghệ sử dụng
 
@@ -183,9 +183,9 @@ curl http://localhost:8000/health
 
 ## Tài liệu chuyên sâu
 
-- [Multi-agent platform design](docs/2026-05-03-insurevn-multi-agent-platform-design.md)
-- [Quad-retrieval RAG architecture](docs/2026-05-04-quad-retrieval-rag-architecture.md)
-- [SQLite schema specification](docs/sqlite_database_schema_specification.md)
-- [Database MCP reference](docs/mcp_insurevn_db_reference.md)
-- [Langfuse integration](docs/langfuse_integration.md)
+- [Multi-agent platform design](docs/architecture/2026-05-03-multi-agent-platform-design.md)
+- [Quad-retrieval RAG architecture](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md)
+- [SQLite schema specification](docs/database/sqlite_database_schema_specification.md)
+- [Database MCP reference](docs/database/mcp_insurevn_db_reference.md)
+- [Langfuse integration](docs/observability/langfuse_integration.md)
 - [Data pipeline work log](docs/work_log/data_pipeline_processing_log.md)

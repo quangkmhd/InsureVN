@@ -11,8 +11,8 @@ a shared evidence foundation.
 
 **Canonical architecture sources**:
 
-- `docs/2026-05-03-insurevn-multi-agent-platform-design.md`
-- `docs/2026-05-04-quad-retrieval-rag-architecture.md`
+- `docs/architecture/2026-05-03-multi-agent-platform-design.md`
+- `docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md`
 - `asset/insurevn-Architecture.svg`
 
 ---
@@ -37,7 +37,7 @@ a shared evidence foundation.
 ## 2.1 Implementation Memory
 
 - In `src/`, all `import` and `from ... import ...` statements must stay at the top of the file. Do not place imports inside `def`, class methods, or runtime branches unless there is a documented unavoidable reason.
-- For architecture decisions, treat `docs/2026-05-03-insurevn-multi-agent-platform-design.md`, `docs/2026-05-04-quad-retrieval-rag-architecture.md`, and `asset/insurevn-Architecture.svg` as current. `docs/multi_agent_system_architecture_design.md` is historical brainstorming only.
+- For architecture decisions, treat `docs/architecture/2026-05-03-multi-agent-platform-design.md`, `docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md`, and `asset/insurevn-Architecture.svg` as current. `docs/architecture/historical/2026-04-28-multi-agent-system-architecture-strategy.md` is historical brainstorming only.
 - Use framework primitives before custom code: LangGraph for workflow orchestration, checkpointing, and HITL; LangChain for tools, retrievers, provider adapters, and existing agents; Deep Agents for long-running operator/developer shells.
 - Services under `src/services/` should remain stateless transformation/retrieval utilities. Agents own LLM instances, MCP tools, and workflow state.
 - High-risk workflows such as claims, payouts, rejections, appeals, and fraud suspicion must preserve evidence, citations, verifier checks, and human review gates.
@@ -148,13 +148,16 @@ InsureVN/
 │
 ├── log/                      # Application logs (e.g., mcp_database.log)
 ├── docs/                     # Documentation, specs, plans, reports, logs
-│   ├── 2026-05-03-insurevn-multi-agent-platform-design.md
-│   ├── 2026-05-04-quad-retrieval-rag-architecture.md
+│   ├── README.md             # Documentation map and navigation index
+│   ├── architecture/          # Canonical and historical architecture docs
+│   ├── assets/                # Documentation images and exported diagrams
 │   ├── blueprints/
+│   ├── database/
+│   ├── observability/
+│   ├── product/
 │   ├── superpowers/specs/
 │   ├── superpowers/plans/
-│   ├── work_log/
-│   └── ...
+│   └── work_log/
 └── gemma4-e2b-finetuned-lora/ # Local finetuned model weights
 
 ```
@@ -356,7 +359,7 @@ This is a **production-grade product**, not an MVP. Build with:
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-06 4:43pm GMT+7
+# [InsureVN] recent context, 2026-05-06 5:23pm GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE

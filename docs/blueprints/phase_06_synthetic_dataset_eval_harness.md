@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Apply `tdd-workflow` for every code change.
 
-> **Phase Mapping:** This is Blueprint Phase 06 = Design Spec Phase 5 (Synthetic Dataset + Eval Harness). See `docs/2026-05-03-insurevn-multi-agent-platform-design.md` Section 5, Phase 5.
+> **Phase Mapping:** This is Blueprint Phase 06 = Design Spec Phase 5 (Synthetic Dataset + Eval Harness). See `docs/architecture/2026-05-03-multi-agent-platform-design.md` Section 5, Phase 5.
 
 ### Dependencies
 
@@ -69,7 +69,7 @@ No new external packages required. Uses existing `pydantic`, `langgraph`, `langf
 
 **Input:**
 - Existing real insurance metadata from SQLite.
-- Base intent list from `docs/customer_intent_scenarios_100_questions.md` (used as seed prompts).
+- Base intent list from `docs/product/customer_intent_scenarios_100_questions.md` (used as seed prompts).
 - Synthetic generation seed count and deterministic random seed.
 - Workflow outputs from phases 04-05.
 

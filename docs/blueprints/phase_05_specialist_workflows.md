@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to implement this plan task-by-task. Apply `tdd-workflow` for every code change.
 
-> **Phase Mapping:** This is Blueprint Phase 05 = Design Spec Phase 4 (Specialist Workflows). See `docs/2026-05-03-insurevn-multi-agent-platform-design.md` Section 5, Phase 4.
+> **Phase Mapping:** This is Blueprint Phase 05 = Design Spec Phase 4 (Specialist Workflows). See `docs/architecture/2026-05-03-multi-agent-platform-design.md` Section 5, Phase 4.
 
 ### Dependencies
 

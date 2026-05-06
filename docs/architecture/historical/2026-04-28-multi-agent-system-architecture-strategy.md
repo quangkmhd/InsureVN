@@ -1,6 +1,6 @@
 # InsureVN Multi-Agent System Architecture Strategy
 
-This document outlines the specialized agents required to fully automate the insurance lifecycle and address all 100 customer scenarios defined in `docs/customer_intent_scenarios_100_questions.md`.
+This document outlines the specialized agents required to fully automate the insurance lifecycle and address all 100 customer scenarios defined in `docs/product/customer_intent_scenarios_100_questions.md`.
 
 ## Architecture Paradigm: Hierarchical Swarm
 The system uses a central **Orchestrator Agent** (Router) built on LangGraph. This orchestrator does not answer questions directly; it delegates sub-tasks to highly specialized expert agents, collects their outputs, and synthesizes the final response.

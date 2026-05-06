@@ -157,20 +157,11 @@ cython_debug/
 # Project Specific - InsureVN
 data/
 !data/.gitkeep
-*.pdf
-*.csv
-*.xlsx
 
 # OS
 .DS_Store
-.worktrees/
 output/
 gemma4-e2b-finetuned-lora/
 unsloth_compiled_cache/
-everything-claude-code/
 .crush/
 .goose/
-scratch/
-superpowers/
-LightRAG/
-asset/

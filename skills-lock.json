@@ -1,30 +1,6 @@
 {
   "version": 1,
   "skills": {
-    "agent-eval": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/agent-eval/SKILL.md",
-      "computedHash": "200179d515f9961a469f30a4fa072b08d1527a3906ba46162b64a6011ce3c57d"
-    },
-    "agent-harness-construction": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/agent-harness-construction/SKILL.md",
-      "computedHash": "8da8d0cd5ab9bcdfc3885818de04fbb7de18446b282138bb1b39b6863f335020"
-    },
-    "agentic-engineering": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/agentic-engineering/SKILL.md",
-      "computedHash": "c202c6bfe6c98a6842b2e2c99c0bf030d82200fccf1f9fdb0143d7b51f0a3d13"
-    },
-    "ai-regression-testing": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/ai-regression-testing/SKILL.md",
-      "computedHash": "e29260b01cad5684547130558d5a15b07b4a77f781e73fcabfde7902aaa5d085"
-    },
     "api-design": {
       "source": "affaan-m/everything-claude-code",
       "sourceType": "github",
@@ -37,18 +13,6 @@
       "skillPath": "skills/architecture-decision-records/SKILL.md",
       "computedHash": "be3ce03e4ad61f5a652cfe27c666aad048d883ed00d3ef057664de8128cd0bfb"
     },
-    "architecture-diagram": {
-      "source": "cocoon-ai/architecture-diagram-generator",
-      "sourceType": "github",
-      "skillPath": "architecture-diagram/SKILL.md",
-      "computedHash": "81fb7cdf808601a1a0670f8dbedb39ad55f0372012b96d40799288e40517d897"
-    },
-    "atlassian": {
-      "source": "sanjay3290/ai-skills",
-      "sourceType": "github",
-      "skillPath": "skills/atlassian/SKILL.md",
-      "computedHash": "f1f894ed8ac4813a5bd4e3e702c2406521d50dff1fc268178261e6098cf37849"
-    },
     "autonomous-loops": {
       "source": "affaan-m/everything-claude-code",
       "sourceType": "github",
@@ -60,12 +24,6 @@
       "sourceType": "github",
       "skillPath": "skills/backend-patterns/SKILL.md",
       "computedHash": "952e95fd7e8d0b17f13835dde8067d7dd2abd019e6e17821d5ebf913113c589e"
-    },
-    "blueprint": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/blueprint/SKILL.md",
-      "computedHash": "714d50f774adeab344e67f24570e04dc1e8b0cd6eb1de0cdacdd901f2e021d07"
     },
     "brainstorming": {
       "source": "obra/superpowers",
@@ -115,35 +73,11 @@
       "skillPath": "skills/dispatching-parallel-agents/SKILL.md",
       "computedHash": "76806091c7f923ba2596546b19cccd98a08e57a68745df77c3a7b998fe838e2b"
     },
-    "e2e-testing": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/e2e-testing/SKILL.md",
-      "computedHash": "f84ae93c159bf6ecef5a60c9735dc82d96bc5f977ef52eb71678b66722acf684"
-    },
-    "eval-harness": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/eval-harness/SKILL.md",
-      "computedHash": "0b1933f5532df4bcc750d8799b7b33037e66c5d41f87d2953065868d08981926"
-    },
-    "executing-plans": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/executing-plans/SKILL.md",
-      "computedHash": "a711f83fb762e2ea0fa151f598893da9911a408895c91cc7a7e0770dd59a27b3"
-    },
     "fine-tuning-expert": {
       "source": "jeffallan/claude-skills",
       "sourceType": "github",
       "skillPath": "skills/fine-tuning-expert/SKILL.md",
       "computedHash": "8e70137cf3de9a6edba12d3f523c087c0407002f1206b0981b767323e0f5a54e"
-    },
-    "finishing-a-development-branch": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/finishing-a-development-branch/SKILL.md",
-      "computedHash": "dd2f82c6dc8582b621f9eb57fcb65f557f88eadf872727ac81d0840ae12c504e"
     },
     "fireworks-tech-graph": {
       "source": "yizhiyanhua-ai/fireworks-tech-graph",
@@ -235,12 +169,6 @@
       "skillPath": "skills/prompt-engineer/SKILL.md",
       "computedHash": "f772f09b7f35d919f82f64b305620767d8dc1d1d521b6a2460a238afbbb2362e"
     },
-    "prompt-optimizer": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/prompt-optimizer/SKILL.md",
-      "computedHash": "645df8819e848ddc131b7c61e87a99bdab15f2098a83a6dcabf44e155846e293"
-    },
     "python-patterns": {
       "source": "affaan-m/everything-claude-code",
       "sourceType": "github",
@@ -283,24 +211,6 @@
       "skillPath": "skills/systematic-debugging/SKILL.md",
       "computedHash": "4999cb851360485eca5074e727bbdd62ef20549c5d5b01216fcbf5831badb473"
     },
-    "tdd-workflow": {
-      "source": "affaan-m/everything-claude-code",
-      "sourceType": "github",
-      "skillPath": "skills/tdd-workflow/SKILL.md",
-      "computedHash": "934c453594ce68330888c70497f40f1454f7c1e7e5a07501a637ecb3c66d87b6"
-    },
-    "test-driven-development": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/test-driven-development/SKILL.md",
-      "computedHash": "7dee67b4af6bdccc7a914ca34533184d64592d0f5b23aeae631538168db14994"
-    },
-    "testing-automation": {
-      "source": "omer-metin/skills-for-antigravity",
-      "sourceType": "github",
-      "skillPath": "skills/testing-automation/SKILL.md",
-      "computedHash": "ee7e108ff3bcad0e864de1fc2a2982745ccdeb69c681f35ef81e4f1781fd9938"
-    },
     "using-git-worktrees": {
       "source": "obra/superpowers",
       "sourceType": "github",
@@ -313,29 +223,23 @@
       "skillPath": "skills/using-superpowers/SKILL.md",
       "computedHash": "316e29381219adf0cac62190c67aeabf427d6e6e5f2735541d502b3d339be7aa"
     },
-    "verification-before-completion": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/verification-before-completion/SKILL.md",
-      "computedHash": "ea52d15aabaf72bc6b558efe2c126f161b53961090ddcd712000273bfe8c7b6c"
-    },
     "workflow-research": {
       "source": "duc01226/easyplatform",
       "sourceType": "github",
       "skillPath": ".agents/skills/workflow-research/SKILL.md",
       "computedHash": "8740a918fc112f5c2f09bad50ebb7ad4dba38897d6e4138a4c3b04a8df0b0789"
     },
-    "writing-plans": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/writing-plans/SKILL.md",
-      "computedHash": "90056bad3d5f196fa7c9fec0ffe592e6d9c86bc983e406642a51d1a4198b7024"
-    },
     "writing-skills": {
       "source": "obra/superpowers",
       "sourceType": "github",
       "skillPath": "skills/writing-skills/SKILL.md",
       "computedHash": "38ba648975ae6ba512d6695676f146163db61a496b867f716f4bdfb0ee3aca3e"
+    },
+    "writing-plans": {
+      "source": "local",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/writing-plans",
+      "computedHash": "56e8a32ad40c7d4fba11bcb39ea8db1ff40e5f5c5122d5f5a6f85eb6a7721de6"
     }
   }
 }

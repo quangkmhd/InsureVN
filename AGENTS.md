@@ -356,13 +356,13 @@ This is a **production-grade product**, not an MVP. Build with:
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-06 3:04pm GMT+7
+# [InsureVN] recent context, 2026-05-06 4:20pm GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 21 obs (6,728t read) | 191,441t work | 96% savings
+Stats: 22 obs (7,015t read) | 195,035t work | 96% savings
 
 ### May 3, 2026
 1 10:14p 🔵 Command execution failed due to bwrap permission error
@@ -388,6 +388,8 @@ Stats: 21 obs (6,728t read) | 191,441t work | 96% savings
 19 " ✅ Standardized Agent Configuration and Improved Data Processing
 20 " 🔴 Resolved Evidence Generation and SQLite Server Issues
 21 " ✅ Published New Roadmaps and RAG Architecture Specifications
+### May 6, 2026
+22 3:11p 🚨 NVIDIA AI API Key Leak Detected by GitScan
 
-Access 191k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 195k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1060" width="1400" height="1060">
+  <style>
+    text { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: 0; }
+    .title { font-size: 26px; font-weight: 600; fill: #111827; }
+    .section-title { font-size: 17px; font-weight: 600; fill: #374151; }
+    .lane-title { font-size: 15px; font-weight: 600; fill: #374151; }
+    .node-label { font-size: 14px; font-weight: 600; fill: #111827; }
+    .node-sub { font-size: 11px; fill: #6b7280; font-family: "Courier New", Courier, monospace; }
+    .node-detail { font-size: 11px; fill: #6b7280; }
+    .legend-text { font-size: 12px; fill: #6b7280; }
+    .small-note { font-size: 11px; fill: #6b7280; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="1060" fill="#ffffff"/>
+  <text x="700" y="44" text-anchor="middle" class="title">InsureVN EnsembleRetriever Architecture</text>
+
+  <rect x="40" y="80" width="1120" height="300" rx="12" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="6,5"/>
+  <text x="64" y="112" class="section-title">Phase 1: Ingestion &amp; Enrichment</text>
+
+  <g transform="translate(80, 145)" filter="url(#shadow)">
+    <path d="M 0,0 L 162,0 L 180,18 L 180,70 L 0,70 Z" fill="#ffffff" stroke="#d1d5db" stroke-width="1.5"/>
+    <path d="M 162,0 L 162,18 L 180,18" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1"/>
+    <text x="90" y="31" text-anchor="middle" class="node-label">Source Docs</text>
+    <text x="90" y="52" text-anchor="middle" class="node-detail">PDF, web, markdown</text>
+  </g>
+
+  <g transform="translate(310, 145)" filter="url(#shadow)">
+    <rect width="230" height="70" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+    <text x="115" y="29" text-anchor="middle" class="node-label">Document Chunker</text>
+    <text x="115" y="51" text-anchor="middle" class="node-sub">document_chunker.py</text>
+  </g>
+
+  <g transform="translate(310, 275)" filter="url(#shadow)">
+    <rect width="230" height="70" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+    <text x="115" y="26" text-anchor="middle" class="node-label">Hybrid Qdrant Index</text>
+    <text x="115" y="46" text-anchor="middle" class="node-detail">dense + sparse/BM25</text>
+    <text x="115" y="61" text-anchor="middle" class="node-sub">qdrant_vector_store.py</text>
+  </g>
+
+  <g transform="translate(640, 145)" filter="url(#shadow)">
+    <rect width="260" height="70" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+    <text x="130" y="29" text-anchor="middle" class="node-label">Graph Extractor</text>
+    <text x="130" y="51" text-anchor="middle" class="node-sub">llm_graph_document_extractor.py</text>
+  </g>
+
+  <g transform="translate(640, 275)" filter="url(#shadow)">
+    <rect width="260" height="70" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+    <text x="130" y="29" text-anchor="middle" class="node-label">Neo4j Graph Store</text>
+    <text x="130" y="51" text-anchor="middle" class="node-sub">neo4j_store.py</text>
+  </g>
+
+  <path d="M 260,180 L 310,180" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <path d="M 425,215 L 425,275" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <path d="M 540,180 L 640,180" fill="none" stroke="#16a34a" stroke-width="1.8" marker-end="url(#arrow-green)"/>
+  <path d="M 770,215 L 770,275" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+
+  <rect x="40" y="430" width="1120" height="570" rx="15" fill="#fcfcfc" stroke="#2563eb" stroke-width="2" stroke-dasharray="8,5"/>
+  <rect x="40" y="430" width="335" height="36" rx="0" fill="#2563eb"/>
+  <text x="207" y="453" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="600">EnsembleRetriever Orchestrator</text>
+
+  <g transform="translate(90, 500)" filter="url(#shadow)">
+    <rect width="280" height="78" rx="8" fill="#ffffff" stroke="#dbeafe" stroke-width="1.5"/>
+    <text x="140" y="28" text-anchor="middle" class="node-label">Query Planner</text>
+    <text x="140" y="49" text-anchor="middle" class="node-detail">intent + risk + hard filters</text>
+    <text x="140" y="65" text-anchor="middle" class="node-detail">company, plan, section, date</text>
+  </g>
+
+  <g transform="translate(460, 500)" filter="url(#shadow)">
+    <rect width="280" height="78" rx="8" fill="#ffffff" stroke="#dbeafe" stroke-width="1.5"/>
+    <text x="140" y="28" text-anchor="middle" class="node-label">Readiness Guard</text>
+    <text x="140" y="49" text-anchor="middle" class="node-detail">index/schema/connector checks</text>
+    <text x="140" y="65" text-anchor="middle" class="node-sub">retrieval_readiness.py</text>
+  </g>
+
+  <rect x="80" y="610" width="740" height="160" rx="12" fill="#f0fdf4" stroke="#dcfce7" stroke-width="1.2" stroke-dasharray="6,5"/>
+  <text x="104" y="642" class="lane-title">Retrieval Lanes (Parallel Execution)</text>
+
+  <g transform="translate(110, 670)" filter="url(#shadow)">
+    <rect width="270" height="74" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5"/>
+    <text x="135" y="25" text-anchor="middle" class="node-label">Hybrid Qdrant Retriever</text>
+    <text x="135" y="45" text-anchor="middle" class="node-detail">semantic + sparse/BM25</text>
+    <text x="135" y="61" text-anchor="middle" class="node-sub">qdrant_retriever.py</text>
+  </g>
+
+  <g transform="translate(465, 670)" filter="url(#shadow)">
+    <rect width="270" height="74" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5"/>
+    <text x="135" y="25" text-anchor="middle" class="node-label">Graph Evidence Retriever</text>
+    <text x="135" y="45" text-anchor="middle" class="node-detail">Cypher paths + citations</text>
+    <text x="135" y="61" text-anchor="middle" class="node-sub">neo4j_cypher_qa.py</text>
+  </g>
+
+  <rect x="80" y="805" width="1040" height="150" rx="12" fill="#faf5ff" stroke="#ede9fe" stroke-width="1.2" stroke-dasharray="6,5"/>
+  <text x="104" y="837" class="lane-title">Synthesis Pipeline</text>
+
+  <g transform="translate(110, 865)" filter="url(#shadow)">
+    <rect width="250" height="74" rx="8" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5"/>
+    <text x="125" y="24" text-anchor="middle" class="node-label">Evidence Merger</text>
+    <text x="125" y="43" text-anchor="middle" class="node-detail">dedup + normalize</text>
+    <text x="125" y="58" text-anchor="middle" class="node-detail">conflict_flags</text>
+    <text x="125" y="70" text-anchor="middle" class="node-sub">evidence_merger.py</text>
+  </g>
+
+  <g transform="translate(505, 865)" filter="url(#shadow)">
+    <rect width="250" height="74" rx="8" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5"/>
+    <text x="125" y="24" text-anchor="middle" class="node-label">Neural Reranker</text>
+    <text x="125" y="43" text-anchor="middle" class="node-detail">optional cross-encoder</text>
+    <text x="125" y="61" text-anchor="middle" class="node-sub">jina_rerank_cross_encoder.py</text>
+  </g>
+
+  <g transform="translate(820, 865)" filter="url(#shadow)">
+    <rect width="270" height="74" rx="8" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5"/>
+    <text x="135" y="24" text-anchor="middle" class="node-label">Citation Formatter</text>
+    <text x="135" y="43" text-anchor="middle" class="node-detail">ranked evidence pack</text>
+    <text x="135" y="61" text-anchor="middle" class="node-sub">citation_formatter.py</text>
+  </g>
+
+  <text x="1190" y="642" class="lane-title">External Evidence Source</text>
+  <g transform="translate(1190, 670)" filter="url(#shadow)">
+    <rect width="180" height="86" rx="8" fill="#ffffff" stroke="#bbf7d0" stroke-width="1.5"/>
+    <text x="90" y="25" text-anchor="middle" class="node-label">DatabaseAgent</text>
+    <text x="90" y="45" text-anchor="middle" class="node-detail">SQL Evidence</text>
+    <text x="90" y="62" text-anchor="middle" class="node-detail">SQLite MCP</text>
+    <text x="90" y="77" text-anchor="middle" class="node-sub">sqlite_evidence.py</text>
+  </g>
+
+  <path d="M 370,539 L 460,539" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <path d="M 600,578 L 600,600 L 245,600 L 245,670" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <path d="M 600,578 L 600,670" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+
+  <path d="M 245,744 L 245,790" fill="none" stroke="#2563eb" stroke-width="1.8"/>
+  <path d="M 600,744 L 600,790" fill="none" stroke="#2563eb" stroke-width="1.8"/>
+  <path d="M 1280,756 L 1280,790 L 225,790" fill="none" stroke="#2563eb" stroke-width="1.8"/>
+  <path d="M 225,790 L 225,865" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+
+  <path d="M 360,902 L 505,902" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <path d="M 755,902 L 820,902" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+
+  <g transform="translate(54, 1018)">
+    <line x1="0" y1="10" x2="34" y2="10" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+    <text x="46" y="15" class="legend-text">Primary Data Flow</text>
+    <line x1="220" y1="10" x2="254" y2="10" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/>
+    <text x="266" y="15" class="legend-text">Data Dependency</text>
+  </g>
+</svg>

@@ -16,7 +16,11 @@ def test_nvidia_gemma():
     # Lấy API key, hỗ trợ tên biến từ .env mà bạn đang dùng (NVIDIA_PAI_KEY_1)
     api_key = os.getenv("NVIDIA_PAI_KEY_1") or os.getenv("NVIDIA_API_KEY")
     if not api_key:
-        api_key = "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" # Dùng key mặc định nếu không load được .env
+        print(
+            "❌ Thiếu NVIDIA API key. Hãy cấu hình NVIDIA_PAI_KEY_1 "
+            "hoặc NVIDIA_API_KEY trong .env."
+        )
+        return
 
     model = "google/gemma-4-31b-it" 
     url = "https://integrate.api.nvidia.com/v1/chat/completions"

@@ -2,32 +2,45 @@
 
 ## 1. Project Overview
 
-InsureVN is a **multi-agent AI system** for the Vietnamese insurance industry.
-It automates the full insurance lifecycle: policy explanation, claim processing, document extraction, fraud detection, and customer advisory.
+InsureVN is a **hybrid full-agent-swarm platform** for the Vietnamese insurance
+industry. It automates policy explanation, product comparison, claim advisory,
+claim/payout drafting, document extraction, and employee review workflows using
+a shared evidence foundation.
 
 **Core Mission**: Solve pain points and optimize time for employees, customers, and all stakeholders in the insurance ecosystem.
+
+**Canonical architecture sources**:
+
+- `docs/2026-05-03-insurevn-multi-agent-platform-design.md`
+- `docs/2026-05-04-quad-retrieval-rag-architecture.md`
+- `asset/insurevn-Architecture.svg`
 
 ---
 
 ## 2. Tech Stack
 
-| Layer               | Technology                                   |
-| :------------------ | :------------------------------------------- |
-| Language            | Python 3.12.3                                |
-| Agent Framework     | LangChain, LangGraph, Deep Agents           |
-| LLM Provider        | Ollama, Nvida,... (called through LangChain) |
-| Web Framework       | FastAPI                                      |
-| Vector Database     | Qdrant                                       |
-| Relational Database | SQLite                                       |
-| Observability       | Langfuse (Tracing, Prompt Mgmt, Evaluation)  |
-| PDF/OCR             |                                              |
+| Layer                   | Technology                                                                 |
+| :---------------------- | :------------------------------------------------------------------------- |
+| Language                | Python 3.12.3                                                              |
+| API Runtime             | FastAPI, Uvicorn                                                           |
+| Agent & Workflow Layer  | LangChain agents/tools/retrievers, LangGraph StateGraph/checkpoints/HITL, Deep Agents operator shell |
+| LLM/Embedding Providers | Ollama, Google Gemini/GenAI, OpenRouter, NVIDIA, Jina rerank via typed config |
+| Structured Data         | SQLite plus FastMCP SQLite server                                          |
+| Vector Retrieval        | Qdrant dense + sparse/BM25 hybrid search via `langchain-qdrant`            |
+| Graph Retrieval         | Neo4j via `langchain-neo4j`; NetworkX for diagnostics and unit fixtures     |
+| Observability           | Langfuse tracing, prompt management, eval metadata, structured JSON logs    |
+| PDF/OCR/Data Prep       | Marker, Datalab, Gemma4/VLM extraction, table-to-narrative conversion      |
+| Testing & Quality       | pytest, ruff, retrieval readiness gates, synthetic benchmark fixtures       |
 
 ---
 
 ## 2.1 Implementation Memory
 
 - In `src/`, all `import` and `from ... import ...` statements must stay at the top of the file. Do not place imports inside `def`, class methods, or runtime branches unless there is a documented unavoidable reason.
-- Implementation priority: use supported Deep Agents primitives first, then LangChain, then LangGraph, and only then write custom/self-built code.
+- For architecture decisions, treat `docs/2026-05-03-insurevn-multi-agent-platform-design.md`, `docs/2026-05-04-quad-retrieval-rag-architecture.md`, and `asset/insurevn-Architecture.svg` as current. `docs/multi_agent_system_architecture_design.md` is historical brainstorming only.
+- Use framework primitives before custom code: LangGraph for workflow orchestration, checkpointing, and HITL; LangChain for tools, retrievers, provider adapters, and existing agents; Deep Agents for long-running operator/developer shells.
+- Services under `src/services/` should remain stateless transformation/retrieval utilities. Agents own LLM instances, MCP tools, and workflow state.
+- High-risk workflows such as claims, payouts, rejections, appeals, and fraud suspicion must preserve evidence, citations, verifier checks, and human review gates.
 
 ---
 
@@ -49,74 +62,97 @@ It automates the full insurance lifecycle: policy explanation, claim processing,
 
 ```
 InsureVN/
-├── GEMINI.md                # AI coding instructions (this file)
-├── README.md                # Project documentation
-├── .env                     # Environment variables (gitignored)
-├── .gitignore               # Git ignore rules
+├── GEMINI.md                 # AI coding instructions for Gemini-style agents
+├── AGENTS.md                 # AI coding instructions for Codex/agent runtimes
+├── README.md                 # Project documentation
+├── pyproject.toml            # Python package metadata and tool config
+├── requirements.txt          # Runtime dependency list
+├── .env                      # Environment variables (gitignored)
+├── .gitignore                # Git ignore rules
 │
-├── CICD/                    # CI/CD configurations
-│   ├── docker-compose.yml    # Local dev services (Qdrant, etc.)
-│   └── langfuse-compose.yml  # Langfuse observability stack
+├── CICD/                     # CI/CD configurations
+│   ├── docker-compose.yml     # Local dev services (Qdrant, Neo4j, etc.)
+│   └── langfuse-compose.yml   # Langfuse observability stack
 │
-├── src/                     # Core source code
-│   ├── main.py               # FastAPI app entry point
+├── src/                      # Core source code
+│   ├── main.py                # FastAPI app entry point
 │   │
-│   ├── agents/               # LangGraph agent definitions
-│   │   ├── database_agent.py # DB interaction via MCP tools
-│   │   └── ...               # (Planned) orchestrator, policy, claim agents
+│   ├── agents/                # Intelligent agents
+│   │   └── database_agent.py  # Structured data agent over SQLite MCP
 │   │
-│   ├── mcp_servers/          # Custom MCP server implementations
-│   │   └── sqlite/           # SQLite MCP server
+│   ├── mcp_servers/           # Custom MCP server implementations
+│   │   └── sqlite/            # FastMCP SQLite server
 │   │
-│   ├── tools/                # LangChain tools & clients
-│   │   ├── mcp_client.py     # Generic MCP client for tool binding
-│   │   └── ...
+│   ├── tools/                 # LangChain tools and clients
+│   │   ├── mcp_client.py      # Generic MCP client for tool binding
+│   │   └── search_tool.py     # Tavily web search tool for live market data
 │   │
-│   ├── api/                  # FastAPI routes
-│   │   ├── routes/           # Endpoint definitions
-│   │   └── dependencies.py   # DI containers
+│   ├── api/                   # FastAPI routes
+│   │   └── routes/health.py   # Health endpoint
 │   │
-│   ├── models/               # Data models & schemas
-│   │   ├── schemas.py        # Pydantic models
-│   │   └── schema.sql        # SQLite schema definition
+│   ├── models/                # Data models and schemas
+│   │   ├── evidence.py        # Evidence, citation, retrieval plan models
+│   │   └── schema.sql         # SQLite insurance + synthetic schema
 │   │
-│   ├── core/                 # Config, settings, shared utilities
-│   │   ├── config.py         # Environment-based settings
-│   │   ├── logger.py         # Structured JSON logging
-│   │   └── database.py       # DB connection utilities
+│   ├── core/                  # Config, settings, shared utilities
+│   │   ├── config.py          # Typed settings registry
+│   │   ├── logger.py          # Structured JSON logging + Langfuse handler
+│   │   ├── database.py        # SQLite connection utilities
+│   │   └── vietnamese_text.py # Vietnamese normalization helpers
 │   │
-│   └── prompts/              # System prompts for agents
+│   ├── services/              # Stateless retrieval/evidence/graph services
+│   │   ├── document_chunker.py
+│   │   ├── qdrant_collection_manager.py
+│   │   ├── qdrant_vector_store.py
+│   │   ├── qdrant_retriever.py
+│   │   ├── qdrant_evidence.py
+│   │   ├── sqlite_evidence.py
+│   │   ├── evidence_merger.py
+│   │   ├── citation_formatter.py
+│   │   ├── retrieval_readiness.py
+│   │   ├── observability.py
+│   │   └── knowledge_graph/    # Neo4j, NetworkX, GraphRAG, schema services
+│   │
+│   └── prompts/               # System prompts for agents
 │
-├── tests/                   # Test suite
-│   ├── unit/                # Component-level tests
-│   ├── integration/         # Multi-component/Tool tests
-│   └── e2e/                  # Full agentic flow tests
+├── tests/                    # Test suite
+│   ├── unit/                 # Component-level tests
+│   ├── integration/          # Multi-component/tool tests
+│   ├── e2e/                  # Full agentic flow tests
+│   └── fixtures/             # Shared fixtures
 │
-├── scripts/                 # Data pipeline & utility scripts
-│   ├── 01_acquisition/      # Scraping (Firecrawl, Deep search)
-│   ├── 02_preprocessing/    # PDF classification & organization
-│   ├── 03_conversion/       # PDF to Markdown (Marker, Datalab)
-│   ├── 04_extraction/       # OCR & structured data extraction
-│   ├── 05_training_eval/    # VLM fine-tuning (Oumi, Gemma4)
-│   ├── 06_db_ingestion/     # Data ingestion to SQLite
-│   └── 06_ipynb/            # Research & training notebooks
+├── scripts/                  # Data pipeline and utility scripts
+│   ├── 01_acquisition/       # Scraping (Firecrawl, deep search)
+│   ├── 02_preprocessing/     # PDF classification and organization
+│   ├── 03_conversion/        # PDF to Markdown, table-to-text, cleanup
+│   ├── 04_extraction/        # OCR, JSON extraction, Knowledge Graph schema/build
+│   ├── 05_training_eval/     # VLM fine-tuning (Oumi, Gemma4)
+│   ├── 06_db_ingestion/      # SQLite, Qdrant, Graph ingestion/indexing
+│   └── 06_ipynb/             # Research and training notebooks
 │
-├── database/                # SQLite database files
-│   └── insurevn.db
+├── database/                 # Local database files
+│   ├── insurevn.db           # SQLite insurance database
+│   └── qdrant/storage/       # Local Qdrant storage
 │
-├── data/                    # Data storage (gitignored)
-│   ├── raw/                 # Original scraped files
-│   ├── processed/           # Intermediate conversion results
-│   ├── health_insurance/    # Domain-specific extracted data
-│   └── qdrant/              # Vector store data
+├── data/                     # Data storage (gitignored)
+│   ├── raw/                  # Original scraped files
+│   ├── processed/            # Intermediate conversion results
+│   └── health_insurance/     # Domain-specific extracted data
 │
-├── config/                  # Configuration files
-│   └── finetune/            # Fine-tuning dataset configs (JSONL)
+├── config/                   # Configuration files
+│   └── finetune/             # Fine-tuning dataset configs (JSONL)
 │
-├── log/                     # Application logs (e.g., mcp_database.log)
-├── docs/                    # Documentation and reports
-│   ├── mcp_insurevn_db_reference.md
-│   ├── database_agent.md
+├── asset/                    # Generated architecture images
+│   └── insurevn-Architecture.svg
+│
+├── log/                      # Application logs (e.g., mcp_database.log)
+├── docs/                     # Documentation, specs, plans, reports, logs
+│   ├── 2026-05-03-insurevn-multi-agent-platform-design.md
+│   ├── 2026-05-04-quad-retrieval-rag-architecture.md
+│   ├── blueprints/
+│   ├── superpowers/specs/
+│   ├── superpowers/plans/
+│   ├── work_log/
 │   └── ...
 └── gemma4-e2b-finetuned-lora/ # Local finetuned model weights
 
@@ -128,67 +164,109 @@ When creating new files, always place them in the correct directory per this str
 
 ## 5. Agent Architecture
 
-### Core Agents
+The current architecture is a **Hybrid Full Agent Swarm** with shared evidence,
+not a monolithic RAG bot. The current visual source is
+`asset/insurevn-Architecture.svg`.
 
-- **Orchestrator** → central controller, routes to specialized agents
-- **PolicyAgent** → query & explain policy via RAG over Qdrant
-- **DatabaseAgent** → execute complex queries and data retrieval via SQLite MCP tools
-- **ClaimAgent** → evaluate claim eligibility (rules + LLM reasoning)
-- **DocumentAgent** → OCR + extract structured data from PDFs
-- **ValidationAgent** → check missing/invalid documents
-- **CalculationAgent** → compute payout/premium (deterministic, no LLM)
+### Runtime Flow
 
-### Advanced Agents
+1. **User / Synthetic Scenario** enters the system.
+2. **SupervisorAgent** classifies intent, extracts hard filters, assigns risk,
+   and routes to one of three lanes.
+3. **Fast Lane (Q&A)** uses the Ensemble Retriever for policy explanation.
+4. **Verified Lane (Advisor)** uses Ensemble Retriever + DatabaseAgent +
+   Profile Store for comparison and recommendations.
+5. **High-Risk Lane (Claim)** uses OCR DocumentAgent + Ensemble Retriever +
+   DatabaseAgent + Profile Store for claim/payout workflows.
+6. **Merge & Rerank Evidence** deduplicates, detects conflicts, preserves
+   citations, and optionally reranks with a cross-encoder.
+7. **PolicyAgent**, **ComparisonAdvisorAgent**, or **ClaimAgent** drafts the
+   response from evidence.
+8. **ValidationAgent** and deterministic **CalculationAgent** check reasoning,
+   missing evidence, limits, premiums, payouts, and self-correction needs.
+9. **VerifierAgent** checks safety, compliance, evidence sufficiency,
+   citations, and risk gates.
+10. High-risk outputs go through **Customer Confirm** and **Employee Approve**.
 
-- **FraudAgent** → detect abnormal patterns
-- **AdvisorAgent** → recommend insurance plans
-- **ExplanationAgent** → simplify complex outputs for end users
+### Agent Boundaries
 
-### Memory
+- `SupervisorAgent`: intent/risk classification, hard-filter extraction,
+  retrieval planning, workflow selection.
+- `DatabaseAgent`: existing LangChain `create_agent` specialist over SQLite
+  MCP tools; wrap as a LangGraph node when used in workflows.
+- `PolicyAgent`: explains policy clauses, exclusions, waiting periods, claim
+  procedures, and glossary terms from evidence only.
+- `ComparisonAdvisorAgent`: compares plans and recommends options. It may use
+  `SearchAgent` as an optional Tavily-backed tool for live market data.
+- `ClaimAgent`: drafts claim decisions, missing-document guidance,
+  rejection/appeal explanations, and payout narratives from evidence.
+- `OCR DocumentAgent`: processes user-uploaded evidence; fixture-backed until
+  production OCR integration is added.
+- `ValidationAgent`: blind-review judge that can trigger self-correction.
+- `CalculationAgent`: deterministic math/Python node; never uses LLM guesses.
+- `VerifierAgent`: checks evidence quality and risk gates; it does not invent a
+  new answer.
 
-- **Short-term**: conversation context (per session)
-- **Long-term**: user profile, claim history (SQLite)
-- **State**: workflow step tracking (e.g., upload → validate → evaluate)
+Deferred agents from older brainstorming docs, such as underwriting,
+compliance guardrail, tone classifier, PII anonymization, market sentiment, and
+predictive optimization agents, must not be added unless a current spec revives
+them.
+
+### Memory And Human Review
+
+- Use LangGraph checkpointing with `thread_id` for multi-turn sessions.
+- Development/local persistence should use SQLite checkpointers; production can
+  migrate to Postgres checkpointers.
+- Foundation release user profiles are synthetic data in SQLite, not real
+  customer data.
+- Claim, payout, rejection, appeal, and fraud-suspicion workflows require
+  customer fact confirmation and employee approval before finalization.
 
 ### Observability
 
-- **Tracing**: Langfuse for end-to-end tracing of agent reasoning and tool calls
-- **Prompt Management**: Remote management and versioning of system prompts
-- **Metrics**: Latency, cost, and quality tracking per agent interaction
+- Langfuse traces agent reasoning, tool calls, HTTP spans, service metadata,
+  prompt versions, and eval outputs.
+- Services should return metadata that callers attach to Langfuse instead of
+  creating global traces directly.
+- Important outputs must preserve citation lineage: company, document, source
+  path, page/section, source table ID, and graph path where available.
 
 ---
 
-## 6. Mandatory Workflows & Skills
+## 6. Data Pipeline And Evidence Foundation
 
-The use of skills is mandatory for all tasks. You MUST select the appropriate skill and announce its usage before starting any changes.
+InsureVN's data flow follows the 6-phase processing lifecycle documented in
+`docs/work_log/data_pipeline_processing_log.md`.
 
-### 6.1 Skill Activation & Compliance
+1. **Acquisition**: scrape PDF/web sources from Vietnamese insurers.
+2. **Preprocessing & QA**: classify PDFs, filter non-health-insurance content,
+   and organize source folders.
+3. **Conversion & Interpretation**: convert PDFs to Markdown, clean image
+   noise, and convert complex tables into narrative text.
+4. **Extraction**: extract JSON/table/image data, filter Good/Trash content,
+   discover/canonicalize Knowledge Graph schema, and map JSON keys to SQL.
+5. **Training & Eval**: prepare Oumi/Gemma4 VLM datasets, train/evaluate/export
+   the model, and run inference checks.
+6. **Ingestion**: load structured facts into SQLite, index document chunks into
+   Qdrant, and build/import Knowledge Graph data for Neo4j/GraphRAG.
 
-1. **Check & Select**: ALWAYS check and select the most relevant skill (e.g., `tdd-workflow`, `systematic-debugging`) BEFORE responding or taking action.
-2. **Announce Usage**: Always start by announcing the skill you are using (e.g., "Using `tdd-workflow` skill to implement feature...").
-3. **Strict Adherence**: No skipping steps or taking shortcuts. All processes within a skill (like TDD's RED-GREEN-REFACTOR) are mandatory.
-4. **No Excuses**: Reasons like "too simple to use a skill" or "will use it later" are unacceptable.
+### Evidence Rules
 
-### 6.2 Before Writing Code
-
-1. **Always use `context7`** to look up current library docs/APIs before coding. Do NOT rely on training data — it may be outdated.
-2. **Always read source files** to understand existing code. Never guess from README, docs, or memory alone.
-3. **Apply relevant hooks** when available. Do not hesitate to use them.
-
-### 6.3 After Writing Code
-
-1. **Follow TDD Cycle**: Write failing test (RED) -> Minimal code (GREEN) -> Refactor.
-2. **Create unit tests** for every new component/function created.
-3. **Create end-to-end tests** when the change affects a user-facing flow.
-4. **Run tests** to verify everything passes before considering a task done.
-
-### 6.4 File & Folder Hygiene
-
-- Every new file must be placed in the correct directory per the project structure.
-- File and folder names must be descriptive, lowercase, with underscores.
-- Do not create files at the project root unless they are config files.
+- The system is **tri-canonical**:
+  - SQLite = structured facts, numbers, premiums, limits, waiting periods.
+  - Qdrant = document text, clauses, legal wording, contextual citations.
+  - Knowledge Graph = entity relationships and multi-hop reasoning paths.
+- Quad retrieval combines semantic vector search, sparse/BM25 keyword search,
+  graph retrieval, and SQLite structured lookup.
+- Hard filters for company, document, product line, plan, section, and date must
+  be applied whenever available.
+- All retrievers and adapters normalize output into `Evidence` and preserve
+  citation metadata for employee review.
+- If SQLite, Qdrant, and graph evidence conflict, flag the conflict and route
+  the workflow to human review instead of hiding the disagreement.
 
 ---
+
 
 ## 7. Behavioral Guidelines
 
@@ -273,10 +351,11 @@ This is a **production-grade product**, not an MVP. Build with:
 - Scalability in mind
 - Comprehensive test coverage
 
+
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-06 8:58am GMT+7
+# [InsureVN] recent context, 2026-05-06 2:34pm GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
@@ -310,4 +389,4 @@ Stats: 21 obs (6,728t read) | 191,441t work | 96% savings
 21 " ✅ Published New Roadmaps and RAG Architecture Specifications
 
 Access 191k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>`
+</claude-mem-context>

@@ -8,6 +8,7 @@ langgraph>=0.1.4
 langchain-mcp-adapters>=0.1.0
 langchain-qdrant>=0.2.0
 langchain-google-genai>=2.0.0
+langchain-ollama>=0.2.0
 langchain-neo4j>=0.4.0
 langchain-graph-retriever>=0.8.0
 langfuse>=2.33.0

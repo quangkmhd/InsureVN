@@ -62,3 +62,9 @@ Tài liệu này tổng hợp các công việc đã thực hiện trong quá tr
 ## Note
 
 - Chunking: với ## là Parent, còn các content bên trong là childrent, và index kèm theo các thông tin như company name, file name, tên bảo hiểm,...
+- So sánh 6 loại chunking khác nhau để tìm ra loại chunking phù hợp nhất, và thông số phù hợp nhất scripts/08_chunking_compare/00_chunking_compare.html,
+- tính toán Token
+- CI/CD, cost tracking, logging, human approval,eval, guardrails, monitoring, retries
+- Maintenance nightmare: AI stack thay đổi cực nhanh: model update, API change,framework breaking change
+- vector DB,queue,caching,observability,secrets,deployment,scaling, telemetry,eval,pipeline,throughput, latency, cost, accuracy, reliability
+- thứ khó nhất không phải prompt, mà là production infrastructure

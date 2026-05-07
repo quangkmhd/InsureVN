@@ -26,7 +26,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.RAG_DENSE_VECTOR_NAME == "text_dense"
     assert settings.RAG_SPARSE_VECTOR_NAME == "text_sparse"
     assert settings.RAG_EMBEDDING_PROVIDER == "google_genai"
-    assert settings.RAG_EMBEDDING_MODEL == "gemini-embedding-2-preview"
+    assert settings.RAG_EMBEDDING_MODEL == "gemini-embedding-2"
     assert settings.RAG_DENSE_VECTOR_SIZE == 768
     assert settings.RAG_SPARSE_MODEL == "Qdrant/bm25"
     assert isinstance(settings.RAG_CHILD_CHUNK_MAX_CHARS, int)

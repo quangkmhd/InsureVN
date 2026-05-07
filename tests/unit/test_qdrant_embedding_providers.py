@@ -27,7 +27,7 @@ def test_google_genai_embedding_provider_uses_configured_vector_size(
     )
 
     provider = qdrant_retriever.GoogleGenAIEmbeddingProvider(
-        model_name="gemini-embedding-2-preview",
+        model_name="gemini-embedding-2",
         google_api_key="test-google-key",
         vector_size=3,
     )
@@ -36,7 +36,7 @@ def test_google_genai_embedding_provider_uses_configured_vector_size(
     assert provider.embed_documents(["policy text"]) == [[1.0, 0.0, 0.0]]
     assert provider.embed_query("policy query") == [0.0, 1.0, 0.0]
     assert captured["init"] == {
-        "model": "gemini-embedding-2-preview",
+        "model": "gemini-embedding-2",
         "google_api_key": "test-google-key",
         "output_dimensionality": 3,
     }

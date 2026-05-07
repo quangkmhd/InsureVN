@@ -121,14 +121,14 @@ def test_build_embedding_provider_uses_configured_google_provider(monkeypatch) -
 
     provider = script.build_embedding_provider(
         provider="google_genai",
-        model_name="gemini-embedding-2-preview",
+        model_name="gemini-embedding-2",
         google_api_key="test-google-key",
         vector_size=768,
     )
 
     assert isinstance(provider, FakeGoogleGenAIEmbeddingProvider)
     assert captured == {
-        "model_name": "gemini-embedding-2-preview",
+        "model_name": "gemini-embedding-2",
         "google_api_key": "test-google-key",
         "vector_size": 768,
     }

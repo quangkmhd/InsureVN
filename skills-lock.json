@@ -163,6 +163,12 @@
       "skillPath": "plugins/ml-model-training/skills/ml-model-training/SKILL.md",
       "computedHash": "7ec25d4cbe57adc5c616a5710fc53581f0d56b2a3efdbb11c25b5b72fa97fd76"
     },
+    "notebooklm": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/notebooklm/SKILL.md",
+      "computedHash": "3560720371792efd5e3c28ef981dfac824107d27a24b62fa8b18f84e3bce1cde"
+    },
     "prompt-engineer": {
       "source": "rmyndharis/antigravity-skills",
       "sourceType": "github",
@@ -229,17 +235,17 @@
       "skillPath": ".agents/skills/workflow-research/SKILL.md",
       "computedHash": "8740a918fc112f5c2f09bad50ebb7ad4dba38897d6e4138a4c3b04a8df0b0789"
     },
-    "writing-skills": {
-      "source": "obra/superpowers",
-      "sourceType": "github",
-      "skillPath": "skills/writing-skills/SKILL.md",
-      "computedHash": "38ba648975ae6ba512d6695676f146163db61a496b867f716f4bdfb0ee3aca3e"
-    },
     "writing-plans": {
       "source": "local",
       "sourceType": "local",
       "skillPath": ".agents/skills/writing-plans",
       "computedHash": "56e8a32ad40c7d4fba11bcb39ea8db1ff40e5f5c5122d5f5a6f85eb6a7721de6"
+    },
+    "writing-skills": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/writing-skills/SKILL.md",
+      "computedHash": "38ba648975ae6ba512d6695676f146163db61a496b867f716f4bdfb0ee3aca3e"
     }
   }
 }

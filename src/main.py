@@ -1,12 +1,18 @@
+import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from time import perf_counter
+
+# Keep `python src/main.py` working while preserving package imports for ASGI.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import uvicorn
 from fastapi import FastAPI, Request
 from langfuse import observe
 
-from api.routes import health
-from core.logger import get_logger
+from src.api.routes import chunking, health  # noqa: E402
+from src.core.logger import get_logger  # noqa: E402
 
 # Initialize logger
 logger = get_logger("bootstrap")
@@ -79,6 +85,7 @@ def create_app() -> FastAPI:
         return response
 
     # Register routers
+    app.include_router(chunking.router)
     app.include_router(health.router)
 
     return app

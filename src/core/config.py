@@ -96,7 +96,7 @@ class Settings:
         )
         self.GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
         self.RAG_EMBEDDING_MODEL: str = os.getenv(
-            "RAG_EMBEDDING_MODEL", "gemini-embedding-2-preview"
+            "RAG_EMBEDDING_MODEL", "gemini-embedding-2"
         )
         self.RAG_DENSE_VECTOR_SIZE: int = int(os.getenv("RAG_DENSE_VECTOR_SIZE", "768"))
         self.RAG_SPARSE_MODEL: str = os.getenv("RAG_SPARSE_MODEL", "Qdrant/bm25")
@@ -126,6 +126,15 @@ class Settings:
         )
         self.RAG_SEMANTIC_BREAKPOINT_AMOUNT: float = float(
             os.getenv("RAG_SEMANTIC_BREAKPOINT_AMOUNT", "1.5")
+        )
+        self.SEMANTIC_CHUNKING_EMBEDDING_PROVIDER: str = os.getenv(
+            "SEMANTIC_CHUNKING_EMBEDDING_PROVIDER", "ollama"
+        )
+        self.SEMANTIC_CHUNKING_EMBEDDING_MODEL: str = os.getenv(
+            "SEMANTIC_CHUNKING_EMBEDDING_MODEL", "qwen3-embedding:8b"
+        )
+        self.SEMANTIC_CHUNKING_OLLAMA_BASE_URL: str = os.getenv(
+            "SEMANTIC_CHUNKING_OLLAMA_BASE_URL", "http://127.0.0.1:11434"
         )
         self.RAG_TABLE_LINE_RATIO_THRESHOLD: float = float(
             os.getenv("RAG_TABLE_LINE_RATIO_THRESHOLD", "0.55")

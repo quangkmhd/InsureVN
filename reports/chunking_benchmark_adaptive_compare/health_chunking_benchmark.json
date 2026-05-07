@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-07T09:22:41.115764+00:00",
+  "generated_at": "2026-05-07T10:16:32.026952+00:00",
   "corpus_dir": "<private_health_markdown_corpus>",
   "env_path": "<redacted_env_path>",
   "document_count": 103,
@@ -40,21 +40,6 @@
       "llm_policy_max_chars": 2500,
       "llm_policy_heading_split_level": 2
     },
-    "adaptive_paper_algorithm": "per_document_intrinsic_selection_size_cohesion_context_boundary_block_integrity_reference_proxy",
-    "adaptive_paper_candidates": [
-      "recursive_1100",
-      "recursive_600",
-      "document_sections",
-      "regex_sections",
-      "semantic_blocks",
-      "semantic_density"
-    ],
-    "adaptive_paper_selection_counts": {
-      "recursive_600": 60,
-      "semantic_blocks": 18,
-      "semantic_density": 13,
-      "recursive_1100": 12
-    },
     "rag_chunking_strategy": "hybrid_semantic",
     "rag_child_chunk_max_chars": "1200",
     "rag_child_chunk_overlap": "150",
@@ -62,41 +47,9 @@
   },
   "results": [
     {
-      "method": "adaptive_semantic_density",
-      "display_name": "Adaptive Semantic Density",
-      "elapsed_seconds": 5.943346,
-      "retrieval": {
-        "hit_at_1": 0.237778,
-        "hit_at_3": 0.414444,
-        "hit_at_5": 0.5,
-        "mrr_at_5": 0.333963,
-        "ndcg_at_5": 0.375268,
-        "evidence_coverage_at_5": 0.5,
-        "context_efficiency_at_5": 0.030271,
-        "retrieval_score": 37.101481
-      },
-      "quality": {
-        "chunk_count": 3152,
-        "avg_tokens": 567.622145,
-        "median_tokens": 366.5,
-        "p95_tokens": 1917.6,
-        "total_tokens": 1789145,
-        "redundancy_ratio": 0.960988,
-        "good_size_ratio": 0.64816,
-        "tiny_ratio": 0.00349,
-        "oversized_ratio": 0.161802,
-        "mid_word_cut_ratio": 0.0,
-        "mid_sentence_cut_ratio": 0.102792,
-        "header_orphan_ratio": 0.0,
-        "table_without_header_ratio": 0.003173,
-        "quality_score": 95.958756
-      },
-      "overall_score": 50.050082
-    },
-    {
       "method": "late_chunking",
       "display_name": "Late Chunking",
-      "elapsed_seconds": 9.093554,
+      "elapsed_seconds": 10.775456,
       "retrieval": {
         "hit_at_1": 0.221111,
         "hit_at_3": 0.43,
@@ -128,7 +81,7 @@
     {
       "method": "llm",
       "display_name": "LLM Chunking",
-      "elapsed_seconds": 5.554051,
+      "elapsed_seconds": 5.736738,
       "retrieval": {
         "hit_at_1": 0.254444,
         "hit_at_3": 0.433333,
@@ -158,41 +111,9 @@
       "overall_score": 49.731313
     },
     {
-      "method": "adaptive_paper",
-      "display_name": "Adaptive Chunking (Paper)",
-      "elapsed_seconds": 6.755609,
-      "retrieval": {
-        "hit_at_1": 0.197778,
-        "hit_at_3": 0.37,
-        "hit_at_5": 0.448889,
-        "mrr_at_5": 0.290833,
-        "ndcg_at_5": 0.330246,
-        "evidence_coverage_at_5": 0.448679,
-        "context_efficiency_at_5": 0.023678,
-        "retrieval_score": 32.613513
-      },
-      "quality": {
-        "chunk_count": 3582,
-        "avg_tokens": 541.169738,
-        "median_tokens": 528.0,
-        "p95_tokens": 1077.0,
-        "total_tokens": 1938470,
-        "redundancy_ratio": 1.041179,
-        "good_size_ratio": 0.416527,
-        "tiny_ratio": 0.003071,
-        "oversized_ratio": 0.1622,
-        "mid_word_cut_ratio": 0.000279,
-        "mid_sentence_cut_ratio": 0.276103,
-        "header_orphan_ratio": 0.018705,
-        "table_without_header_ratio": 0.120603,
-        "quality_score": 92.586265
-      },
-      "overall_score": 45.807518
-    },
-    {
       "method": "parent_child",
       "display_name": "Hierarchical Parent-Child",
-      "elapsed_seconds": 9.324363,
+      "elapsed_seconds": 11.537459,
       "retrieval": {
         "hit_at_1": 0.168889,
         "hit_at_3": 0.347778,
@@ -224,7 +145,7 @@
     {
       "method": "recursive",
       "display_name": "Recursive",
-      "elapsed_seconds": 7.562728,
+      "elapsed_seconds": 9.444588,
       "retrieval": {
         "hit_at_1": 0.173333,
         "hit_at_3": 0.32,
@@ -256,7 +177,7 @@
     {
       "method": "fixed",
       "display_name": "Fixed-size",
-      "elapsed_seconds": 8.03244,
+      "elapsed_seconds": 10.289958,
       "retrieval": {
         "hit_at_1": 0.192222,
         "hit_at_3": 0.355556,
@@ -288,7 +209,7 @@
     {
       "method": "hybrid_recursive_semantic",
       "display_name": "Hybrid Recursive+Semantic",
-      "elapsed_seconds": 6.057768,
+      "elapsed_seconds": 7.502192,
       "retrieval": {
         "hit_at_1": 0.16,
         "hit_at_3": 0.278889,
@@ -320,7 +241,7 @@
     {
       "method": "regex",
       "display_name": "Regex",
-      "elapsed_seconds": 5.163824,
+      "elapsed_seconds": 6.943128,
       "retrieval": {
         "hit_at_1": 0.143333,
         "hit_at_3": 0.267778,
@@ -352,7 +273,7 @@
     {
       "method": "markdown",
       "display_name": "Markdown",
-      "elapsed_seconds": 4.681985,
+      "elapsed_seconds": 5.063882,
       "retrieval": {
         "hit_at_1": 0.127778,
         "hit_at_3": 0.256667,
@@ -384,7 +305,7 @@
     {
       "method": "sentence",
       "display_name": "Sentence",
-      "elapsed_seconds": 8.449126,
+      "elapsed_seconds": 9.785629,
       "retrieval": {
         "hit_at_1": 0.091111,
         "hit_at_3": 0.167778,
@@ -416,7 +337,7 @@
     {
       "method": "semantic",
       "display_name": "Semantic",
-      "elapsed_seconds": 5.774124,
+      "elapsed_seconds": 8.135821,
       "retrieval": {
         "hit_at_1": 0.086667,
         "hit_at_3": 0.133333,
@@ -448,7 +369,7 @@
     {
       "method": "project_chunker",
       "display_name": "Project Chunker",
-      "elapsed_seconds": 46.932232,
+      "elapsed_seconds": 61.307711,
       "retrieval": {
         "hit_at_1": 0.138889,
         "hit_at_3": 0.266667,
@@ -478,5 +399,5 @@
       "overall_score": 18.484404
     }
   ],
-  "elapsed_seconds": 220.091655
+  "elapsed_seconds": 196.004901
 }

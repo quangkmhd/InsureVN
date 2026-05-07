@@ -150,19 +150,6 @@ class SourceBlock:
 
 
 @dataclass(frozen=True)
-class AdaptiveCandidateScore:
-    """Intrinsic score used by paper-style adaptive chunk selection."""
-
-    candidate: str
-    score: float
-    size_compliance: float
-    intrachunk_cohesion: float
-    contextual_coherence: float
-    block_integrity: float
-    reference_completeness: float
-
-
-@dataclass(frozen=True)
 class GoogleGenAIConfig:
     """Google GenAI connection settings for LLM-guided chunk planning."""
 
@@ -716,72 +703,6 @@ def hybrid_recursive_semantic_document_chunks(document: SourceDocument) -> list[
     )
 
 
-def semantic_density_score(text: str) -> float:
-    """Estimate semantic density from normalized lexical diversity."""
-    normalized = normalize_for_search(text)
-    words = [
-        word
-        for word in re.findall(r"[a-z0-9]{3,}", normalized)
-        if word not in STOPWORDS and not word.isdigit()
-    ]
-    if not words:
-        return 0.0
-    return len(set(words)) / len(words)
-
-
-def adaptive_semantic_density_chunks(document: SourceDocument) -> list[Chunk]:
-    """Adjust chunk size from semantic density and local topic shifts."""
-    blocks = atomic_blocks(document)
-    ranges: list[dict[str, int]] = []
-    if not blocks:
-        return []
-
-    current_start = blocks[0].block_id
-    current_end = blocks[0].block_id
-    current_chars = 0
-    current_terms: set[str] = set()
-    min_chars = 500
-
-    for block in blocks:
-        density = semantic_density_score(block.text)
-        block_term_set = block_terms(block.text)
-        similarity = jaccard_similarity(current_terms, block_term_set)
-        if block.block_type == "table":
-            target_chars = 1_850
-            max_chars = 3_300
-        elif density >= 0.72 or block.block_type == "list":
-            target_chars = 950
-            max_chars = 2_100
-        elif density <= 0.38:
-            target_chars = 1_700
-            max_chars = 3_000
-        else:
-            target_chars = 1_300
-            max_chars = 2_600
-
-        heading_boundary = block.block_type == "heading" and current_chars >= min_chars
-        semantic_shift = current_chars >= target_chars and similarity <= 0.06
-        too_large = current_chars + len(block.text) > max_chars
-        if current_chars and (too_large or heading_boundary or semantic_shift):
-            ranges.append({"start": current_start, "end": current_end})
-            current_start = block.block_id
-            current_chars = 0
-            current_terms = set()
-
-        current_end = block.block_id
-        current_chars += len(block.text)
-        current_terms.update(block_term_set)
-
-    if current_chars:
-        ranges.append({"start": current_start, "end": current_end})
-    return ranges_to_method_chunks(
-        method="adaptive_semantic_density",
-        document=document,
-        blocks=blocks,
-        ranges=ranges,
-    )
-
-
 def heading_context_for_offset(document: SourceDocument, offset: int) -> str:
     """Return the most recent heading path before a source offset."""
     heading_stack: dict[int, str] = {}
@@ -880,324 +801,6 @@ def late_post_chunks(
             )
         )
     return contextual_chunks
-
-
-def retag_chunks(chunks: list[Chunk], *, method: str) -> list[Chunk]:
-    """Return equivalent chunks under another benchmark method id."""
-    retagged: list[Chunk] = []
-    for index, chunk in enumerate(chunks):
-        retagged.append(
-            Chunk(
-                chunk_id=f"{method}:{chunk.doc_id}:{index}",
-                method=method,
-                doc_id=chunk.doc_id,
-                file_name=chunk.file_name,
-                text=chunk.text,
-                start=chunk.start,
-                end=chunk.end,
-                tokens=chunk.tokens,
-            )
-        )
-    return retagged
-
-
-def recursive_variant_chunks(
-    document: SourceDocument,
-    *,
-    method: str,
-    size_tokens: int,
-    overlap_tokens: int,
-) -> list[Chunk]:
-    """Split with adaptive-paper recursive candidates and named method ids."""
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=size_tokens * TOKEN_CHARS,
-        chunk_overlap=overlap_tokens * TOKEN_CHARS,
-        separators=["\n\n", "\n", ". ", "! ", "? ", "; ", ", ", " ", ""],
-    )
-    return map_parts_to_chunks(
-        method=method,
-        document=document,
-        parts=splitter.split_text(document.text),
-    )
-
-
-def document_section_chunks(
-    document: SourceDocument,
-    *,
-    method: str,
-) -> list[Chunk]:
-    """Use markdown/legal sections as page-like adaptive candidates."""
-    return span_chunks(
-        method=method,
-        document=document,
-        spans=document_section_spans(document),
-    )
-
-
-def semantic_block_candidate_chunks(
-    document: SourceDocument,
-    *,
-    method: str,
-) -> list[Chunk]:
-    """Group atomic blocks by semantic shifts for adaptive candidate scoring."""
-    blocks = atomic_blocks(document)
-    ranges = semantic_boundary_ranges(
-        blocks,
-        target_chars=1_450,
-        min_chars=520,
-        max_chars=2_850,
-        similarity_threshold=0.08,
-    )
-    return ranges_to_method_chunks(
-        method=method,
-        document=document,
-        blocks=blocks,
-        ranges=ranges,
-    )
-
-
-def adaptive_size_compliance(
-    chunks: list[Chunk],
-    *,
-    min_tokens: int = 100,
-    max_tokens: int = 1100,
-) -> float:
-    """Score how many chunks fall inside the adaptive-paper token bounds."""
-    if not chunks:
-        return 0.0
-    compliant = sum(min_tokens <= chunk.tokens <= max_tokens for chunk in chunks)
-    return compliant / len(chunks)
-
-
-def adaptive_block_integrity(
-    chunks: list[Chunk],
-    blocks: list[SourceBlock],
-    *,
-    tolerance_chars: int = 8,
-) -> float:
-    """Score whether predicted chunk boundaries avoid cutting source blocks."""
-    if not blocks:
-        return 0.0
-    boundaries = {
-        boundary
-        for chunk in chunks
-        for boundary in (chunk.start, chunk.end)
-        if boundary > 0
-    }
-    intact = 0
-    for block in blocks:
-        block_cut = any(
-            block.start + tolerance_chars < boundary < block.end - tolerance_chars
-            for boundary in boundaries
-        )
-        if not block_cut:
-            intact += 1
-    return intact / len(blocks)
-
-
-def source_blocks_for_chunk(
-    chunk: Chunk,
-    blocks: list[SourceBlock],
-) -> list[SourceBlock]:
-    """Return source blocks overlapped by a chunk."""
-    return [
-        block
-        for block in blocks
-        if overlap_chars(chunk.start, chunk.end, block.start, block.end) > 0
-    ]
-
-
-def adaptive_intrachunk_cohesion(
-    chunks: list[Chunk],
-    blocks: list[SourceBlock],
-) -> float:
-    """Approximate intrachunk cohesion with adjacent source-block term overlap."""
-    if not chunks:
-        return 0.0
-    scores: list[float] = []
-    for chunk in chunks:
-        chunk_blocks = source_blocks_for_chunk(chunk, blocks)
-        if len(chunk_blocks) <= 1:
-            scores.append(1.0)
-            continue
-        term_sets = [block_terms(block.text) for block in chunk_blocks]
-        pair_scores = [
-            jaccard_similarity(left, right)
-            for left, right in zip(term_sets, term_sets[1:], strict=False)
-            if left or right
-        ]
-        scores.append(statistics.fmean(pair_scores) if pair_scores else 1.0)
-    return statistics.fmean(scores) if scores else 0.0
-
-
-def adaptive_contextual_coherence(
-    chunks: list[Chunk],
-    blocks: list[SourceBlock],
-) -> float:
-    """Approximate contextual coherence from natural boundaries and topic shifts."""
-    if len(chunks) <= 1:
-        return 0.7 if chunks else 0.0
-
-    block_boundaries = {block.start for block in blocks} | {
-        block.end for block in blocks
-    }
-    natural_scores: list[float] = []
-    shift_scores: list[float] = []
-    for left, right in zip(chunks, chunks[1:], strict=False):
-        boundary = left.end
-        nearest_distance = min(
-            (abs(boundary - block_boundary) for block_boundary in block_boundaries),
-            default=9999,
-        )
-        if nearest_distance <= 12:
-            natural_scores.append(1.0)
-        elif nearest_distance <= 120:
-            natural_scores.append(0.5)
-        else:
-            natural_scores.append(0.0)
-
-        left_terms = block_terms(left.text)
-        right_terms = block_terms(right.text)
-        similarity = jaccard_similarity(left_terms, right_terms)
-        shift_scores.append(1.0 - min(1.0, similarity / 0.45))
-
-    natural = statistics.fmean(natural_scores) if natural_scores else 0.0
-    semantic_shift = statistics.fmean(shift_scores) if shift_scores else 0.0
-    return 0.6 * natural + 0.4 * semantic_shift
-
-
-def adaptive_reference_completeness(chunks: list[Chunk]) -> float:
-    """Proxy the paper reference-completeness metric for markdown tables/headings."""
-    if not chunks:
-        return 0.0
-    scores: list[float] = []
-    for chunk in chunks:
-        score = 1.0
-        table_lines = [
-            line for line in chunk.text.splitlines() if line.strip().startswith("|")
-        ]
-        if len(table_lines) >= 2 and not has_table_header(chunk.text):
-            score -= 0.35
-        heading_match = re.search(r"^#{1,6}\s+.+$", chunk.text, re.M)
-        if heading_match:
-            heading_tail = chunk.text[heading_match.end() :].strip()
-            if len(heading_tail) < 40:
-                score -= 0.20
-        scores.append(max(0.0, score))
-    return statistics.fmean(scores)
-
-
-def score_adaptive_candidate(
-    *,
-    candidate: str,
-    chunks: list[Chunk],
-    blocks: list[SourceBlock],
-) -> AdaptiveCandidateScore:
-    """Score one adaptive chunking candidate with paper-style intrinsic metrics."""
-    size_compliance = adaptive_size_compliance(chunks)
-    intrachunk_cohesion = adaptive_intrachunk_cohesion(chunks, blocks)
-    contextual_coherence = adaptive_contextual_coherence(chunks, blocks)
-    block_integrity = adaptive_block_integrity(chunks, blocks)
-    reference_completeness = adaptive_reference_completeness(chunks)
-    score = (
-        0.24 * size_compliance
-        + 0.18 * intrachunk_cohesion
-        + 0.18 * contextual_coherence
-        + 0.26 * block_integrity
-        + 0.14 * reference_completeness
-    )
-    return AdaptiveCandidateScore(
-        candidate=candidate,
-        score=score,
-        size_compliance=size_compliance,
-        intrachunk_cohesion=intrachunk_cohesion,
-        contextual_coherence=contextual_coherence,
-        block_integrity=block_integrity,
-        reference_completeness=reference_completeness,
-    )
-
-
-def adaptive_paper_chunks(
-    document: SourceDocument,
-    *,
-    selection_counts: Counter[str] | None = None,
-) -> list[Chunk]:
-    """Select the best chunking strategy per document using intrinsic metrics."""
-    blocks = atomic_blocks(document)
-    candidates: list[tuple[str, list[Chunk]]] = [
-        (
-            "recursive_1100",
-            recursive_variant_chunks(
-                document,
-                method="adaptive_candidate_recursive_1100",
-                size_tokens=1100,
-                overlap_tokens=120,
-            ),
-        ),
-        (
-            "recursive_600",
-            recursive_variant_chunks(
-                document,
-                method="adaptive_candidate_recursive_600",
-                size_tokens=600,
-                overlap_tokens=80,
-            ),
-        ),
-        (
-            "document_sections",
-            document_section_chunks(
-                document,
-                method="adaptive_candidate_document_sections",
-            ),
-        ),
-        (
-            "regex_sections",
-            retag_chunks(regex_chunks(document), method="adaptive_candidate_regex"),
-        ),
-        (
-            "semantic_blocks",
-            semantic_block_candidate_chunks(
-                document,
-                method="adaptive_candidate_semantic_blocks",
-            ),
-        ),
-        (
-            "semantic_density",
-            retag_chunks(
-                adaptive_semantic_density_chunks(document),
-                method="adaptive_candidate_semantic_density",
-            ),
-        ),
-    ]
-    scored_candidates: list[tuple[AdaptiveCandidateScore, list[Chunk]]] = []
-    for candidate_name, candidate_chunks in candidates:
-        if not candidate_chunks:
-            continue
-        scored_candidates.append(
-            (
-                score_adaptive_candidate(
-                    candidate=candidate_name,
-                    chunks=candidate_chunks,
-                    blocks=blocks,
-                ),
-                candidate_chunks,
-            )
-        )
-    if not scored_candidates:
-        return []
-
-    best_score, best_chunks = max(
-        scored_candidates,
-        key=lambda item: (
-            item[0].score,
-            item[0].size_compliance,
-            item[0].block_integrity,
-            -len(item[1]),
-        ),
-    )
-    if selection_counts is not None:
-        selection_counts[best_score.candidate] += 1
-    return retag_chunks(best_chunks, method="adaptive_paper")
 
 
 def semantic_chunks(
@@ -1761,7 +1364,7 @@ def build_chunks_by_method(
     sentences_per_chunk: int,
     llm_cache_path: Path,
     include_llm: bool,
-) -> tuple[dict[str, list[Chunk]], dict[str, int], dict[str, int]]:
+) -> tuple[dict[str, list[Chunk]], dict[str, int]]:
     """Run chunking methods over all documents."""
     embeddings = HashingEmbeddings()
     llm_cache = load_json_cache(llm_cache_path)
@@ -1773,7 +1376,6 @@ def build_chunks_by_method(
         "llm_fallback_documents": 0,
         "llm_policy_fallbacks": 0,
     }
-    adaptive_selection_counts: Counter[str] = Counter()
     llm_policy = (
         load_or_build_llm_policy(
             documents=documents,
@@ -1795,8 +1397,6 @@ def build_chunks_by_method(
         "semantic": [],
         "project_chunker": [],
         "hybrid_recursive_semantic": [],
-        "adaptive_semantic_density": [],
-        "adaptive_paper": [],
         "parent_child": [],
         "late_chunking": [],
     }
@@ -1831,15 +1431,6 @@ def build_chunks_by_method(
         chunks_by_method["hybrid_recursive_semantic"].extend(
             hybrid_recursive_semantic_document_chunks(document)
         )
-        chunks_by_method["adaptive_semantic_density"].extend(
-            adaptive_semantic_density_chunks(document)
-        )
-        chunks_by_method["adaptive_paper"].extend(
-            adaptive_paper_chunks(
-                document,
-                selection_counts=adaptive_selection_counts,
-            )
-        )
         chunks_by_method["parent_child"].extend(
             hierarchical_parent_child_chunks(
                 document,
@@ -1865,7 +1456,7 @@ def build_chunks_by_method(
                     stats=llm_stats,
                 )
             )
-    return chunks_by_method, llm_stats, dict(adaptive_selection_counts)
+    return chunks_by_method, llm_stats
 
 
 def evidence_spans_for_document(document: SourceDocument) -> list[tuple[int, int, str]]:
@@ -2227,8 +1818,6 @@ DISPLAY_NAMES = {
     "semantic": "Semantic",
     "project_chunker": "Project Chunker",
     "hybrid_recursive_semantic": "Hybrid Recursive+Semantic",
-    "adaptive_semantic_density": "Adaptive Semantic Density",
-    "adaptive_paper": "Adaptive Chunking (Paper)",
     "parent_child": "Hierarchical Parent-Child",
     "late_chunking": "Late Chunking",
     "llm": "LLM Chunking",
@@ -2242,7 +1831,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     if args.max_documents:
         documents = documents[: args.max_documents]
     cases = build_evidence_cases(documents, max_cases=args.max_cases)
-    chunks_by_method, llm_stats, adaptive_selection_counts = build_chunks_by_method(
+    chunks_by_method, llm_stats = build_chunks_by_method(
         documents,
         env=env,
         size_tokens=args.chunk_size_tokens,
@@ -2297,19 +1886,6 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 "google_genai_policy_guided_source_preserving_block_grouping"
             ),
             "llm_stats": llm_stats,
-            "adaptive_paper_algorithm": (
-                "per_document_intrinsic_selection_size_cohesion_context_boundary_"
-                "block_integrity_reference_proxy"
-            ),
-            "adaptive_paper_candidates": [
-                "recursive_1100",
-                "recursive_600",
-                "document_sections",
-                "regex_sections",
-                "semantic_blocks",
-                "semantic_density",
-            ],
-            "adaptive_paper_selection_counts": adaptive_selection_counts,
             "rag_chunking_strategy": env.get("RAG_CHUNKING_STRATEGY"),
             "rag_child_chunk_max_chars": env.get("RAG_CHILD_CHUNK_MAX_CHARS"),
             "rag_child_chunk_overlap": env.get("RAG_CHILD_CHUNK_OVERLAP"),

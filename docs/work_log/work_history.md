@@ -68,3 +68,10 @@ Tài liệu này tổng hợp các công việc đã thực hiện trong quá tr
 - Maintenance nightmare: AI stack thay đổi cực nhanh: model update, API change,framework breaking change
 - vector DB,queue,caching,observability,secrets,deployment,scaling, telemetry,eval,pipeline,throughput, latency, cost, accuracy, reliability
 - thứ khó nhất không phải prompt, mà là production infrastructure
+- https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/ bài nghiên cứu về:
+
+  - Chunking strategy nào tốt nhất cho hệ thống RAG
+  - Ảnh hưởng của kích thước chunk đến retrieval và chất lượng answer
+  - So sánh thực nghiệm giữa nhiều kiểu chunking khác nhau trên nhiều dataset thực tế
+- [Adaptive Chunking: Optimizing Chunking-Method Selection for RAG](https://arxiv.org/pdf/2603.25333) , [ekimetrics/adaptive-chunking: Adaptive Chunking: automatically select the best chunking method per document for RAG. Accepted at LREC 2026.](https://github.com/ekimetrics/adaptive-chunking)
+- docs/work_log/2026-05-07-health_chunking_benchmark_end_to_end_process.md tạo grounf truth tự động mà không cần gán nhãn tay: cắt theo các đầu mục như H1, H2 -> chọn các bock > 200 kí tự, cắt các block lớn hơn 400 kí tự. -> Tạo query = H1/H2 + **`[Top 10 Keywords]`** chính trong đoạn đó -> Ground: doc id + strat + end chính đoạn đó -> vecor lên bằng thư viện TfidfVectorizer -> tính toán Retrieval score-> Chấm Chất Lượng Chunk -> Retrieval score + Chất Lượng Chunk = overal

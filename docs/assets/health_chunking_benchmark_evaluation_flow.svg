@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1185" width="1600" height="1185">
+<style>
+text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', 'DejaVu Sans', sans-serif; }
+</style>
+<defs>
+<marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+</marker>
+<marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#16a34a"/>
+</marker>
+<marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+<polygon points="0 0, 10 3.5, 0 7" fill="#9333ea"/>
+</marker>
+<filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+<feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#111827" flood-opacity="0.10"/>
+</filter>
+</defs>
+<rect width="1600" height="1185" fill="#ffffff"/>
+<g filter="url(#shadow)">
+<rect x="32" y="24" width="1536" height="64" rx="14" ry="14" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.2"/>
+</g>
+<text x="56" y="62" font-size="24" font-weight="800" fill="#111827" text-anchor="start">Flow tổng quát: Đánh giá benchmark chunking cho RAG</text>
+<rect x="1110" y="37" width="430" height="40" rx="8" ry="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.0"/>
+<line x1="1130" y1="57" x2="1175" y2="57" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+<text x="1186" y="61" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">source/config</text>
+<line x1="1285" y1="57" x2="1330" y2="57" stroke="#16a34a" stroke-width="2" marker-end="url(#arrow-green)"/>
+<text x="1341" y="61" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">ground truth</text>
+<line x1="1440" y1="57" x2="1485" y2="57" stroke="#9333ea" stroke-width="2" marker-end="url(#arrow-purple)"/>
+<text x="1496" y="61" font-size="12" font-weight="400" fill="#6b7280" text-anchor="start">scoring</text>
+<rect x="40" y="112" width="1520" height="140" rx="12" ry="12" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="7,5"/>
+<text x="58" y="138" font-size="12" font-weight="700" fill="#60a5fa" text-anchor="start">1. DỮ LIỆU ĐẦU VÀO</text>
+<rect x="40" y="286" width="1520" height="190" rx="12" ry="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.2" stroke-dasharray="7,5"/>
+<text x="58" y="312" font-size="12" font-weight="700" fill="#22c55e" text-anchor="start">2. TẠO GROUND TRUTH TỰ ĐỘNG, KHÔNG GÁN NHÃN TAY</text>
+<rect x="40" y="510" width="1520" height="172" rx="12" ry="12" fill="#fff7ed" stroke="#f97316" stroke-width="1.2" stroke-dasharray="7,5"/>
+<text x="58" y="536" font-size="12" font-weight="700" fill="#f97316" text-anchor="start">3. CHẠY 11 PHƯƠNG PHÁP CHUNKING</text>
+<rect x="40" y="714" width="1520" height="236" rx="12" ry="12" fill="#faf5ff" stroke="#a855f7" stroke-width="1.2" stroke-dasharray="7,5"/>
+<text x="58" y="740" font-size="12" font-weight="700" fill="#a855f7" text-anchor="start">4. CHẤM RETRIEVAL VÀ CHẤT LƯỢNG CHUNK</text>
+<rect x="40" y="984" width="1520" height="162" rx="12" ry="12" fill="#f9fafb" stroke="#6b7280" stroke-width="1.2" stroke-dasharray="7,5"/>
+<text x="58" y="1010" font-size="12" font-weight="700" fill="#6b7280" text-anchor="start">5. XẾP HẠNG VÀ QUYẾT ĐỊNH BƯỚC TIẾP THEO</text>
+<rect x="80" y="150" width="300" height="76" rx="10" ry="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.6"/>
+<circle cx="108" cy="180" r="16" fill="#60a5fa" opacity="0.14"/>
+<text x="108" y="185" font-size="13" font-weight="800" fill="#60a5fa" text-anchor="middle">MD</text>
+<text x="134" y="181" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Markdown corpus</text>
+<text x="134" y="205" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">103 file Markdown</text>
+<text x="134" y="222" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">7,442,006 ký tự nguồn</text>
+<rect x="430" y="150" width="300" height="76" rx="10" ry="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="1.6"/>
+<circle cx="458" cy="180" r="16" fill="#60a5fa" opacity="0.14"/>
+<text x="458" y="185" font-size="13" font-weight="800" fill="#60a5fa" text-anchor="middle">CFG</text>
+<text x="484" y="181" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Benchmark config</text>
+<text x="484" y="205" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">max_cases=900, top_k=5</text>
+<text x="484" y="222" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">token ≈ ceil(chars / 4)</text>
+<rect x="780" y="150" width="330" height="76" rx="10" ry="10" fill="#eef2ff" stroke="#818cf8" stroke-width="1.6"/>
+<circle cx="808" cy="180" r="16" fill="#818cf8" opacity="0.14"/>
+<text x="808" y="185" font-size="13" font-weight="800" fill="#818cf8" text-anchor="middle">LLM</text>
+<text x="834" y="181" font-size="16" font-weight="700" fill="#111827" text-anchor="start">LLM chunking cache</text>
+<text x="834" y="205" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Google GenAI / gemma-4-31b-it</text>
+<text x="834" y="222" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">llm_calls=0, cache_hits=104</text>
+<rect x="92" y="334" width="220" height="74" rx="8" ry="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.2"/>
+<text x="202.0" y="358" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Parse section</text>
+<text x="202.0" y="378" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">H1-H4, Điều/Mục</text>
+<rect x="362" y="334" width="230" height="74" rx="8" ry="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.2"/>
+<text x="477.0" y="358" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Chọn evidence</text>
+<text x="477.0" y="378" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">block ≥180 ký tự</text>
+<rect x="642" y="334" width="240" height="74" rx="8" ry="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.2"/>
+<text x="762.0" y="358" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Split span dài</text>
+<text x="762.0" y="378" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">220-1,400 ký tự</text>
+<rect x="932" y="334" width="250" height="74" rx="8" ry="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.2"/>
+<text x="1057.0" y="358" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Tạo query</text>
+<text x="1057.0" y="378" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">Heading + top 10 keywords</text>
+<rect x="1232" y="334" width="250" height="74" rx="8" ry="8" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.2"/>
+<text x="1357.0" y="358" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Ground truth</text>
+<text x="1357.0" y="378" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">doc_id + start/end offset</text>
+<line x1="312" y1="371" x2="362" y2="371" stroke="#16a34a" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<line x1="592" y1="371" x2="642" y2="371" stroke="#16a34a" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<line x1="882" y1="371" x2="932" y2="371" stroke="#16a34a" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<line x1="1182" y1="371" x2="1232" y2="371" stroke="#16a34a" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<rect x="638" y="436" width="330" height="28" rx="4" ry="4" fill="#ffffff" stroke="none" stroke-width="0" opacity="0.96"/>
+<text x="803.0" y="458" font-size="12" font-weight="700" fill="#16a34a" text-anchor="middle">900 synthetic retrieval cases</text>
+<path d="M 1357 408 L 1357 452 L 972 452 L 972 510" fill="none" stroke="#16a34a" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<path d="M 230 226 L 230 334" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrow-blue)"/>
+<rect x="182" y="279" width="112" height="24" rx="4" ry="4" fill="#ffffff" stroke="none" stroke-width="0" opacity="0.96"/>
+<text x="238.0" y="297" font-size="12" font-weight="700" fill="#2563eb" text-anchor="middle">source text</text>
+<path d="M 230 226 L 230 262 L 62 262 L 62 596 L 92 596" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrow-blue)"/>
+<rect x="74" y="583" width="102" height="24" rx="4" ry="4" fill="#ffffff" stroke="none" stroke-width="0" opacity="0.96"/>
+<text x="125.0" y="601" font-size="12" font-weight="700" fill="#2563eb" text-anchor="middle">source text</text>
+<rect x="76" y="560" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="186.0" y="584" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Fixed-size</text>
+<text x="186.0" y="604" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">400 tok + overlap</text>
+<rect x="322" y="560" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="432.0" y="584" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Recursive</text>
+<text x="432.0" y="604" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">paragraph → word</text>
+<rect x="568" y="560" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="678.0" y="584" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Sentence</text>
+<text x="678.0" y="604" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">3 câu/chunk</text>
+<rect x="814" y="560" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="924.0" y="584" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Markdown</text>
+<text x="924.0" y="604" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">H1-H3 heading</text>
+<rect x="1060" y="560" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="1170.0" y="584" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Regex</text>
+<text x="1170.0" y="604" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">heading + Điều/Mục</text>
+<rect x="1306" y="560" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="1416.0" y="584" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Semantic</text>
+<text x="1416.0" y="604" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">hash embedding</text>
+<rect x="76" y="626" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="186.0" y="650" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Project Chunker</text>
+<text x="186.0" y="670" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">table-aware</text>
+<rect x="322" y="626" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="432.0" y="650" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Hybrid Rec+Sem</text>
+<text x="432.0" y="670" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">section + shift</text>
+<rect x="568" y="626" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="678.0" y="650" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Parent-Child</text>
+<text x="678.0" y="670" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">parent context</text>
+<rect x="814" y="626" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="924.0" y="650" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">Late Chunking</text>
+<text x="924.0" y="670" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">post context</text>
+<rect x="1060" y="626" width="220" height="50" rx="8" ry="8" fill="#fff7ed" stroke="#fb923c" stroke-width="1.2"/>
+<text x="1170.0" y="650" font-size="13" font-weight="700" fill="#111827" text-anchor="middle">LLM Chunking</text>
+<text x="1170.0" y="670" font-size="11.5" font-weight="400" fill="#6b7280" text-anchor="middle">policy-guided</text>
+<rect x="90" y="762" width="610" height="142" rx="10" ry="10" fill="#faf5ff" stroke="#a855f7" stroke-width="1.6"/>
+<circle cx="118" cy="792" r="16" fill="#a855f7" opacity="0.14"/>
+<text x="118" y="797" font-size="13" font-weight="800" fill="#a855f7" text-anchor="middle">RET</text>
+<text x="144" y="793" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Retrieval evaluation</text>
+<text x="144" y="817" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Fit TF-IDF riêng cho chunks của từng method</text>
+<text x="144" y="834" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">900 query → top 5 chunks/query</text>
+<text x="144" y="851" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Relevant nếu same doc và overlap/evidence ≥ 0.20</text>
+<text x="144" y="868" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Metrics: Hit@1/3/5, MRR@5, NDCG@5, Coverage@5, Efficiency@5</text>
+<rect x="900" y="762" width="610" height="142" rx="10" ry="10" fill="#faf5ff" stroke="#a855f7" stroke-width="1.6"/>
+<circle cx="928" cy="792" r="16" fill="#a855f7" opacity="0.14"/>
+<text x="928" y="797" font-size="13" font-weight="800" fill="#a855f7" text-anchor="middle">QLT</text>
+<text x="954" y="793" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Chunk quality evaluation</text>
+<text x="954" y="817" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Chấm hình dạng chunk, không cần query</text>
+<text x="954" y="834" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Size: avg/median/p95, tiny, oversized, good size</text>
+<text x="954" y="851" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Boundary: mid-word, mid-sentence, heading orphan</text>
+<text x="954" y="868" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Structure: table thiếu header, redundancy ratio</text>
+<path d="M 590 682 L 590 720 L 395 720 L 395 762" fill="none" stroke="#9333ea" stroke-width="2.2" marker-end="url(#arrow-purple)"/>
+<path d="M 1030 682 L 1030 720 L 1205 720 L 1205 762" fill="none" stroke="#9333ea" stroke-width="2.2" marker-end="url(#arrow-purple)"/>
+<rect x="690" y="708" width="220" height="26" rx="4" ry="4" fill="#ffffff" stroke="none" stroke-width="0" opacity="0.96"/>
+<text x="800.0" y="728" font-size="12" font-weight="700" fill="#9333ea" text-anchor="middle">chunks theo từng method</text>
+<rect x="714" y="772" width="172" height="112" rx="8" ry="8" fill="#ffffff" stroke="#d8b4fe" stroke-width="1.2"/>
+<text x="730" y="797" font-size="13" font-weight="700" fill="#9333ea" text-anchor="start">retrieval_score</text>
+<text x="730" y="820" font-size="11.2" font-weight="400" fill="#6b7280" text-anchor="start">30% Hit@1</text>
+<text x="730" y="834" font-size="11.2" font-weight="400" fill="#6b7280" text-anchor="start">20% Hit@3</text>
+<text x="730" y="848" font-size="11.2" font-weight="400" fill="#6b7280" text-anchor="start">15% Hit@5</text>
+<text x="730" y="862" font-size="11.2" font-weight="400" fill="#6b7280" text-anchor="start">20% MRR@5</text>
+<text x="730" y="876" font-size="11.2" font-weight="400" fill="#6b7280" text-anchor="start">15% Coverage@5</text>
+<rect x="610" y="920" width="380" height="58" rx="10" ry="10" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<circle cx="638" cy="950" r="16" fill="#7c3aed" opacity="0.14"/>
+<text x="638" y="955" font-size="13" font-weight="800" fill="#7c3aed" text-anchor="middle">Σ</text>
+<text x="664" y="951" font-size="15" font-weight="700" fill="#111827" text-anchor="start">Overall score</text>
+<text x="664" y="975" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">0.78 × retrieval_score + 0.22 × quality_score</text>
+<path d="M 395 904 L 395 949 L 610 949" fill="none" stroke="#9333ea" stroke-width="2.2" marker-end="url(#arrow-purple)"/>
+<path d="M 1205 904 L 1205 949 L 990 949" fill="none" stroke="#9333ea" stroke-width="2.2" marker-end="url(#arrow-purple)"/>
+<rect x="90" y="1030" width="330" height="88" rx="10" ry="10" fill="#f9fafb" stroke="#6b7280" stroke-width="1.6"/>
+<circle cx="118" cy="1060" r="16" fill="#6b7280" opacity="0.14"/>
+<text x="118" y="1065" font-size="13" font-weight="800" fill="#6b7280" text-anchor="middle">OUT</text>
+<text x="144" y="1061" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Reports</text>
+<text x="144" y="1085" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Markdown + JSON + CSV</text>
+<text x="144" y="1102" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">health_chunking_benchmark.*</text>
+<rect x="500" y="1030" width="360" height="88" rx="10" ry="10" fill="#ecfdf5" stroke="#10b981" stroke-width="1.6"/>
+<circle cx="528" cy="1060" r="16" fill="#10b981" opacity="0.14"/>
+<text x="528" y="1065" font-size="13" font-weight="800" fill="#10b981" text-anchor="middle">TOP</text>
+<text x="554" y="1061" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Kết quả hiện tại</text>
+<text x="554" y="1085" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">#1 Late Chunking: 49.80</text>
+<text x="554" y="1102" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">#2 LLM Chunking: 49.73</text>
+<rect x="940" y="1030" width="500" height="88" rx="10" ry="10" fill="#fff7ed" stroke="#f97316" stroke-width="1.6"/>
+<circle cx="968" cy="1060" r="16" fill="#f97316" opacity="0.14"/>
+<text x="968" y="1065" font-size="13" font-weight="800" fill="#f97316" text-anchor="middle">NEXT</text>
+<text x="994" y="1061" font-size="16" font-weight="700" fill="#111827" text-anchor="start">Dùng kết quả để làm gì?</text>
+<text x="994" y="1085" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Chọn top 2-3 method → embedding retrieval → rerank → answer eval</text>
+<text x="994" y="1102" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start">Không dùng như kết luận cuối cùng cho chatbot production</text>
+<path d="M 800 978 L 800 1010 L 255 1010 L 255 1030" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrow-blue)"/>
+<path d="M 800 978 L 800 1030" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrow-blue)"/>
+<path d="M 800 978 L 800 1010 L 1190 1010 L 1190 1030" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#arrow-blue)"/>
+</svg>

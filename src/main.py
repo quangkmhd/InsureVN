@@ -11,7 +11,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from langfuse import observe
 
-from src.api.routes import chunking, health  # noqa: E402
+from src.api.routes import health  # noqa: E402
 from src.core.logger import get_logger  # noqa: E402
 
 # Initialize logger
@@ -85,7 +85,6 @@ def create_app() -> FastAPI:
         return response
 
     # Register routers
-    app.include_router(chunking.router)
     app.include_router(health.router)
 
     return app

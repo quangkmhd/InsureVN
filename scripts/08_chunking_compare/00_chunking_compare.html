@@ -1484,7 +1484,7 @@
       </h1>
       <p class="sub">How you split your documents matters more than which embedding model you pick. Paste any text — API
         docs, legal contracts, README files — and instantly see how fixed-size, recursive, sentence, markdown, regex,
-        and semantic chunking handle it differently. Compare chunk quality, spot mid-word cuts and header orphans, and
+        semantic, adaptive density, late chunking, and LLM chunking handle it differently. Compare chunk quality, spot mid-word cuts and header orphans, and
         export production-ready code.</p>
     </div>
 
@@ -1497,7 +1497,7 @@
             <button class="file-btn" onclick="document.getElementById('fileInput').click()">📁 Upload .txt / .md /
               .pdf</button>
             <button class="file-btn"
-              onclick="document.getElementById('textInput').value='';updStats();document.getElementById('results').classList.remove('show');document.getElementById('queryPanel').style.display='none';document.getElementById('queryResults').innerHTML='';document.getElementById('queryInput').value='';document.querySelectorAll('.sbtn').forEach(function(b){b.classList.remove('active')});document.getElementById('fileName').textContent='';allChunks={};allAnalysis={};semanticError='';semanticMeta=null">✕
+              onclick="document.getElementById('textInput').value='';updStats();document.getElementById('results').classList.remove('show');document.getElementById('queryPanel').style.display='none';document.getElementById('queryResults').innerHTML='';document.getElementById('queryInput').value='';document.querySelectorAll('.sbtn').forEach(function(b){b.classList.remove('active')});document.getElementById('fileName').textContent='';allChunks={};allAnalysis={};semanticError='';semanticMeta=null;adaptiveError='';adaptiveMeta=null;lateError='';lateMeta=null;llmError='';llmMeta=null">✕
               Clear</button>
             <input type="file" id="fileInput" accept=".txt,.md,.text,.markdown,.pdf">
             <span class="file-name" id="fileName"></span>
@@ -1602,8 +1602,7 @@
         </div>
       </div>
       <div class="code-section show" id="codeSection">
-        <div class="code-tabs"><button class="ctab active" data-fw="langchain">LangChain</button><button class="ctab"
-            data-fw="llamaindex">LlamaIndex</button><button class="ctab" data-fw="haystack">Haystack</button></div>
+        <div class="code-tabs"><button class="ctab active" data-fw="langchain">LangChain</button><button class="ctab" data-fw="haystack">Haystack</button></div>
         <div class="code-box" id="codeBox"></div>
       </div>
       <div id="guideCta"
@@ -1805,31 +1804,84 @@
   function chunkRegex(text, pattern) { if (!pattern) return [{ text: text, start: 0, end: text.length, tokens: estimateTokens(text), issues: ['no pattern'] }]; try { var rx = new RegExp(pattern, 'g'); var ch = [], lastIdx = 0, m; while ((m = rx.exec(text)) !== null) { if (m.index > lastIdx) { var seg = text.slice(lastIdx, m.index).trim(); if (seg) ch.push({ text: seg, start: lastIdx, end: m.index, tokens: estimateTokens(seg), issues: [] }) } lastIdx = m.index } if (lastIdx < text.length) { var last2 = text.slice(lastIdx).trim(); if (last2) ch.push({ text: last2, start: lastIdx, end: text.length, tokens: estimateTokens(last2), issues: [] }) } if (ch.length === 0) ch.push({ text: text, start: 0, end: text.length, tokens: estimateTokens(text), issues: ['pattern not found'] }); return ch } catch (e) { return [{ text: text, start: 0, end: text.length, tokens: estimateTokens(text), issues: ['invalid regex: ' + e.message] }] } }
 
   function getSemanticApiUrl() {
-    var saved = localStorage.getItem('insurevnSemanticChunkingApiUrl');
+    var saved = localStorage.getItem('chunkingCompareSemanticApiUrl');
     if (saved) return saved;
     if ((location.protocol === 'http:' || location.protocol === 'https:') && (location.port === '8000' || location.pathname.indexOf('/tools/chunking-compare') === 0)) return location.origin + '/chunking/semantic';
     return 'http://127.0.0.1:8000/chunking/semantic';
   }
 
-  async function chunkSemantic(text, sz, ov) {
-    var res = await fetch(getSemanticApiUrl(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: text,
-        chunk_size_tokens: sz,
-        overlap_tokens: ov,
-        min_chunk_chars: Math.max(80, Math.round(sz * 1.5))
-      })
-    });
-    if (!res.ok) {
-      var detail = '';
-      try { var err = await res.json(); detail = err.detail ? String(err.detail) : '' } catch (e) { }
-      throw new Error(detail || ('Semantic API returned ' + res.status));
+  function getLlmApiUrl() {
+    var saved = localStorage.getItem('chunkingCompareLlmApiUrl');
+    if (saved) return saved;
+    if ((location.protocol === 'http:' || location.protocol === 'https:') && (location.port === '8000' || location.pathname.indexOf('/tools/chunking-compare') === 0)) return location.origin + '/chunking/llm';
+    return 'http://127.0.0.1:8000/chunking/llm';
+  }
+
+  function getLateApiUrl() {
+    var saved = localStorage.getItem('chunkingCompareLateApiUrl');
+    if (saved) return saved;
+    if ((location.protocol === 'http:' || location.protocol === 'https:') && (location.port === '8000' || location.pathname.indexOf('/tools/chunking-compare') === 0)) return location.origin + '/chunking/late';
+    return 'http://127.0.0.1:8000/chunking/late';
+  }
+
+  function getAdaptiveApiUrl() {
+    var saved = localStorage.getItem('chunkingCompareAdaptiveDensityApiUrl');
+    if (saved) return saved;
+    if ((location.protocol === 'http:' || location.protocol === 'https:') && (location.port === '8000' || location.pathname.indexOf('/tools/chunking-compare') === 0)) return location.origin + '/chunking/adaptive-density';
+    return 'http://127.0.0.1:8000/chunking/adaptive-density';
+  }
+
+  async function postChunkingJson(url, payload, label, timeoutMs) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort() }, timeoutMs);
+    try {
+      var res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      if (!res.ok) {
+        var detail = '';
+        try { var err = await res.json(); detail = err.detail ? String(err.detail) : '' } catch (e) { }
+        throw new Error(detail || (label + ' API returned ' + res.status));
+      }
+      return await res.json();
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw new Error(label + ' timed out after ' + Math.round(timeoutMs / 1000) + 's');
+      throw e;
+    } finally {
+      clearTimeout(timer);
     }
-    var data = await res.json();
+  }
+
+  async function chunkSemantic(text, sz, ov) {
+    var data = await postChunkingJson(getSemanticApiUrl(), {
+      text: text,
+      chunk_size_tokens: sz,
+      overlap_tokens: ov,
+      min_chunk_chars: Math.max(80, Math.round(sz * 1.5))
+    }, 'Semantic', 45000);
     semanticMeta = { provider: data.provider, model: data.model, strategy: data.strategy };
     return data.chunks.map(function (c) { return { text: c.text, start: c.start, end: c.end, tokens: c.tokens, issues: c.issues || ['langchain semantic'] } });
+  }
+
+  async function chunkAdaptiveDensity(text, sz) {
+    var data = await postChunkingJson(getAdaptiveApiUrl(), { text: text, chunk_size_tokens: sz }, 'Adaptive Density', 20000);
+    adaptiveMeta = { provider: data.provider, model: data.model, strategy: data.strategy };
+    return data.chunks.map(function (c) { return { text: c.text, start: c.start, end: c.end, tokens: c.tokens, issues: c.issues || ['adaptive semantic density'] } });
+  }
+
+  async function chunkLate(text, sz, ov) {
+    var data = await postChunkingJson(getLateApiUrl(), { text: text, chunk_size_tokens: sz, overlap_tokens: ov }, 'Late Chunking', 20000);
+    lateMeta = { provider: data.provider, model: data.model, strategy: data.strategy };
+    return data.chunks.map(function (c) { return { text: c.display_text || c.text, indexText: c.index_text || c.text, start: c.start, end: c.end, tokens: c.tokens, issues: c.issues || ['late chunking contextual index'] } });
+  }
+
+  async function chunkLLM(text, sz) {
+    var data = await postChunkingJson(getLlmApiUrl(), { text: text, chunk_size_tokens: sz }, 'LLM', 120000);
+    llmMeta = { provider: data.provider, model: data.model, strategy: data.strategy };
+    return data.chunks.map(function (c) { return { text: c.text, start: c.start, end: c.end, tokens: c.tokens, issues: c.issues || ['llm chunking'] } });
   }
 
   // =========================================================================
@@ -1973,9 +2025,11 @@
       if (s === 'recursive') return '# RAG Chunking Playground — Recursive\nfrom langchain.text_splitter import RecursiveCharacterTextSplitter\n\nsplitter = RecursiveCharacterTextSplitter(\n    chunk_size=' + sz * 4 + ',\n    chunk_overlap=' + ov * 4 + ',\n    separators=["\\n\\n","\\n",". "," ",""]\n)\nchunks = splitter.split_text(text)\nprint(f"Created {len(chunks)} chunks")';
       if (s === 'sentence') return '# RAG Chunking Playground — Sentence\nimport re\n\nsentences = re.split(r"(?<=[.!?])\\s+", text)\nchunks = [" ".join(sentences[i:i+' + sn + '])\n          for i in range(0, len(sentences), ' + sn + ')]\nprint(f"Created {len(chunks)} chunks")';
       if (s === 'markdown') return '# RAG Chunking Playground — Markdown\nfrom langchain.text_splitter import MarkdownHeaderTextSplitter\n\nheaders = [("#","H1"),("##","H2"),("###","H3")]\nsplitter = MarkdownHeaderTextSplitter(\n    headers_to_split_on=headers\n)\nchunks = splitter.split_text(text)\nprint(f"Created {len(chunks)} chunks")';
-      if (s === 'semantic') return '# RAG Chunking Playground — Semantic\n# pip install langchain-experimental langchain-ollama\nfrom langchain_experimental.text_splitter import SemanticChunker\nfrom langchain_ollama import OllamaEmbeddings\n\nembeddings = OllamaEmbeddings(\n    model="qwen3-embedding:8b",\n    base_url="http://127.0.0.1:11434",\n)\nsplitter = SemanticChunker(\n    embeddings=embeddings,\n    breakpoint_threshold_type="interquartile",\n    breakpoint_threshold_amount=1.5,\n)\nchunks = splitter.split_text(text)\nprint(f"Created {len(chunks)} chunks")';
+      if (s === 'semantic') return '# RAG Chunking Playground — Semantic\n# pip install langchain-experimental langchain-ollama\nfrom langchain_experimental.text_splitter import SemanticChunker\nfrom langchain_ollama import OllamaEmbeddings\n\nembeddings = OllamaEmbeddings(\n    model="bge-m3",\n    base_url="http://127.0.0.1:11434",\n)\nsplitter = SemanticChunker(\n    embeddings=embeddings,\n    breakpoint_threshold_type="interquartile",\n    breakpoint_threshold_amount=1.5,\n)\nchunks = splitter.split_text(text)\nprint(f"Created {len(chunks)} chunks")';
+      if (s === 'adaptive') return '# Adaptive Semantic Density\n# Ported from scripts/08_chunking_compare/chunking_compare_api.py\n# Group source blocks by heading boundaries, lexical density, and topic shifts.\nchunks = adaptive_semantic_density_chunks(text)\nprint(f"Created {len(chunks)} chunks")';
+      if (s === 'late') return '# Late Chunking benchmark proxy\n# Split source chunks first, then index contextualized text.\nchunks = recursive_source_chunks(text, chunk_size=' + sz + ', overlap=' + ov + ')\nfor chunk in chunks:\n    chunk.index_text = build_section_context(text, chunk.start) + "\\n" + chunk.text\nprint(f"Created {len(chunks)} late chunks")';
+      if (s === 'llm') return '# RAG Chunking Playground - LLM boundary planning\n# The LLM returns source-unit ranges, not rewritten chunk text.\nimport json\nimport os\nimport urllib.parse\nimport urllib.request\n\napi_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY")\nmodel = os.getenv("LLM_CHUNKING_MODEL", os.getenv("LLM_MODEL", "gemma-4-31b-it"))\nprompt = build_source_unit_boundary_prompt(text, target_chars=' + sz * 4 + ')\nurl = "https://generativelanguage.googleapis.com/v1beta/models/" + urllib.parse.quote(model, safe="") + ":generateContent?" + urllib.parse.urlencode({"key": api_key})\nbody = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0, "responseMimeType": "application/json"}}\nrequest = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers={"Content-Type": "application/json"})\nresponse = json.loads(urllib.request.urlopen(request, timeout=90).read().decode("utf-8"))\nplan = json.loads(response["candidates"][0]["content"]["parts"][0]["text"])\nchunks = source_ranges_to_chunks(text, plan["chunks"])\nprint(f"Created {len(chunks)} chunks")';
     }
-    if (fw === 'llamaindex') return '# RAG Chunking Playground (LlamaIndex)\nfrom llama_index.core.node_parser import SentenceSplitter\n\nparser = SentenceSplitter(\n    chunk_size=' + sz + ',\n    chunk_overlap=' + ov + '\n)\nnodes = parser.get_nodes_from_documents(docs)\nprint(f"Created {len(nodes)} nodes")';
     return '# RAG Chunking Playground (Haystack)\nfrom haystack.components.preprocessors import DocumentSplitter\n\nsplitter = DocumentSplitter(\n    split_by="' + (s === 'sentence' ? 'sentence' : 'word') + '",\n    split_length=' + sz + ',\n    split_overlap=' + ov + '\n)\nresult = splitter.run(documents=[doc])'
   }
   function genRegexCode(p) { return '# RAG Chunking Playground — Custom Regex\nimport re\n\npattern = r"' + p + '"\nchunks = re.split(pattern, text)\nchunks = [c.strip() for c in chunks if c.strip()]\nprint(f"Created {len(chunks)} chunks")' }
@@ -2001,9 +2055,17 @@
   // =========================================================================
   // STATE
   // =========================================================================
-  var STRAT_NAMES = { fixed: 'Fixed-Size', recursive: 'Recursive', sentence: 'Sentence', markdown: 'Markdown', regex: 'Regex', semantic: 'Semantic' };
-  var activeStrat = 'recursive', allChunks = {}, allAnalysis = {}, codeFw = 'langchain', codeVis = true, semanticError = '', semanticMeta = null;
+  var STRAT_NAMES = { fixed: 'Fixed-Size', recursive: 'Recursive', sentence: 'Sentence', markdown: 'Markdown', regex: 'Regex', semantic: 'Semantic', adaptive: 'Adaptive Density', late: 'Late Chunking', llm: 'LLM Chunking' };
+  var activeStrat = 'recursive', allChunks = {}, allAnalysis = {}, codeFw = 'langchain', codeVis = true, semanticError = '', semanticMeta = null, adaptiveError = '', adaptiveMeta = null, lateError = '', lateMeta = null, llmError = '', llmMeta = null;
   function getS() { return { size: +document.getElementById('sizeR').value, overlap: +document.getElementById('overR').value, sentences: +document.getElementById('sentR').value } }
+
+  function getStrategyError(id) {
+    return ({ semantic: semanticError, adaptive: adaptiveError, late: lateError, llm: llmError })[id] || '';
+  }
+
+  function getStrategyMeta(id) {
+    return ({ semantic: semanticMeta, adaptive: adaptiveMeta, late: lateMeta, llm: llmMeta })[id] || null;
+  }
 
   async function runAll() {
     document.querySelectorAll('.cblk').forEach(function (b) {
@@ -2016,20 +2078,33 @@
     var text = document.getElementById('textInput').value; if (!text.trim()) return;
     if (text.length > 50000) { text = text.slice(0, 50000); document.getElementById('textInput').value = text; updStats() }
     var s = getS(), regexPat = document.getElementById('regexR').value;
-    semanticError = ''; semanticMeta = null;
+    semanticError = ''; semanticMeta = null; adaptiveError = ''; adaptiveMeta = null; lateError = ''; lateMeta = null; llmError = ''; llmMeta = null;
     var goBtn = document.getElementById('goBtn'), oldBtnText = goBtn.textContent;
-    goBtn.disabled = true; goBtn.textContent = 'Embedding...';
+    goBtn.disabled = true; goBtn.textContent = 'Chunking...';
     try {
-      allChunks = { fixed: chunkFixed(text, s.size, s.overlap), recursive: chunkRecursive(text, s.size, s.overlap), sentence: chunkSentence(text, s.sentences), markdown: chunkMarkdown(text, 3, s.size * 4), semantic: null, regex: regexPat ? chunkRegex(text, regexPat) : null };
-      try { allChunks.semantic = await chunkSemantic(text, s.size, s.overlap) } catch (e) { semanticError = e.message || 'Semantic API unavailable' }
+      allChunks = { fixed: chunkFixed(text, s.size, s.overlap), recursive: chunkRecursive(text, s.size, s.overlap), sentence: chunkSentence(text, s.sentences), markdown: chunkMarkdown(text, 3, s.size * 4), semantic: null, adaptive: null, late: null, llm: null, regex: regexPat ? chunkRegex(text, regexPat) : null };
       allAnalysis = {};['fixed', 'recursive', 'sentence', 'markdown'].forEach(function (k) { allAnalysis[k] = analyzeStrategy(allChunks[k], text) });
-      if (allChunks.semantic) allAnalysis.semantic = analyzeStrategy(allChunks.semantic, text);
       if (allChunks.regex) allAnalysis.regex = analyzeStrategy(allChunks.regex, text);
       var nextActive = allChunks[activeStrat] ? activeStrat : 'recursive';
       document.getElementById('results').classList.add('show'); renderMap(); setActive(nextActive);
       document.getElementById('queryPanel').style.display = 'block';
       var guideCta = document.getElementById('guideCta'); if (guideCta) guideCta.style.display = 'flex';
       setTimeout(function () { document.querySelector('.results').scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100);
+      var remoteJobs = [
+        { id: 'semantic', run: function () { return chunkSemantic(text, s.size, s.overlap) }, fail: function (e) { semanticError = e.message || 'Semantic API unavailable' } },
+        { id: 'adaptive', run: function () { return chunkAdaptiveDensity(text, s.size) }, fail: function (e) { adaptiveError = e.message || 'Adaptive Density API unavailable' } },
+        { id: 'late', run: function () { return chunkLate(text, s.size, s.overlap) }, fail: function (e) { lateError = e.message || 'Late Chunking API unavailable' } },
+        { id: 'llm', run: function () { return chunkLLM(text, s.size) }, fail: function (e) { llmError = e.message || 'LLM API unavailable' } }
+      ];
+      await Promise.all(remoteJobs.map(function (job) {
+        return job.run().then(function (chunks) {
+          allChunks[job.id] = chunks;
+          allAnalysis[job.id] = analyzeStrategy(chunks, text);
+        }).catch(job.fail).finally(function () {
+          renderMap();
+          if (activeStrat === job.id && allChunks[job.id]) setActive(job.id);
+        });
+      }));
     } finally {
       goBtn.disabled = false; goBtn.textContent = oldBtnText;
     }
@@ -2040,15 +2115,15 @@
   // =========================================================================
   function renderMap() {
     var el = document.getElementById('stratMap');
-    var strats = [{ id: 'fixed', name: 'Fixed' }, { id: 'recursive', name: 'Recursive' }, { id: 'sentence', name: 'Sentence' }, { id: 'markdown', name: 'Markdown' }, { id: 'regex', name: 'Regex' }, { id: 'semantic', name: 'Semantic' }];
+    var strats = [{ id: 'fixed', name: 'Fixed' }, { id: 'recursive', name: 'Recursive' }, { id: 'sentence', name: 'Sentence' }, { id: 'markdown', name: 'Markdown' }, { id: 'regex', name: 'Regex' }, { id: 'semantic', name: 'Semantic' }, { id: 'adaptive', name: 'Adaptive' }, { id: 'late', name: 'Late' }, { id: 'llm', name: 'LLM' }];
     var html = '';
     strats.forEach(function (st) {
-      var an = allAnalysis[st.id], chunks = allChunks[st.id], isA = st.id === activeStrat, isSem = st.id === 'semantic', isRegex = st.id === 'regex';
+      var an = allAnalysis[st.id], chunks = allChunks[st.id], isA = st.id === activeStrat, isRemote = ['semantic', 'adaptive', 'late', 'llm'].indexOf(st.id) !== -1, isRegex = st.id === 'regex', strategyError = getStrategyError(st.id);
       html += '<div class="srow' + (isA ? ' active-row' : '') + '" data-strat="' + st.id + '">';
-      html += '<div class="srow-label"><span class="srow-dot"' + (isSem ? ' style="background:var(--purple);box-shadow:0 0 5px var(--purple)"' : '') + '></span><span class="srow-name">' + st.name + '</span></div>';
+      html += '<div class="srow-label"><span class="srow-dot"' + (isRemote ? ' style="background:var(--purple);box-shadow:0 0 5px var(--purple)"' : '') + '></span><span class="srow-name">' + st.name + '</span></div>';
       html += '<div class="cbar">';
-      if (isSem && !chunks && semanticError) {
-        html += '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--neon-r);opacity:.85;text-align:center;padding:0 8px">Semantic API error: ' + escH(semanticError) + '</div>';
+      if (isRemote && !chunks && strategyError) {
+        html += '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--neon-r);opacity:.85;text-align:center;padding:0 8px">' + st.name + ' API error: ' + escH(strategyError) + '</div>';
       } else if (isRegex && !chunks) {
         html += '<div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t2);opacity:.5">Enter a regex pattern above</div>';
       } else if (an && an.chunks.length) {
@@ -2091,7 +2166,7 @@
         var bg = an.summary.stratGrade === 'good' ? 'badge-g' : an.summary.stratGrade === 'acceptable' ? 'badge-y' : 'badge-r';
         var bl = an.summary.stratGrade === 'good' ? '✓ Clean' : an.summary.stratGrade === 'acceptable' ? an.summary.grades.acceptable + '⚠' : an.summary.grades.problematic + '✗';
         html += '<span class="srow-badge ' + bg + '">' + bl + '</span>';
-      } else if (isSem) { html += '<div class="srow-stats"><span class="ss-c">—</span><span class="ss-a">—</span></div><span class="srow-badge badge-ai">API</span>' }
+      } else if (isRemote) { html += '<div class="srow-stats"><span class="ss-c">—</span><span class="ss-a">—</span></div><span class="srow-badge badge-ai">API</span>' }
       else if (isRegex && !chunks) { html += '<div class="srow-stats"><span class="ss-c">—</span><span class="ss-a">—</span></div>' }
       html += '</div>';
     });
@@ -2128,7 +2203,8 @@
     document.getElementById('stTotal').textContent = sm.totalTokens.toLocaleString();
     document.getElementById('gradeRow').innerHTML = '<div class="grade-pill gp-g">🟢 ' + sm.grades.good + '</div><div class="grade-pill gp-y">🟡 ' + sm.grades.acceptable + '</div><div class="grade-pill gp-r">🔴 ' + sm.grades.problematic + '</div>';
     var seen = {}, als = ''; an.chunks.forEach(function (c) { c.signals.forEach(function (s2) { if (s2.type !== 'good' && !seen[s2.text]) { seen[s2.text] = true; var ac = s2.type === 'warn' ? 'alert-warn' : 'alert-err'; als += '<div class="alert ' + ac + '">' + (s2.type === 'warn' ? '⚠' : '✗') + ' ' + s2.text + '</div>' } }) });
-    if (sid === 'semantic' && semanticMeta) als = '<div class="alert alert-ok">Ollama embeddings: ' + escH(semanticMeta.model) + '</div>' + als;
+    var remoteMeta = getStrategyMeta(sid);
+    if (remoteMeta) als = '<div class="alert alert-ok">' + escH(remoteMeta.provider) + ': ' + escH(remoteMeta.model) + '</div>' + als;
     if (!als) als = '<div class="alert alert-ok">✅ All chunks look good</div>'; document.getElementById('stAlerts').innerHTML = als;
     var costs = calcCosts(sm.totalTokens); var chtml = ''; costs.forEach(function (c2) { chtml += '<tr><td class="ct-n">' + c2.name + '</td><td class="ct-p">' + (c2.free ? 'Free' : '$' + c2.cost.toFixed(6)) + '</td></tr>' }); document.getElementById('costTable').innerHTML = chtml;
     var ctx = calcCtx(sm.avgTokens); var xhtml = ''; ctx.forEach(function (c3) { xhtml += '<tr><td class="ct-n">' + c3.name + '</td><td class="ct-p" style="color:var(--teal)">' + c3.pct + '%</td></tr>' }); document.getElementById('ctxTable').innerHTML = xhtml;
@@ -2253,7 +2329,7 @@
     if (!query) return;
 
     var strategies = ['fixed', 'recursive', 'sentence', 'markdown'];
-    if (allChunks.semantic) strategies.push('semantic');
+    ['semantic', 'adaptive', 'late', 'llm'].forEach(function (sid) { if (allChunks[sid]) strategies.push(sid) });
     if (allChunks.regex) strategies.push('regex');
 
     var html = '<div style="display:grid;grid-template-columns:repeat(' + strategies.length + ',1fr);gap:8px">';

@@ -2,9 +2,17 @@
 
 **Ngày tạo:** 2026-05-07
 **Phạm vi:** Giải thích cách đánh giá benchmark chunking cho bộ Markdown bảo hiểm sức khỏe.
-**Report kết quả:** `reports/chunking_benchmark_llm/health_chunking_benchmark.*`
+**Report kết quả:** `reports/chunking_benchmark_adaptive_compare/health_chunking_benchmark.*`
 
 Tài liệu này mô tả cách benchmark được tính, kỹ thuật đánh giá được dùng, số lượng file tham gia đánh giá, và ý nghĩa của các thông số/metric trong report.
+
+## Sơ Đồ Tổng Quan
+
+Ảnh dưới đây tóm tắt toàn bộ flow đánh giá: dữ liệu đầu vào, cách tạo ground truth tự động, 11 phương pháp chunking được chạy, cách chấm retrieval/quality, công thức overall score và kết quả top hiện tại.
+
+![Flow tổng quát đánh giá benchmark chunking](../assets/health_chunking_benchmark_evaluation_flow.png)
+
+File nguồn vector: `docs/assets/health_chunking_benchmark_evaluation_flow.svg`
 
 ---
 
@@ -33,7 +41,7 @@ Full benchmark hiện tại dùng:
 | Tổng ký tự nguồn                | 7,442,006 |
 | Synthetic retrieval cases           |       900 |
 | Retrieval top-k                     |         5 |
-| Số phương pháp được so sánh |        12 |
+| Số phương pháp được so sánh |        11 |
 
 Phân bố case:
 
@@ -128,7 +136,6 @@ Benchmark không cần người ngồi viết câu hỏi. Nó lấy heading và 
 | Project Chunker           | Table-aware chunker hiện có, chạy ở chế độ benchmark không dùng external embedding. |
 | LLM Chunking              | Google GenAI chọn policy chunking, splitter deterministic thực thi trên source gốc.      |
 | Hybrid Recursive+Semantic | Kết hợp section/document boundary, semantic shift nhẹ, và size guard.                    |
-| Adaptive Semantic Density | Tự điều chỉnh size theo semantic density và local topic shift.                          |
 | Hierarchical Parent-Child | Child chunks được index kèm parent heading context.                                      |
 | Late Chunking             | Cắt trước, sau đó bổ sung document/section context vào indexed text.                  |
 
@@ -204,36 +211,6 @@ Ví dụ:
 ```
 
 Nếu section này dài, Hybrid có thể chia thành nhiều chunk nhỏ hơn theo nhóm nội dung, nhưng vẫn nằm trong cùng parent section.
-
-**Adaptive Semantic Density**
-
-Đây là phương pháp tự điều chỉnh size theo "mật độ thông tin".
-
-Ví dụ đoạn dày thông tin:
-
-```text
-Hạn mức phẫu thuật: 100 triệu/năm. Tiền phòng: 2 triệu/ngày.
-ICU: 5 triệu/ngày. Đồng chi trả: 20%. Thời gian chờ: 30 ngày.
-```
-
-Đoạn này nhiều số, nhiều khái niệm, nhiều điều kiện. Chunk nên nhỏ hơn để retrieval chính xác.
-
-Ví dụ đoạn loãng thông tin:
-
-```text
-Chương trình bảo hiểm mang lại sự an tâm cho khách hàng và gia đình
-trong quá trình chăm sóc sức khỏe lâu dài.
-```
-
-Đoạn này ít facts cụ thể. Có thể gom dài hơn mà không mất nhiều precision.
-
-Nói ngắn gọn:
-
-```text
-Nội dung dày facts -> chunk nhỏ hơn.
-Nội dung narrative/loãng facts -> chunk lớn hơn.
-Bảng hoặc danh sách dài -> giữ context rộng hơn.
-```
 
 **Hierarchical Parent-Child**
 
@@ -549,14 +526,14 @@ Overall score không phải điểm chất lượng answer. Nó là điểm ưu 
 LLM stats của full run:
 
 ```text
-llm_calls=1
-llm_cache_hits=0
+llm_calls=0
+llm_cache_hits=104
 llm_fallback_batches=0
 llm_fallback_documents=0
 llm_policy_fallbacks=0
 ```
 
-Nghĩa là LLM policy được tạo thành công, không fallback.
+Nghĩa là full run dùng lại LLM chunking cache đã có, không gọi LLM mới và không fallback.
 
 ---
 
@@ -564,18 +541,17 @@ Nghĩa là LLM policy được tạo thành công, không fallback.
 
 | Rank | Method                    | Overall | Retrieval | Quality | Chunks |
 | ---: | ------------------------- | ------: | --------: | ------: | -----: |
-|    1 | Adaptive Semantic Density |   50.05 |     37.10 |   95.96 |  3,152 |
-|    2 | Late Chunking             |   49.80 |     37.63 |   92.94 |  6,126 |
-|    3 | LLM Chunking              |   49.73 |     38.90 |   88.12 |  1,838 |
-|    4 | Hierarchical Parent-Child |   43.74 |     30.03 |   92.32 |  9,029 |
-|    5 | Recursive                 |   42.66 |     28.38 |   93.25 |  6,126 |
-|    6 | Fixed-size                |   41.18 |     31.97 |   73.84 |  5,350 |
-|    7 | Hybrid Recursive+Semantic |   39.51 |     25.58 |   88.92 |  5,401 |
-|    8 | Regex                     |   38.46 |     24.32 |   88.58 |  4,817 |
-|    9 | Markdown                  |   37.65 |     23.36 |   88.30 |  2,991 |
-|   10 | Sentence                  |   31.25 |     14.93 |   89.11 | 14,904 |
-|   11 | Semantic                  |   27.92 |     12.00 |   84.37 |  3,329 |
-|   12 | Project Chunker           |   18.48 |     23.70 |    0.00 | 13,331 |
+|    1 | Late Chunking             |   49.80 |     37.63 |   92.94 |  6,126 |
+|    2 | LLM Chunking              |   49.73 |     38.90 |   88.12 |  1,838 |
+|    3 | Hierarchical Parent-Child |   43.74 |     30.03 |   92.32 |  9,029 |
+|    4 | Recursive                 |   42.66 |     28.38 |   93.25 |  6,126 |
+|    5 | Fixed-size                |   41.18 |     31.97 |   73.84 |  5,350 |
+|    6 | Hybrid Recursive+Semantic |   39.51 |     25.58 |   88.92 |  5,401 |
+|    7 | Regex                     |   38.46 |     24.32 |   88.58 |  4,817 |
+|    8 | Markdown                  |   37.65 |     23.36 |   88.30 |  2,991 |
+|    9 | Sentence                  |   31.25 |     14.93 |   89.11 | 14,904 |
+|   10 | Semantic                  |   27.92 |     12.00 |   84.37 |  3,329 |
+|   11 | Project Chunker           |   18.48 |     23.70 |    0.00 | 13,331 |
 
 Doc này chỉ giải thích cách tính. Kết quả chi tiết nằm trong JSON/CSV/Markdown report.
 

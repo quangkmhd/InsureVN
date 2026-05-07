@@ -23,7 +23,10 @@ import numpy as np
 from dotenv import dotenv_values
 from langchain_core.embeddings import Embeddings
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 from sklearn.feature_extraction.text import HashingVectorizer, TfidfVectorizer
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -111,6 +114,14 @@ QUESTION_HINTS = {
     "premium": ("phi bao hiem", "bieu phi", "muc phi"),
     "eligibility": ("tuoi", "doi tuong", "tham gia", "nguoi duoc bao hiem"),
 }
+MARKDOWN_HEADERS_TO_SPLIT_ON = [
+    ("#", "h1"),
+    ("##", "h2"),
+    ("###", "h3"),
+]
+MARKDOWN_TABLE_SEPARATOR_RE = re.compile(
+    r"^\|?\s*:?-{2,}:?\s*(?:\|\s*:?-{2,}:?\s*)+\|?$"
+)
 
 
 @dataclass(frozen=True)
@@ -314,6 +325,109 @@ def map_parts_to_chunks(
     return chunks
 
 
+def map_parts_to_table_safe_chunks(
+    *,
+    method: str,
+    document: SourceDocument,
+    parts: list[str],
+) -> list[Chunk]:
+    """Map text splitter outputs back to source spans without cutting tables."""
+    spans: list[tuple[int, int]] = []
+    cursor = 0
+    for raw_part in parts:
+        part = raw_part.strip()
+        if not part:
+            continue
+        start, end = locate_part_span(document.text, part, cursor)
+        cursor = max(cursor, start + 1)
+        spans.append((start, end))
+
+    table_spans = markdown_table_spans(document.text)
+    safe_spans = [
+        expand_span_to_table_boundaries(start, end, table_spans) for start, end in spans
+    ]
+    return span_chunks(
+        method=method,
+        document=document,
+        spans=merge_overlapping_spans(safe_spans),
+    )
+
+
+def markdown_table_spans(text: str) -> list[tuple[int, int]]:
+    """Return source spans for contiguous Markdown table blocks."""
+    line_spans: list[tuple[int, int, str]] = []
+    cursor = 0
+    for line in text.splitlines(keepends=True):
+        line_start = cursor
+        cursor += len(line)
+        line_spans.append((line_start, cursor, line))
+
+    spans: list[tuple[int, int]] = []
+    index = 0
+    while index < len(line_spans):
+        if not is_markdown_table_line(line_spans[index][2]):
+            index += 1
+            continue
+
+        table_start_index = index
+        table_lines: list[str] = []
+        while index < len(line_spans) and is_markdown_table_line(line_spans[index][2]):
+            table_lines.append(line_spans[index][2])
+            index += 1
+
+        has_separator = any(
+            is_markdown_table_separator(line) for line in table_lines[1:]
+        )
+        if len(table_lines) >= 2 and has_separator:
+            spans.append(
+                (
+                    line_spans[table_start_index][0],
+                    line_spans[index - 1][1],
+                )
+            )
+    return spans
+
+
+def is_markdown_table_line(line: str) -> bool:
+    """Detect one Markdown pipe-table line."""
+    stripped = line.strip()
+    return stripped.startswith("|") and stripped.count("|") >= 2
+
+
+def is_markdown_table_separator(line: str) -> bool:
+    """Detect a Markdown pipe-table separator line."""
+    return bool(MARKDOWN_TABLE_SEPARATOR_RE.fullmatch(line.strip()))
+
+
+def expand_span_to_table_boundaries(
+    start: int,
+    end: int,
+    table_spans: list[tuple[int, int]],
+) -> tuple[int, int]:
+    """Expand a chunk span if either boundary lands inside a table."""
+    safe_start = start
+    safe_end = end
+    for table_start, table_end in table_spans:
+        if table_start < safe_start < table_end:
+            safe_start = table_start
+        if table_start < safe_end < table_end:
+            safe_end = table_end
+    return safe_start, safe_end
+
+
+def merge_overlapping_spans(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Merge source spans after table-boundary expansion."""
+    sorted_spans = sorted(spans)
+    merged: list[tuple[int, int]] = []
+    for start, end in sorted_spans:
+        if not merged or start > merged[-1][1]:
+            merged.append((start, end))
+            continue
+        previous_start, previous_end = merged[-1]
+        merged[-1] = (previous_start, max(previous_end, end))
+    return merged
+
+
 def locate_part_span(source_text: str, part: str, cursor: int) -> tuple[int, int]:
     """Locate a possibly context-augmented chunk inside its source document."""
     start = source_text.find(part, cursor)
@@ -470,6 +584,19 @@ def markdown_chunks(document: SourceDocument) -> list[Chunk]:
         )
         spans.append((match.start(), end))
     return span_chunks(method="markdown", document=document, spans=spans)
+
+
+def langchain_markdown_header_chunks(document: SourceDocument) -> list[Chunk]:
+    """Split with LangChain MarkdownHeaderTextSplitter and preserve tables."""
+    splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=MARKDOWN_HEADERS_TO_SPLIT_ON
+    )
+    chunks = splitter.split_text(document.text)
+    return map_parts_to_table_safe_chunks(
+        method="langchain_markdown_header",
+        document=document,
+        parts=[chunk.page_content for chunk in chunks],
+    )
 
 
 REGEX_SPLIT_RE = re.compile(
@@ -1393,6 +1520,7 @@ def build_chunks_by_method(
         "recursive": [],
         "sentence": [],
         "markdown": [],
+        "langchain_markdown_header": [],
         "regex": [],
         "semantic": [],
         "project_chunker": [],
@@ -1421,6 +1549,9 @@ def build_chunks_by_method(
             sentence_chunks(document, sentences_per_chunk=sentences_per_chunk)
         )
         chunks_by_method["markdown"].extend(markdown_chunks(document))
+        chunks_by_method["langchain_markdown_header"].extend(
+            langchain_markdown_header_chunks(document)
+        )
         chunks_by_method["regex"].extend(regex_chunks(document))
         chunks_by_method["semantic"].extend(
             semantic_chunks(document, embeddings=embeddings, size_tokens=size_tokens)
@@ -1814,6 +1945,7 @@ DISPLAY_NAMES = {
     "recursive": "Recursive",
     "sentence": "Sentence",
     "markdown": "Markdown",
+    "langchain_markdown_header": "LangChain MarkdownHeader",
     "regex": "Regex",
     "semantic": "Semantic",
     "project_chunker": "Project Chunker",

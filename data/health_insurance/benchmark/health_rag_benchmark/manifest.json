@@ -1,0 +1,108 @@
+{
+  "version": "health_insurance_rag_benchmark_v1_generated",
+  "input_dir": "/home/quangnhvn34/dev/me/InsureVN/data/health_insurance/health_insurance_markdowns_interpreted_cleaned",
+  "output_dir": "data/health_insurance/benchmark/health_rag_benchmark",
+  "file_count": 103,
+  "candidate_count": 927,
+  "case_count": 150,
+  "provider_slot_count": 19,
+  "provider_slots": [
+    {
+      "slot_id": "gemini_1_1919c4ba",
+      "provider": "gemini",
+      "model": "gemma-4-31b-it"
+    },
+    {
+      "slot_id": "gemini_2_2917ca3d",
+      "provider": "gemini",
+      "model": "gemma-4-31b-it"
+    },
+    {
+      "slot_id": "gemini_3_cd9c572e",
+      "provider": "gemini",
+      "model": "gemma-4-31b-it"
+    },
+    {
+      "slot_id": "openrouter_1_e391e8a6",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    },
+    {
+      "slot_id": "openrouter_2_1905ea39",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    },
+    {
+      "slot_id": "openrouter_3_e4ce9a21",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    },
+    {
+      "slot_id": "openrouter_4_2d262cec",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    },
+    {
+      "slot_id": "openrouter_5_a4d8d401",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    },
+    {
+      "slot_id": "openrouter_6_2c244b21",
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"
+    },
+    {
+      "slot_id": "nvidia_1_6b2f861e",
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it"
+    },
+    {
+      "slot_id": "nvidia_2_eedce8d4",
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it"
+    },
+    {
+      "slot_id": "nvidia_3_785bdc7f",
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it"
+    },
+    {
+      "slot_id": "nvidia_4_f3efbb1d",
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it"
+    },
+    {
+      "slot_id": "nvidia_5_94b61786",
+      "provider": "nvidia",
+      "model": "google/gemma-4-31b-it"
+    },
+    {
+      "slot_id": "ollama_1_df5e51bb",
+      "provider": "ollama",
+      "model": "gemma4:31b-cloud"
+    },
+    {
+      "slot_id": "ollama_2_b08d2d9f",
+      "provider": "ollama",
+      "model": "gemma4:31b-cloud"
+    },
+    {
+      "slot_id": "ollama_3_a89827c4",
+      "provider": "ollama",
+      "model": "gemma4:31b-cloud"
+    },
+    {
+      "slot_id": "ollama_4_b3e05505",
+      "provider": "ollama",
+      "model": "gemma4:31b-cloud"
+    },
+    {
+      "slot_id": "ollama_5_62a3efd3",
+      "provider": "ollama",
+      "model": "gemma4:31b-cloud"
+    }
+  ],
+  "use_llm": false,
+  "elapsed_seconds": 2.97
+}

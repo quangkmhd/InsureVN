@@ -359,13 +359,13 @@ This is a **production-grade product**, not an MVP. Build with:
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-07 5:43pm GMT+7
+# [InsureVN] recent context, 2026-05-08 1:15pm GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 30 obs (9,001t read) | 274,286t work | 97% savings
+Stats: 31 obs (9,747t read) | 278,875t work | 97% savings
 
 ### May 3, 2026
 1 10:14p 🔵 Command execution failed due to bwrap permission error
@@ -402,6 +402,8 @@ Stats: 30 obs (9,001t read) | 274,286t work | 97% savings
 28 " 🔵 Reviewed existing chunking strategies and API for Adaptive Semantic Density integration
 29 4:28p ⚖️ Planned Adaptive Semantic Density implementation strategy
 30 " 🟣 Added Adaptive Semantic Density data models and constants
+### May 8, 2026
+31 11:45a 🟣 New InsureVN Chunking Evaluation System Implemented
 
-Access 274k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 279k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

@@ -24,6 +24,8 @@ from dotenv import dotenv_values
 from langchain_core.embeddings import Embeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import (
+    CharacterTextSplitter,
+    Language,
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
 )
@@ -519,25 +521,178 @@ def recursive_chunks(
     )
 
 
+def databricks_fixed_size_chunks(
+    document: SourceDocument,
+    *,
+    size_tokens: int,
+    overlap_tokens: int,
+) -> list[Chunk]:
+    """Split with the Databricks guide fixed-size paragraph separator."""
+    splitter = CharacterTextSplitter(
+        separator="\n\n",
+        chunk_size=size_tokens * TOKEN_CHARS,
+        chunk_overlap=overlap_tokens * TOKEN_CHARS,
+        length_function=len,
+    )
+    return map_parts_to_chunks(
+        method="databricks_fixed_size",
+        document=document,
+        parts=splitter.split_text(document.text),
+    )
+
+
+def databricks_semantic_chunks(
+    document: SourceDocument,
+    *,
+    size_tokens: int,
+    overlap_tokens: int,
+) -> list[Chunk]:
+    """Split with the Databricks guide logical-boundary recursive splitter."""
+    splitter = RecursiveCharacterTextSplitter(
+        separators=["\n\n", "\n", ". ", " ", ""],
+        chunk_size=size_tokens * TOKEN_CHARS,
+        chunk_overlap=overlap_tokens * TOKEN_CHARS,
+        length_function=len,
+    )
+    return map_parts_to_chunks(
+        method="databricks_semantic",
+        document=document,
+        parts=splitter.split_text(document.text),
+    )
+
+
+def databricks_recursive_code_chunks(
+    document: SourceDocument,
+    *,
+    size_tokens: int,
+    overlap_tokens: int,
+) -> list[Chunk]:
+    """Apply the Databricks guide code-aware recursive splitter."""
+    splitter = RecursiveCharacterTextSplitter.from_language(
+        language=Language.PYTHON,
+        chunk_size=size_tokens * TOKEN_CHARS,
+        chunk_overlap=overlap_tokens * TOKEN_CHARS,
+    )
+    return map_parts_to_chunks(
+        method="databricks_recursive_code",
+        document=document,
+        parts=splitter.split_text(document.text),
+    )
+
+
 SENTENCE_END_RE = re.compile(
     r"(?<=[.!?])\s+(?=[A-Z0-9\"'(\[]|[#*\-]|\n)|\n{2,}",
     re.M,
 )
 
 
+def sentence_like_spans(text: str) -> list[tuple[int, int]]:
+    """Return source spans for sentence-like units."""
+    spans: list[tuple[int, int]] = []
+    cursor = 0
+    for match in SENTENCE_END_RE.finditer(text):
+        end = match.start()
+        if text[cursor:end].strip():
+            spans.append((cursor, end))
+        cursor = match.end()
+    if text[cursor:].strip():
+        spans.append((cursor, len(text)))
+    return spans
+
+
+def analyze_text_complexity(text: str) -> float:
+    """Approximate Databricks adaptive chunk complexity between 0 and 1."""
+    if not text.strip():
+        return 0.0
+
+    words = re.findall(r"\b\w+\b", normalize_for_search(text))
+    lexical_density = len(set(words)) / len(words) if words else 0.0
+    lexical_density = min(1.0, lexical_density / 0.8)
+
+    sentence_spans = sentence_like_spans(text)
+    sentence_lengths = [
+        len(text[start:end].strip()) for start, end in sentence_spans if start < end
+    ]
+    if sentence_lengths:
+        sentence_complexity = min(1.0, statistics.fmean(sentence_lengths) / 200)
+    else:
+        sentence_complexity = 0.0
+
+    return (lexical_density + sentence_complexity) / 2
+
+
+def databricks_adaptive_chunks(
+    document: SourceDocument,
+    *,
+    min_chars: int = 300,
+    max_chars: int = 1000,
+    min_overlap_chars: int = 30,
+    max_overlap_chars: int = 150,
+) -> list[Chunk]:
+    """Split with Databricks adaptive chunk sizing based on text complexity."""
+    sentence_spans = sentence_like_spans(document.text)
+    if not sentence_spans:
+        return []
+
+    chunk_spans: list[tuple[int, int]] = []
+    current_spans: list[tuple[int, int]] = []
+    current_size = 0
+    current_complexity = 0.5
+
+    for sentence_start, sentence_end in sentence_spans:
+        sentence_text = document.text[sentence_start:sentence_end].strip()
+        sentence_length = len(sentence_text)
+        if sentence_length == 0:
+            continue
+
+        sentence_complexity = analyze_text_complexity(sentence_text)
+        if current_spans:
+            current_complexity = (current_complexity + sentence_complexity) / 2
+        else:
+            current_complexity = sentence_complexity
+
+        target_size = max_chars - current_complexity * (max_chars - min_chars)
+        target_overlap = min_overlap_chars + current_complexity * (
+            max_overlap_chars - min_overlap_chars
+        )
+
+        if current_size + sentence_length > target_size and current_spans:
+            chunk_spans.append((current_spans[0][0], current_spans[-1][1]))
+            overlap_size = 0
+            overlap_spans: list[tuple[int, int]] = []
+            for previous_start, previous_end in reversed(current_spans):
+                previous_length = len(
+                    document.text[previous_start:previous_end].strip()
+                )
+                if overlap_size + previous_length <= target_overlap:
+                    overlap_spans.insert(0, (previous_start, previous_end))
+                    overlap_size += previous_length
+                else:
+                    break
+            current_spans = overlap_spans + [(sentence_start, sentence_end)]
+            current_size = sum(
+                len(document.text[start:end].strip()) for start, end in current_spans
+            )
+            continue
+
+        current_spans.append((sentence_start, sentence_end))
+        current_size += sentence_length
+
+    if current_spans:
+        chunk_spans.append((current_spans[0][0], current_spans[-1][1]))
+
+    return span_chunks(
+        method="databricks_adaptive",
+        document=document,
+        spans=chunk_spans,
+    )
+
+
 def sentence_chunks(
     document: SourceDocument, *, sentences_per_chunk: int
 ) -> list[Chunk]:
     """Group a fixed number of sentence-like units."""
-    spans: list[tuple[int, int]] = []
-    cursor = 0
-    for match in SENTENCE_END_RE.finditer(document.text):
-        end = match.start()
-        if document.text[cursor:end].strip():
-            spans.append((cursor, end))
-        cursor = match.end()
-    if document.text[cursor:].strip():
-        spans.append((cursor, len(document.text)))
+    spans = sentence_like_spans(document.text)
 
     chunks: list[Chunk] = []
     for index in range(0, len(spans), sentences_per_chunk):
@@ -828,106 +983,6 @@ def hybrid_recursive_semantic_document_chunks(document: SourceDocument) -> list[
         blocks=blocks,
         ranges=all_ranges,
     )
-
-
-def heading_context_for_offset(document: SourceDocument, offset: int) -> str:
-    """Return the most recent heading path before a source offset."""
-    heading_stack: dict[int, str] = {}
-    for match in re.finditer(r"^(#{1,6})\s+(.+)$", document.text, re.M):
-        if match.start() > offset:
-            break
-        level = len(match.group(1))
-        heading_stack[level] = match.group(2).strip()
-        for stale_level in list(heading_stack):
-            if stale_level > level:
-                heading_stack.pop(stale_level, None)
-    if not heading_stack:
-        return ""
-    return " > ".join(heading_stack[level] for level in sorted(heading_stack))
-
-
-def hierarchical_parent_child_chunks(
-    document: SourceDocument,
-    *,
-    size_tokens: int,
-    overlap_tokens: int,
-) -> list[Chunk]:
-    """Index child chunks with parent heading context."""
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=size_tokens * TOKEN_CHARS,
-        chunk_overlap=overlap_tokens * TOKEN_CHARS,
-        separators=["\n\n", "\n", ". ", "! ", "? ", "; ", ", ", " ", ""],
-    )
-    chunks: list[Chunk] = []
-    for section_start, section_end in document_section_spans(document):
-        section_text = document.text[section_start:section_end]
-        parent_heading = heading_context_for_offset(document, section_start)
-        cursor = 0
-        for raw_part in splitter.split_text(section_text):
-            part = raw_part.strip()
-            if not part:
-                continue
-            relative_start, relative_end = locate_part_span(section_text, part, cursor)
-            cursor = max(cursor, relative_start + 1)
-            start = section_start + relative_start
-            end = section_start + relative_end
-            indexed_text = (
-                f"Parent context: {parent_heading}\n{part}"
-                if parent_heading and parent_heading not in part[:240]
-                else part
-            )
-            chunks.append(
-                Chunk(
-                    chunk_id=f"parent_child:{document.doc_id}:{len(chunks)}",
-                    method="parent_child",
-                    doc_id=document.doc_id,
-                    file_name=document.file_name,
-                    text=indexed_text,
-                    start=start,
-                    end=end,
-                    tokens=estimate_tokens(indexed_text),
-                )
-            )
-    return chunks
-
-
-def late_post_chunks(
-    document: SourceDocument,
-    *,
-    size_tokens: int,
-    overlap_tokens: int,
-) -> list[Chunk]:
-    """Approximate late chunking by adding document context after splitting."""
-    base_chunks = recursive_chunks(
-        document,
-        size_tokens=size_tokens,
-        overlap_tokens=overlap_tokens,
-    )
-    document_terms = " ".join(extract_keywords(document.text, limit=8))
-    contextual_chunks: list[Chunk] = []
-    for chunk in base_chunks:
-        heading_context = heading_context_for_offset(document, chunk.start)
-        context_parts = []
-        if heading_context:
-            context_parts.append(f"Section context: {heading_context}")
-        if document_terms:
-            context_parts.append(f"Document terms: {document_terms}")
-        indexed_text = (
-            "\n".join(context_parts + [chunk.text]) if context_parts else chunk.text
-        )
-        contextual_chunks.append(
-            Chunk(
-                chunk_id=f"late_chunking:{document.doc_id}:{len(contextual_chunks)}",
-                method="late_chunking",
-                doc_id=document.doc_id,
-                file_name=document.file_name,
-                text=indexed_text,
-                start=chunk.start,
-                end=chunk.end,
-                tokens=estimate_tokens(indexed_text),
-            )
-        )
-    return contextual_chunks
 
 
 def semantic_chunks(
@@ -1312,32 +1367,6 @@ def load_or_build_llm_policy(
     return policy
 
 
-def deterministic_block_ranges(blocks: list[SourceBlock]) -> list[dict[str, int]]:
-    """Fallback block grouping for failed LLM chunk planning."""
-    ranges: list[dict[str, int]] = []
-    if not blocks:
-        return ranges
-    current_start = blocks[0].block_id
-    current_end = blocks[0].block_id
-    current_chars = 0
-    for block in blocks:
-        starts_new_heading = block.block_type == "heading" and current_chars >= 600
-        too_large = current_chars + len(block.text) > LLM_MAX_CHARS
-        if current_chars and (starts_new_heading or too_large):
-            ranges.append({"start": current_start, "end": current_end})
-            current_start = block.block_id
-            current_chars = 0
-        current_end = block.block_id
-        current_chars += len(block.text)
-        if current_chars >= LLM_TARGET_CHARS:
-            ranges.append({"start": current_start, "end": current_end})
-            current_start = block.block_id + 1
-            current_chars = 0
-    if current_chars:
-        ranges.append({"start": current_start, "end": current_end})
-    return ranges
-
-
 def policy_block_ranges(
     blocks: list[SourceBlock],
     *,
@@ -1466,17 +1495,17 @@ def llm_chunks(
         except ValueError:
             cache.pop(cache_key, None)
 
+    if llm_policy is None:
+        return []
+
     try:
-        if llm_policy is None:
-            raise RuntimeError("Google GenAI LLM policy is not configured.")
         validated_ranges = validate_ranges(
             policy_block_ranges(blocks, policy=llm_policy),
             blocks,
         )
     except Exception:
-        stats["llm_fallback_batches"] += 1
         stats["llm_fallback_documents"] += 1
-        validated_ranges = deterministic_block_ranges(blocks)
+        return []
     cache[cache_key] = validated_ranges
     save_json_cache(cache_path, cache)
     return ranges_to_chunks(document=document, blocks=blocks, ranges=validated_ranges)
@@ -1499,7 +1528,6 @@ def build_chunks_by_method(
     llm_stats = {
         "llm_calls": 0,
         "llm_cache_hits": 0,
-        "llm_fallback_batches": 0,
         "llm_fallback_documents": 0,
         "llm_policy_fallbacks": 0,
     }
@@ -1517,7 +1545,11 @@ def build_chunks_by_method(
     )
     chunks_by_method: dict[str, list[Chunk]] = {
         "fixed": [],
+        "databricks_fixed_size": [],
         "recursive": [],
+        "databricks_semantic": [],
+        "databricks_recursive_code": [],
+        "databricks_adaptive": [],
         "sentence": [],
         "markdown": [],
         "langchain_markdown_header": [],
@@ -1525,14 +1557,19 @@ def build_chunks_by_method(
         "semantic": [],
         "project_chunker": [],
         "hybrid_recursive_semantic": [],
-        "parent_child": [],
-        "late_chunking": [],
     }
-    if include_llm:
+    if include_llm and llm_policy is not None:
         chunks_by_method["llm"] = []
     for document in documents:
         chunks_by_method["fixed"].extend(
             fixed_chunks(
+                document,
+                size_tokens=size_tokens,
+                overlap_tokens=overlap_tokens,
+            )
+        )
+        chunks_by_method["databricks_fixed_size"].extend(
+            databricks_fixed_size_chunks(
                 document,
                 size_tokens=size_tokens,
                 overlap_tokens=overlap_tokens,
@@ -1544,6 +1581,23 @@ def build_chunks_by_method(
                 size_tokens=size_tokens,
                 overlap_tokens=overlap_tokens,
             )
+        )
+        chunks_by_method["databricks_semantic"].extend(
+            databricks_semantic_chunks(
+                document,
+                size_tokens=size_tokens,
+                overlap_tokens=overlap_tokens,
+            )
+        )
+        chunks_by_method["databricks_recursive_code"].extend(
+            databricks_recursive_code_chunks(
+                document,
+                size_tokens=size_tokens,
+                overlap_tokens=overlap_tokens,
+            )
+        )
+        chunks_by_method["databricks_adaptive"].extend(
+            databricks_adaptive_chunks(document)
         )
         chunks_by_method["sentence"].extend(
             sentence_chunks(document, sentences_per_chunk=sentences_per_chunk)
@@ -1562,21 +1616,7 @@ def build_chunks_by_method(
         chunks_by_method["hybrid_recursive_semantic"].extend(
             hybrid_recursive_semantic_document_chunks(document)
         )
-        chunks_by_method["parent_child"].extend(
-            hierarchical_parent_child_chunks(
-                document,
-                size_tokens=size_tokens,
-                overlap_tokens=overlap_tokens,
-            )
-        )
-        chunks_by_method["late_chunking"].extend(
-            late_post_chunks(
-                document,
-                size_tokens=size_tokens,
-                overlap_tokens=overlap_tokens,
-            )
-        )
-        if include_llm:
+        if "llm" in chunks_by_method:
             chunks_by_method["llm"].extend(
                 llm_chunks(
                     document,
@@ -1942,7 +1982,11 @@ def evaluate_quality(
 
 DISPLAY_NAMES = {
     "fixed": "Fixed-size",
+    "databricks_fixed_size": "Databricks Fixed-size",
     "recursive": "Recursive",
+    "databricks_semantic": "Databricks Semantic",
+    "databricks_recursive_code": "Databricks Code Recursive",
+    "databricks_adaptive": "Databricks Adaptive",
     "sentence": "Sentence",
     "markdown": "Markdown",
     "langchain_markdown_header": "LangChain MarkdownHeader",
@@ -1950,8 +1994,6 @@ DISPLAY_NAMES = {
     "semantic": "Semantic",
     "project_chunker": "Project Chunker",
     "hybrid_recursive_semantic": "Hybrid Recursive+Semantic",
-    "parent_child": "Hierarchical Parent-Child",
-    "late_chunking": "Late Chunking",
     "llm": "LLM Chunking",
 }
 
@@ -1992,6 +2034,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         )
 
     results.sort(key=lambda result: result.overall_score, reverse=True)
+    llm_chunking_enabled = "llm" in chunks_by_method
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "corpus_dir": "<private_health_markdown_corpus>",
@@ -2010,12 +2053,14 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 "SEMANTIC_CHUNKING_EMBEDDING_PROVIDER"
             ),
             "semantic_embedding_model": env.get("SEMANTIC_CHUNKING_EMBEDDING_MODEL"),
-            "llm_chunking_enabled": not args.skip_llm,
+            "llm_chunking_enabled": llm_chunking_enabled,
             "llm_provider": env.get("LLM_PROVIDER"),
             "llm_model": env.get("LLM_MODEL"),
             "llm_cache_path": str(args.llm_cache_path),
             "llm_chunking_mode": (
                 "google_genai_policy_guided_source_preserving_block_grouping"
+                if llm_chunking_enabled
+                else "not_included_without_configured_policy"
             ),
             "llm_stats": llm_stats,
             "rag_chunking_strategy": env.get("RAG_CHUNKING_STRATEGY"),
@@ -2175,7 +2220,7 @@ def print_summary(report: dict[str, Any]) -> None:
             f"{report['settings'].get('llm_model')} "
             f"calls={stats.get('llm_calls', 0)} "
             f"cache_hits={stats.get('llm_cache_hits', 0)} "
-            f"fallback_batches={stats.get('llm_fallback_batches', 0)} "
+            f"fallback_documents={stats.get('llm_fallback_documents', 0)} "
             f"policy_fallbacks={stats.get('llm_policy_fallbacks', 0)}"
         )
     print()

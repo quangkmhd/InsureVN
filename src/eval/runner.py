@@ -19,7 +19,10 @@ from src.eval.embeddings import (
     SentenceTransformerEmbeddings,
     build_semantic_chunking_embeddings,
 )
-from src.eval.evaluators.deepeval_retrieval import DeepEvalRetrievalEvaluator
+from src.eval.evaluators.deepeval_retrieval import (
+    DeepEvalRetrievalEvaluator,
+    ProviderPoolDeepEvalLLM,
+)
 from src.eval.heading_analysis import (
     HeadingLevelRecommendation,
     analyze_heading_structure,
@@ -256,9 +259,24 @@ class ChunkingBenchmarkRunner:
     def _build_evaluator(self) -> DeepEvalRetrievalEvaluator | None:
         if not self.config.run_deepeval:
             return None
+        deepeval_model = self.config.deepeval_model
+        if deepeval_model is None:
+            judge_llm = build_markdown_element_llm(
+                provider=self.config.markdown_element_llm_provider,
+                gemini_model=self.config.markdown_element_gemini_model,
+                gemini_api_keys=self.config.markdown_element_gemini_api_keys,
+                provider_slots=self.config.markdown_element_llm_provider_slots,
+                request_timeout_seconds=(
+                    self.config.markdown_element_llm_timeout_seconds
+                ),
+            )
+            deepeval_model = ProviderPoolDeepEvalLLM(
+                provider_pool_llm=judge_llm,
+                model_name=build_provider_pool_judge_name(self.config),
+            )
         return DeepEvalRetrievalEvaluator(
             threshold=self.config.deepeval_threshold,
-            model=self.config.deepeval_model,
+            model=deepeval_model,
             include_reason=self.config.include_deepeval_reasons,
         )
 
@@ -356,7 +374,10 @@ class ChunkingBenchmarkRunner:
                 ),
                 "top_k": self.config.top_k,
                 "run_deepeval": self.config.run_deepeval,
-                "deepeval_model": self.config.deepeval_model,
+                "deepeval_model": (
+                    self.config.deepeval_model
+                    or build_provider_pool_judge_name(self.config)
+                ),
                 "benchmark_case_count": len(benchmark_cases),
                 "benchmark_case_count_before_corpus_filter": (
                     benchmark_case_count_before_filter
@@ -757,7 +778,8 @@ def build_resume_signature(
         "heading_max_table_rows": config.heading_max_table_rows,
         "top_k": config.top_k,
         "run_deepeval": config.run_deepeval,
-        "deepeval_model": config.deepeval_model,
+        "deepeval_model": config.deepeval_model
+        or build_provider_pool_judge_name(config),
         "deepeval_threshold": config.deepeval_threshold,
         "include_deepeval_reasons": config.include_deepeval_reasons,
         "markdown_element_llm_provider": config.markdown_element_llm_provider,
@@ -785,6 +807,16 @@ def optional_bool(value: object) -> bool | None:
     if value is None:
         return None
     return bool(value)
+
+
+def build_provider_pool_judge_name(config: ChunkingRunConfig) -> str:
+    """Return a stable DeepEval judge name for the configured provider pool."""
+
+    provider_counts = provider_slot_counts(config.markdown_element_llm_provider_slots)
+    provider_count_parts = [
+        f"{provider}:{count}" for provider, count in sorted(provider_counts.items())
+    ]
+    return "provider_pool(" + ",".join(provider_count_parts) + ")"
 
 
 def validate_run_id(run_id: str) -> None:

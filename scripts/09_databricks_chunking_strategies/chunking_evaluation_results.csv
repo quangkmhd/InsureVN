@@ -1,0 +1,7 @@
+strategy,processing_time,keyword_coverage,chunk_coherence,concept_integrity,size_consistency,total_chunks,avg_chunk_size
+fixed_500,0.0,1.0,0.62,1.0,0.83,4,298.75
+fixed_500_overlap_100,0.0,1.0,0.62,1.0,0.83,4,316.5
+semantic_500,0.0,1.0,0.62,1.0,0.83,4,316.5
+adaptive_300_1000,0.02,1.0,1.0,1.0,0.79,4,348.5
+context_enriched_500,0.0,1.0,0.62,1.0,0.89,4,447.0
+ai_driven_10,0.0,1.0,0.62,1.0,0.83,4,298.75

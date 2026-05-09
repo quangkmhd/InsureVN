@@ -31,6 +31,9 @@ DEFINITION_HEADING_PATTERN = re.compile(r"định nghĩa|diễn giải", re.IGNO
 MARKDOWN_TAG_PATTERN = re.compile(r"<[^>]+>|\*\*|__|`")
 WHITESPACE_PATTERN = re.compile(r"\s+")
 TABLE_SUMMARY_PREFIX = "**Tóm tắt bảng:**"
+# Fast eval default: provider-list PDFs can expand into thousands of table chunks.
+MAX_LLM_TABLE_SUMMARY_CHUNKS = 0
+MAX_DETERMINISTIC_SUMMARY_COLUMNS = 8
 
 
 class InsuranceContractHybridLateChunking(ChunkingStrategy):
@@ -218,6 +221,11 @@ def summarize_table_chunks(
 ) -> list[str]:
     """Summarize table chunks concurrently while preserving table order."""
 
+    if len(table_chunks) > MAX_LLM_TABLE_SUMMARY_CHUNKS:
+        return [
+            summarize_table_deterministically(table_chunk)
+            for table_chunk in table_chunks
+        ]
     if len(table_chunks) <= 1 or max_workers <= 1:
         return [summarize_table(table_chunk, llm) for table_chunk in table_chunks]
     with ThreadPoolExecutor(max_workers=min(max_workers, len(table_chunks))) as pool:
@@ -241,7 +249,40 @@ def summarize_table(table_markdown: str, llm: LLM | None) -> str:
         "bảng nói về nội dung gì. Không bịa số liệu ngoài bảng.\n\n"
         f"{table_markdown}"
     )
-    return str(llm.complete(prompt)).strip()
+    return str(llm.complete(prompt, max_tokens=160)).strip()
+
+
+def summarize_table_deterministically(table_markdown: str) -> str:
+    """Build a cheap table summary from Markdown headers and row counts."""
+
+    lines = [line.strip() for line in table_markdown.splitlines() if line.strip()]
+    if not lines:
+        return "Bảng Markdown không có dữ liệu."
+    header_cells = markdown_table_cells(lines[0])
+    body_start_index = 2 if len(lines) > 1 and is_table_separator_line(lines[1]) else 1
+    row_count = max(0, len(lines) - body_start_index)
+    if header_cells:
+        visible_columns = header_cells[:MAX_DETERMINISTIC_SUMMARY_COLUMNS]
+        columns = ", ".join(visible_columns)
+        suffix = "..." if len(header_cells) > len(visible_columns) else ""
+        return (
+            f"Bảng Markdown gồm {row_count} dòng dữ liệu với các cột: "
+            f"{columns}{suffix}."
+        )
+    return f"Bảng Markdown gồm {len(lines)} dòng dữ liệu."
+
+
+def markdown_table_cells(line: str) -> list[str]:
+    """Parse non-empty Markdown table cells from a single line."""
+
+    return [cell.strip() for cell in line.strip().strip("|").split("|") if cell.strip()]
+
+
+def is_table_separator_line(line: str) -> bool:
+    """Return True when a Markdown table line is a separator row."""
+
+    stripped = re.sub(r"[\s|:-]", "", line.strip())
+    return not stripped and "-" in line
 
 
 def extract_definitions(text: str) -> dict[str, str]:

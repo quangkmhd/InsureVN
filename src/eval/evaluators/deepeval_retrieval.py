@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from src.eval.models import BenchmarkCase, MetricScore, RetrievedChunk
 
 JSON_CODE_BLOCK_PATTERN = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+MAX_SCHEMA_ATTEMPTS = 8
 
 
 class ProviderPoolDeepEvalLLM(DeepEvalBaseLLM):
@@ -45,12 +46,23 @@ class ProviderPoolDeepEvalLLM(DeepEvalBaseLLM):
             return self._complete(prompt)
 
         schema_prompt = build_schema_prompt(prompt, schema)
-        response_text = self._complete(schema_prompt)
-        try:
-            return parse_schema_response(response_text, schema)
-        except ValueError:
-            retry_text = self._complete(build_json_retry_prompt(schema_prompt))
-            return parse_schema_response(retry_text, schema)
+        current_prompt = schema_prompt
+        last_error: ValueError | None = None
+        for attempt_number in range(1, MAX_SCHEMA_ATTEMPTS + 1):
+            response_text = self._complete(current_prompt)
+            try:
+                return parse_schema_response(response_text, schema)
+            except ValueError as exc:
+                last_error = exc
+                current_prompt = build_json_retry_prompt(
+                    schema_prompt,
+                    response_text=response_text,
+                    attempt_number=attempt_number,
+                )
+        if last_error is not None:
+            raise last_error
+        msg = "Provider-pool judge did not run schema generation."
+        raise ValueError(msg)
 
     async def a_generate(
         self,
@@ -191,18 +203,29 @@ def build_schema_prompt(prompt: str, schema: type[BaseModel]) -> str:
     return (
         f"{prompt}\n\n"
         "Return only valid JSON. Do not include markdown fences, explanation, "
-        "or text outside the JSON object. The JSON must match this schema:\n"
-        f"{json.dumps(schema_json_schema(schema), ensure_ascii=False)}"
+        "or text outside the JSON object. Do not return the schema itself; "
+        "return one answer instance that matches the schema.\n\n"
+        "Schema:\n"
+        f"{json.dumps(schema_json_schema(schema), ensure_ascii=False)}\n\n"
+        "Answer shape example:\n"
+        f"{json.dumps(schema_instance_skeleton(schema), ensure_ascii=False)}"
     )
 
 
-def build_json_retry_prompt(prompt: str) -> str:
+def build_json_retry_prompt(
+    prompt: str,
+    response_text: str,
+    attempt_number: int,
+) -> str:
     """Build a stricter retry prompt for invalid JSON responses."""
 
+    preview = response_text[:800].replace("\n", " ")
     return (
         f"{prompt}\n\n"
-        "Your previous response was not valid JSON for the requested schema. "
-        "Return only the JSON object now."
+        f"Attempt {attempt_number} returned invalid JSON/schema output:\n"
+        f"{preview}\n\n"
+        "Fix it. Return only one JSON object that is an answer instance for the "
+        "schema. Do not return analysis, bullets, markdown, or the schema."
     )
 
 
@@ -292,6 +315,38 @@ def schema_json_schema(schema: type[BaseModel]) -> dict[str, Any]:
     if hasattr(schema, "model_json_schema"):
         return schema.model_json_schema()
     return schema.schema()
+
+
+def schema_instance_skeleton(schema: type[BaseModel]) -> dict[str, object]:
+    """Return a minimal JSON instance skeleton for a Pydantic schema."""
+
+    json_schema = schema_json_schema(schema)
+    properties = json_schema.get("properties", {})
+    if not isinstance(properties, dict):
+        return {}
+    return {
+        field_name: placeholder_for_json_schema(field_schema)
+        for field_name, field_schema in properties.items()
+    }
+
+
+def placeholder_for_json_schema(field_schema: object) -> object:
+    """Return an example value for one JSON schema field."""
+
+    if not isinstance(field_schema, dict):
+        return ""
+    field_type = field_schema.get("type")
+    if field_type == "number":
+        return 0.5
+    if field_type == "integer":
+        return 1
+    if field_type == "boolean":
+        return False
+    if field_type == "array":
+        return []
+    if field_type == "object":
+        return {}
+    return ""
 
 
 def model_name_for_cache(model: str | DeepEvalBaseLLM | None) -> str:

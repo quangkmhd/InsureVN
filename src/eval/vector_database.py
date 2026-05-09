@@ -25,10 +25,18 @@ class QdrantStrategyDatabase:
         self.collection_name = collection_name
         self.embeddings = embeddings
         self.client: QdrantClient | None = None
+        self._next_point_id = 0
 
     def rebuild(self, chunks: list[TextChunk]) -> None:
         """Create a fresh local Qdrant database and index chunks into it."""
 
+        self.reset(vector_dimension(chunks, self.embeddings))
+        self.upsert_chunks(chunks)
+
+    def reset(self, vector_size: int) -> None:
+        """Create a fresh empty local Qdrant database."""
+
+        self.close()
         if self.database_path.exists():
             shutil.rmtree(self.database_path)
         self.database_path.mkdir(parents=True, exist_ok=True)
@@ -36,17 +44,25 @@ class QdrantStrategyDatabase:
         self.client.create_collection(
             collection_name=self.collection_name,
             vectors_config=VectorParams(
-                size=vector_dimension(chunks, self.embeddings),
+                size=vector_size,
                 distance=Distance.COSINE,
             ),
         )
-        point_id = 0
+        self._next_point_id = 0
+
+    def upsert_chunks(self, chunks: list[TextChunk]) -> int:
+        """Embed and upsert chunks without rebuilding the whole database."""
+
+        if not chunks:
+            return 0
+        if self.client is None:
+            self.reset(vector_dimension(chunks, self.embeddings))
         for batch_start in range(0, len(chunks), self.embeddings.batch_size):
             batch = chunks[batch_start : batch_start + self.embeddings.batch_size]
             vectors = build_batch_vectors(batch, self.embeddings)
             points = [
                 PointStruct(
-                    id=point_id + offset,
+                    id=self._next_point_id + offset,
                     vector=vector,
                     payload=chunk.to_payload(),
                 )
@@ -55,7 +71,8 @@ class QdrantStrategyDatabase:
                 )
             ]
             self.client.upsert(collection_name=self.collection_name, points=points)
-            point_id += len(batch)
+            self._next_point_id += len(batch)
+        return len(chunks)
 
     def search(
         self,
@@ -102,6 +119,14 @@ class QdrantStrategyDatabase:
         if self.client is not None:
             self.client.close()
             self.client = None
+
+    def delete(self) -> None:
+        """Close and remove the local Qdrant database directory."""
+
+        self.close()
+        if self.database_path.exists():
+            shutil.rmtree(self.database_path)
+        self._next_point_id = 0
 
 
 def vector_dimension(chunks: list[TextChunk], embeddings: BenchmarkEmbeddings) -> int:

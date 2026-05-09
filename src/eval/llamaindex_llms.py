@@ -22,6 +22,7 @@ from pydantic import PrivateAttr
 from src.eval.llm_provider_slots import EvalLLMProviderSlot, provider_slot_counts
 
 ResponseT = TypeVar("ResponseT")
+DEFAULT_PROVIDER_POOL_MAX_TOKENS = 2048
 
 
 class RoundRobinGoogleGenAILLM(LLM):
@@ -218,6 +219,7 @@ class ConcurrentProviderPoolLLM(LLM):
     client_count: int
     provider_counts: dict[str, int]
     request_timeout_seconds: float
+    max_slot_attempts: int
 
     _slots: list[EvalLLMProviderSlot] = PrivateAttr(default_factory=list)
     _available: list[bool] = PrivateAttr(default_factory=list)
@@ -229,6 +231,7 @@ class ConcurrentProviderPoolLLM(LLM):
         self,
         slots: Sequence[EvalLLMProviderSlot],
         request_timeout_seconds: float = 120.0,
+        max_slot_attempts: int | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         unique_slots = list(dict.fromkeys(slots))
@@ -240,6 +243,7 @@ class ConcurrentProviderPoolLLM(LLM):
             client_count=len(unique_slots),
             provider_counts=provider_slot_counts(unique_slots),
             request_timeout_seconds=request_timeout_seconds,
+            max_slot_attempts=max(1, max_slot_attempts or len(unique_slots)),
         )
         self._slots = unique_slots
         self._available = [True] * len(unique_slots)
@@ -251,7 +255,7 @@ class ConcurrentProviderPoolLLM(LLM):
 
         return LLMMetadata(
             context_window=32768,
-            num_output=2048,
+            num_output=DEFAULT_PROVIDER_POOL_MAX_TOKENS,
             is_chat_model=True,
             model_name=self.model_name,
         )
@@ -373,7 +377,8 @@ class ConcurrentProviderPoolLLM(LLM):
 
         attempted_indices: set[int] = set()
         errors: list[str] = []
-        while len(attempted_indices) < len(self._slots):
+        attempt_limit = min(len(self._slots), self.max_slot_attempts)
+        while len(attempted_indices) < attempt_limit:
             slot_index = self._acquire_slot(attempted_indices)
             slot = self._slots[slot_index]
             attempted_indices.add(slot_index)
@@ -383,7 +388,10 @@ class ConcurrentProviderPoolLLM(LLM):
                 errors.append(f"{slot.slot_id}: {type(exc).__name__}: {exc}")
             finally:
                 self._release_slot(slot_index)
-        msg = "All configured LLM provider slots failed: " + "; ".join(errors)
+        msg = (
+            "All attempted LLM provider slots failed "
+            f"({len(attempted_indices)}/{len(self._slots)}): " + "; ".join(errors)
+        )
         raise RuntimeError(msg)
 
     def _acquire_slot(self, excluded_indices: set[int]) -> int:
@@ -421,6 +429,9 @@ class ConcurrentProviderPoolLLM(LLM):
         """Call a concrete provider slot."""
 
         temperature = float(kwargs.get("temperature", 0.0))
+        max_tokens = int(
+            kwargs.get("max_tokens", DEFAULT_PROVIDER_POOL_MAX_TOKENS),
+        )
         with httpx.Client(
             transport=self._transport,
             timeout=self.request_timeout_seconds,
@@ -431,6 +442,7 @@ class ConcurrentProviderPoolLLM(LLM):
                     slot=slot,
                     messages=messages,
                     temperature=temperature,
+                    max_tokens=max_tokens,
                 )
                 return extract_openai_compatible_content(response_payload)
             if slot.provider == "ollama":
@@ -439,6 +451,7 @@ class ConcurrentProviderPoolLLM(LLM):
                     slot=slot,
                     messages=messages,
                     temperature=temperature,
+                    max_tokens=max_tokens,
                 )
                 return extract_ollama_content(response_payload)
             if slot.provider == "gemini":
@@ -447,6 +460,7 @@ class ConcurrentProviderPoolLLM(LLM):
                     slot=slot,
                     messages=messages,
                     temperature=temperature,
+                    max_tokens=max_tokens,
                 )
                 return extract_gemini_content(response_payload)
         msg = f"Unsupported LLM provider slot: {slot.provider}"
@@ -473,6 +487,7 @@ def post_openai_compatible_messages(
     slot: EvalLLMProviderSlot,
     messages: list[dict[str, str]],
     temperature: float,
+    max_tokens: int,
 ) -> dict[str, Any]:
     """Post a chat completion request to OpenRouter or NVIDIA NIM."""
 
@@ -493,6 +508,7 @@ def post_openai_compatible_messages(
             "model": slot.model,
             "messages": messages,
             "temperature": temperature,
+            "max_tokens": max_tokens,
             "stream": False,
         },
     )
@@ -505,6 +521,7 @@ def post_ollama_messages(
     slot: EvalLLMProviderSlot,
     messages: list[dict[str, str]],
     temperature: float,
+    max_tokens: int,
 ) -> dict[str, Any]:
     """Post a chat request to an Ollama-compatible endpoint."""
 
@@ -524,7 +541,7 @@ def post_ollama_messages(
             "model": slot.model,
             "messages": messages,
             "stream": False,
-            "options": {"temperature": temperature},
+            "options": {"temperature": temperature, "num_predict": max_tokens},
         },
     )
     raise_for_status_with_body(response)
@@ -536,6 +553,7 @@ def post_gemini_messages(
     slot: EvalLLMProviderSlot,
     messages: list[dict[str, str]],
     temperature: float,
+    max_tokens: int,
 ) -> dict[str, Any]:
     """Post a generateContent request to Gemini Studio."""
 
@@ -558,7 +576,10 @@ def post_gemini_messages(
     ]
     payload: dict[str, Any] = {
         "contents": contents,
-        "generationConfig": {"temperature": temperature},
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": max_tokens,
+        },
     }
     if system_text:
         payload["systemInstruction"] = {"parts": [{"text": system_text}]}
@@ -640,6 +661,7 @@ def build_markdown_element_llm(
     gemini_api_keys: Sequence[str],
     provider_slots: Sequence[EvalLLMProviderSlot] = (),
     request_timeout_seconds: float = 120.0,
+    max_slot_attempts: int | None = None,
 ) -> LLM | None:
     """Build the LLM used by LlamaIndex MarkdownElementNodeParser."""
 
@@ -650,6 +672,7 @@ def build_markdown_element_llm(
         return ConcurrentProviderPoolLLM(
             slots=provider_slots,
             request_timeout_seconds=request_timeout_seconds,
+            max_slot_attempts=max_slot_attempts,
         )
     if normalized_provider in {"gemini", "google_genai"}:
         return RoundRobinGoogleGenAILLM(

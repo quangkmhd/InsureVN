@@ -1,7 +1,7 @@
 # Nhật ký Phát triển Hệ thống InsureVN
 
-**Thời gian cập nhật:** 06/05/2026
-**Trạng thái hệ thống:** Đã hoàn thiện toàn bộ Pipeline xử lý dữ liệu. Nhật ký mã nguồn `src/` được tách riêng.
+**Thời gian cập nhật:** 09/05/2026
+**Trạng thái hệ thống:** Đã hoàn thiện pipeline chunking, embedding, Qdrant, eval retrieval/LLM judge và benchmark v2 theo context cho bảo hiểm sức khỏe. Nhật ký mã nguồn `src/` được tách riêng.
 
 ---
 
@@ -76,9 +76,21 @@ Nhật ký này chỉ ghi tiến độ xử lý dữ liệu theo 6 giai đoạn 
 | Script | Công dụng |
 | :--- | :--- |
 | `05_training_eval/02_train_gemma4.py` | Huấn luyện mô hình Gemma4. |
+| `05_training_eval/06_generate_health_rag_context_benchmark_v2.py` | Sinh benchmark v2 gồm 100 câu hỏi RAG theo context 1/2/3 chunk và table context, dùng 21 provider slots song song và không fallback deterministic. |
+| `05_training_eval/run_llm_retrieval_judge_eval.py` | Chấm AI cho kết quả retrieval đã có, dùng provider pool không OpenAI và có resume khi provider timeout/rate-limit. |
+| `05_training_eval/run_streaming_chunking_embedding_qdrant.py` | Chạy streaming chunking + embedding + Qdrant, có cache chunk boundary để không phải gọi lại LLM chunking. |
 | `06_db_ingestion/02_ingest_with_mapping.py` | Đẩy dữ liệu vào SQL dựa trên mapping AI. |
 | `06_db_ingestion/09_index_all_markdowns.py` | Pipeline đẩy dữ liệu đồng thời vào Vector & Graph. |
 | `06_db_ingestion/04_index_qdrant_documents.py` | Index tài liệu vào Qdrant. |
+
+### 4.3.1. Báo cáo Eval / Vector Ingestion
+| Ngày | Báo cáo | Nội dung |
+| :--- | :--- | :--- |
+| 2026-05-08 | [`2026-05-08-llm-chunking-cache-qdrant-run-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-llm-chunking-cache-qdrant-run-report.md) | Hoàn tất 2 chiến lược LLM chunking trên 86 expected-source files, lưu chunk boundary cache và Qdrant per-strategy. |
+| 2026-05-08 | [`2026-05-08-health-rag-context-benchmark-v2-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-health-rag-context-benchmark-v2-report.md) | Tạo benchmark v2 riêng gồm 100 case: 30 single-context, 30 two-context, 30 three-context, 10 table-context; verify nguồn và quote line span đạt 0 lỗi. |
+| 2026-05-09 | [`2026-05-09-context-benchmark-v2-all-chunking-eval-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-report.md) | Đánh giá 9 kỹ thuật chunking trên benchmark v2 mới, 100 case, 42 source files; `hierarchical_header_recursive` đứng đầu required-source recall@5 và line-overlap recall@5. |
+| 2026-05-08 | [`2026-05-08-all-techniques-full-retrieval-eval-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-all-techniques-full-retrieval-eval-report.md) | Đánh giá retrieval top-k=5 cho toàn bộ 9 kỹ thuật chunking trên 150 benchmark cases. |
+| 2026-05-08 | [`2026-05-08-all-techniques-full-llm-judge-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-all-techniques-full-llm-judge-report.md) | Chấm AI toàn bộ 1350 strategy-case retrieval rows, dùng Gemini/NVIDIA/Ollama provider pool, 1350/1350 completed. |
 
 ### 4.4. Knowledge Graph Discovery & Build
 | Script | Công dụng |

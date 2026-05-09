@@ -12,6 +12,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_SPARSE_MODEL", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_OVERLAP", raising=False)
+    monkeypatch.delenv("RAG_CHUNKING_STRATEGY", raising=False)
     monkeypatch.delenv("RAG_PARENT_SECTION_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TOP_K", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", raising=False)
@@ -32,6 +33,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert isinstance(settings.RAG_CHILD_CHUNK_MAX_CHARS, int)
     assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 1200
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 150
+    assert settings.RAG_CHUNKING_STRATEGY == "hierarchical_header_recursive"
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 6000
     assert settings.RAG_RETRIEVAL_TOP_K == 5
     assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 30.0
@@ -62,6 +64,12 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
 
 
 def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
+    monkeypatch.delenv("OLLAMA_BASE_URLS", raising=False)
     monkeypatch.delenv("NEO4J_URI", raising=False)
     monkeypatch.delenv("NEO4J_USERNAME", raising=False)
     monkeypatch.delenv("NEO4J_PASSWORD", raising=False)
@@ -158,8 +166,8 @@ def test_langfuse_settings_prefer_current_base_url(monkeypatch) -> None:
     assert settings.LANGFUSE_HOST == "http://langfuse.local:3000"
 
 
-def test_agent_llm_settings_do_not_inherit_global_llm_config(monkeypatch) -> None:
-    """Verify agent-owned settings remain isolated from global LLM settings."""
+def test_agent_llm_settings_inherit_global_llm_config(monkeypatch) -> None:
+    """Verify agent-owned settings inherit shared global LLM defaults."""
     monkeypatch.setenv("LLM_PROVIDER", "nvidia")
     monkeypatch.setenv("LLM_MODEL", "global-model")
     monkeypatch.setenv("LLM_API_KEY", "global-key")
@@ -183,19 +191,19 @@ def test_agent_llm_settings_do_not_inherit_global_llm_config(monkeypatch) -> Non
 
     settings = Settings()
 
-    assert settings.DATABASE_LLM_PROVIDER == "ollama"
-    assert settings.DATABASE_LLM_MODEL == "gemma4:31b-cloud"
-    assert settings.DATABASE_LLM_API_KEY == ""
-    assert settings.DATABASE_LLM_BASE_URL == "http://localhost:11434"
-    assert settings.SEARCH_LLM_PROVIDER == "ollama"
-    assert settings.SEARCH_LLM_MODEL == "gemma4:31b-cloud"
-    assert settings.SEARCH_LLM_API_KEY == ""
-    assert settings.SEARCH_LLM_BASE_URL == "http://localhost:11434"
-    assert settings.KG_EXTRACTION_LLM_PROVIDER == "ollama"
-    assert settings.KG_EXTRACTION_LLM_MODEL == "gemma4:31b-cloud"
-    assert settings.KG_EXTRACTION_LLM_API_KEY == ""
-    assert settings.KG_EXTRACTION_LLM_BASE_URL == "http://localhost:11434"
-    assert settings.KG_CYPHER_QA_LLM_PROVIDER == "ollama"
-    assert settings.KG_CYPHER_QA_LLM_MODEL == "gemma4:31b-cloud"
-    assert settings.KG_CYPHER_QA_LLM_API_KEY == ""
-    assert settings.KG_CYPHER_QA_LLM_BASE_URL == "http://localhost:11434"
+    assert settings.DATABASE_LLM_PROVIDER == "nvidia"
+    assert settings.DATABASE_LLM_MODEL == "global-model"
+    assert settings.DATABASE_LLM_API_KEY == "global-key"
+    assert settings.DATABASE_LLM_BASE_URL == "https://global.example"
+    assert settings.SEARCH_LLM_PROVIDER == "nvidia"
+    assert settings.SEARCH_LLM_MODEL == "global-model"
+    assert settings.SEARCH_LLM_API_KEY == "global-key"
+    assert settings.SEARCH_LLM_BASE_URL == "https://global.example"
+    assert settings.KG_EXTRACTION_LLM_PROVIDER == "nvidia"
+    assert settings.KG_EXTRACTION_LLM_MODEL == "global-model"
+    assert settings.KG_EXTRACTION_LLM_API_KEY == "global-key"
+    assert settings.KG_EXTRACTION_LLM_BASE_URL == "https://global.example"
+    assert settings.KG_CYPHER_QA_LLM_PROVIDER == "nvidia"
+    assert settings.KG_CYPHER_QA_LLM_MODEL == "global-model"
+    assert settings.KG_CYPHER_QA_LLM_API_KEY == "global-key"
+    assert settings.KG_CYPHER_QA_LLM_BASE_URL == "https://global.example"

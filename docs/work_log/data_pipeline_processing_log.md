@@ -1,7 +1,7 @@
 # Nhật ký Phát triển Hệ thống InsureVN
 
 **Thời gian cập nhật:** 09/05/2026
-**Trạng thái hệ thống:** Đã hoàn thiện pipeline chunking, embedding, Qdrant, eval retrieval/LLM judge và benchmark v2 theo context cho bảo hiểm sức khỏe. Nhật ký mã nguồn `src/` được tách riêng.
+**Trạng thái hệ thống:** Đã hoàn thiện pipeline chunking, embedding, Qdrant, eval retrieval/LLM judge và benchmark v2 theo context cho bảo hiểm sức khỏe. Chiến lược chunking mặc định đã được chuyển sang `hierarchical_header_recursive`; full vector/graph run cần cấu hình lại quota embedding và KG model để hoàn tất. Nhật ký mã nguồn `src/` được tách riêng.
 
 ---
 
@@ -90,6 +90,7 @@ Nhật ký này chỉ ghi tiến độ xử lý dữ liệu theo 6 giai đoạn 
 | 2026-05-08 | [`2026-05-08-health-rag-context-benchmark-v2-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-health-rag-context-benchmark-v2-report.md) | Tạo benchmark v2 riêng gồm 100 case: 30 single-context, 30 two-context, 30 three-context, 10 table-context; verify nguồn và quote line span đạt 0 lỗi. |
 | 2026-05-09 | [`2026-05-09-context-benchmark-v2-all-chunking-eval-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-report.md) | Đánh giá 9 kỹ thuật chunking trên benchmark v2 mới, 100 case, 42 source files; `hierarchical_header_recursive` đứng đầu required-source recall@5 và line-overlap recall@5. |
 | 2026-05-09 | [`2026-05-09-final-chunking-900-150-vs-512-50-decision-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-09-final-chunking-900-150-vs-512-50-decision-report.md) | Kết luận không merge nhánh table-aware; `DEFAULT_CHUNK_SIZE=900` và `DEFAULT_CHUNK_OVERLAP=150` tốt hơn `512/50` trong benchmark hiện tại, và `hierarchical_header_recursive` tốt hơn phương pháp kết hợp về source recall tổng. |
+| 2026-05-09 | [`2026-05-09-hierarchical-default-chunking-indexing-run-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-09-hierarchical-default-chunking-indexing-run-report.md) | Chuyển default chunking sang `hierarchical_header_recursive`, thêm metadata QA, dry-run 107 tài liệu/9933 chunks không thiếu/rỗng/null metadata; full Qdrant/Graph run bị chặn bởi Gemini embedding quota và KG model default chưa authorized. |
 | 2026-05-08 | [`2026-05-08-all-techniques-full-retrieval-eval-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-all-techniques-full-retrieval-eval-report.md) | Đánh giá retrieval top-k=5 cho toàn bộ 9 kỹ thuật chunking trên 150 benchmark cases. |
 | 2026-05-08 | [`2026-05-08-all-techniques-full-llm-judge-report.md`](file:///home/quangnhvn34/dev/me/InsureVN/docs/work_log/2026-05-08-all-techniques-full-llm-judge-report.md) | Chấm AI toàn bộ 1350 strategy-case retrieval rows, dùng Gemini/NVIDIA/Ollama provider pool, 1350/1350 completed. |
 

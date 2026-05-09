@@ -116,3 +116,27 @@ def test_context_enriched_and_fake_ai_methods_are_not_reported() -> None:
     }
 
     assert excluded_methods.isdisjoint(script.DISPLAY_NAMES)
+
+
+def test_project_chunker_defaults_to_hierarchical_strategy() -> None:
+    script = _load_benchmark_script()
+    markdown_text = (
+        "# Bao hiem suc khoe\n\n"
+        "Mo dau.\n\n"
+        "## Quyen loi noi tru\n\n"
+        "Chi tra chi phi nam vien."
+    )
+    document = script.SourceDocument(
+        doc_id="bao-hiem-suc-khoe",
+        file_name="bao_hiem_suc_khoe.md",
+        path="bao_hiem_suc_khoe.md",
+        text=markdown_text,
+    )
+
+    chunks = script.project_chunker_chunks(document, env={})
+
+    assert script.project_chunking_strategy({}) == "hierarchical_header_recursive"
+    assert chunks
+    assert any("Chi tra chi phi nam vien" in chunk.text for chunk in chunks)
+    assert all(chunk.method == "project_chunker" for chunk in chunks)
+    assert all(0 <= chunk.start < chunk.end <= len(document.text) for chunk in chunks)

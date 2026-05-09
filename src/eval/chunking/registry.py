@@ -26,7 +26,7 @@ from src.eval.chunking.markdown_then_semantic import MarkdownThenSemanticChunkin
 from src.eval.chunking.semantic import SemanticChunking
 from src.eval.chunking.table_as_one_hybrid import TableAsOneHybridChunking
 
-DEFAULT_INSURANCE_STRATEGY_NAMES = (
+ACTIVE_INSURANCE_STRATEGY_NAMES = (
     "semantic_embedding",
     "heading_level_table_safe",
     "markdown_header_recursive_table",
@@ -37,6 +37,7 @@ DEFAULT_INSURANCE_STRATEGY_NAMES = (
     "llamaindex_markdown_element",
     "hierarchical_header_recursive",
 )
+DEFAULT_INSURANCE_STRATEGY_NAMES = ("hierarchical_header_recursive",)
 
 
 def available_strategy_specs() -> list[StrategySpec]:
@@ -226,10 +227,10 @@ def select_strategies(
 def validate_strategy_names(names: Iterable[str]) -> None:
     """Raise if any requested strategy is not active."""
 
-    known_names = set(DEFAULT_INSURANCE_STRATEGY_NAMES)
+    known_names = set(ACTIVE_INSURANCE_STRATEGY_NAMES)
     unknown = sorted(set(names) - known_names)
     if unknown:
-        known = ", ".join(DEFAULT_INSURANCE_STRATEGY_NAMES)
+        known = ", ".join(ACTIVE_INSURANCE_STRATEGY_NAMES)
         msg = f"Unknown chunking strategies: {unknown}. Known strategies: {known}"
         raise ValueError(msg)
 

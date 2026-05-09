@@ -141,6 +141,10 @@ def test_run_indexing_pipeline_indexes_qdrant_and_imports_neo4j(tmp_path) -> Non
     assert report["chunk_count"] == len(qdrant_retriever.indexed_chunks)
     assert report["qdrant_indexed"] is True
     assert report["neo4j_imported"] is True
+    assert report["chunk_metadata_quality"]["required_metadata_valid"] is True
+    assert report["chunk_metadata_quality"]["missing_required_counts"] == {}
+    assert report["chunk_metadata_quality"]["empty_required_counts"] == {}
+    assert report["chunk_metadata_quality"]["invalid_required_counts"] == {}
     assert qdrant_retriever.recreate is True
     assert neo4j_store.schema_ensured is True
     assert len(neo4j_store.graph_documents) == 1
@@ -181,3 +185,150 @@ def test_run_indexing_pipeline_skips_graph_extraction_when_graph_outputs_disable
     assert report["document_count"] == 1
     assert report["graph_document_count"] == 0
     assert report["neo4j_imported"] is False
+
+
+def test_run_indexing_pipeline_accepts_hierarchical_chunking_strategy(
+    tmp_path,
+) -> None:
+    script = _load_indexer_script()
+    markdown_dir = tmp_path / "health_insurance_markdowns"
+    markdown_path = markdown_dir / "aia.com.vn" / "policy" / "policy.md"
+    markdown_path.parent.mkdir(parents=True)
+    markdown_path.write_text(
+        (
+            "# Bao hiem suc khoe\n\n"
+            "Mo dau.\n\n"
+            "## Quyen loi noi tru\n\n"
+            "Chi tra chi phi nam vien."
+        ),
+        encoding="utf-8",
+    )
+
+    report = script.run_indexing_pipeline(
+        markdown_dir=markdown_dir,
+        table_mapping_path=None,
+        ingestion_version="test-v1",
+        dry_run=True,
+        skip_qdrant=True,
+        skip_neo4j=True,
+        graph_json_path=None,
+        chunking_strategy="hierarchical_header_recursive",
+    )
+
+    assert report["document_count"] == 1
+    assert report["chunk_count"] > 0
+    assert report["chunk_metadata_quality"]["required_metadata_valid"] is True
+    assert report["chunk_metadata_quality"]["missing_required_counts"] == {}
+    assert report["chunk_metadata_quality"]["empty_required_counts"] == {}
+    assert report["chunk_metadata_quality"]["invalid_required_counts"] == {}
+
+
+def test_run_indexing_pipeline_uses_default_hierarchical_strategy(
+    tmp_path,
+) -> None:
+    script = _load_indexer_script()
+    markdown_dir = tmp_path / "health_insurance_markdowns"
+    markdown_path = markdown_dir / "aia.com.vn" / "policy" / "policy.md"
+    markdown_path.parent.mkdir(parents=True)
+    markdown_path.write_text(
+        "# Bao hiem suc khoe\n\n## Quyen loi noi tru\n\nChi tra chi phi nam vien.",
+        encoding="utf-8",
+    )
+
+    class FakeQdrantRetriever:
+        def __init__(self) -> None:
+            self.indexed_chunks = []
+
+        def setup_collection(self, *, recreate: bool = False) -> None:
+            self.recreate = recreate
+
+        def index_chunks(self, chunks) -> None:
+            self.indexed_chunks.extend(chunks)
+
+    qdrant_retriever = FakeQdrantRetriever()
+
+    report = script.run_indexing_pipeline(
+        markdown_dir=markdown_dir,
+        table_mapping_path=None,
+        ingestion_version="test-v1",
+        qdrant_retriever=qdrant_retriever,
+        skip_neo4j=True,
+        graph_json_path=None,
+    )
+
+    assert report["qdrant_indexed"] is True
+    assert qdrant_retriever.indexed_chunks
+    assert all(
+        chunk.payload["chunking_strategy"] == "hierarchical_header_recursive"
+        for chunk in qdrant_retriever.indexed_chunks
+    )
+    assert report["chunk_metadata_quality"]["required_metadata_valid"] is True
+
+
+def test_chunk_metadata_quality_report_flags_missing_hierarchical_lineage() -> None:
+    script = _load_indexer_script()
+    chunk = script.ChildChunk(
+        chunk_id="chunk-1",
+        parent_section_id="section-1",
+        text="No lineage.",
+        payload={
+            "company_code": "AIA",
+            "document_id": "doc-aia-health",
+            "document_type": "policy",
+            "document_name": "AIA Health Policy",
+            "product_line": "health",
+            "section_type": "benefit",
+            "chunk_index": 0,
+            "parent_section_id": "section-1",
+            "file_name": "health.md",
+            "content_hash": "abc",
+            "ingestion_version": "test-v1",
+        },
+    )
+
+    report = script.build_chunk_metadata_quality_report(
+        [chunk],
+        expected_chunking_strategy="hierarchical_header_recursive",
+    )
+
+    assert report["required_metadata_valid"] is False
+    assert report["missing_required_counts"]["chunking_strategy"] == 1
+    assert report["missing_required_counts"]["header_hierarchy"] == 1
+    assert report["missing_required_counts"]["header_path"] == 1
+    assert report["missing_required_counts"]["header_level"] == 1
+    assert report["missing_required_counts"]["section_heading"] == 1
+
+
+def test_chunk_metadata_quality_report_flags_blank_required_values() -> None:
+    script = _load_indexer_script()
+    chunk = script.ChildChunk(
+        chunk_id="chunk-1",
+        parent_section_id="section-1",
+        text="Blank metadata.",
+        payload={
+            "company_code": " ",
+            "document_id": "doc-aia-health",
+            "document_type": "policy",
+            "document_name": "AIA Health Policy",
+            "product_line": "health",
+            "section_type": "benefit",
+            "chunk_index": 0,
+            "parent_section_id": "section-1",
+            "file_name": "health.md",
+            "content_hash": "abc",
+            "ingestion_version": "test-v1",
+            "chunking_strategy": "hierarchical_header_recursive",
+            "header_hierarchy": [],
+            "header_path": "AIA Health Policy",
+            "header_level": 0,
+            "section_heading": "AIA Health Policy",
+        },
+    )
+
+    report = script.build_chunk_metadata_quality_report(
+        [chunk],
+        expected_chunking_strategy="hierarchical_header_recursive",
+    )
+
+    assert report["required_metadata_valid"] is False
+    assert report["empty_required_counts"]["company_code"] == 1

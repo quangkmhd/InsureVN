@@ -35,7 +35,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.services.document_chunker import ChunkingMetrics, DocumentChunker  # noqa: E402
+from src.services.document_chunker import DocumentChunker  # noqa: E402
 
 DEFAULT_SOURCE_ROOT = next(
     (parent.parent for parent in REPO_ROOT.parents if parent.name == ".worktrees"),
@@ -48,6 +48,7 @@ DEFAULT_CHUNK_SIZE_TOKENS = 400
 DEFAULT_OVERLAP_TOKENS = 50
 DEFAULT_SENTENCES_PER_CHUNK = 3
 DEFAULT_MAX_CASES = 900
+DEFAULT_PROJECT_CHUNKING_STRATEGY = "hierarchical_header_recursive"
 DEFAULT_LLM_CHUNK_CACHE_PATH = (
     Path("reports/chunking_benchmark_llm") / "llm_chunk_cache.json"
 )
@@ -1022,10 +1023,11 @@ def project_chunker_chunks(
     env: dict[str, str | None],
 ) -> list[Chunk]:
     """Split with the project table-aware DocumentChunker configuration."""
+    chunking_strategy = project_chunking_strategy(env)
     chunker = DocumentChunker(
         child_chunk_chars=int(env.get("RAG_CHILD_CHUNK_MAX_CHARS") or "1200"),
         child_chunk_overlap=int(env.get("RAG_CHILD_CHUNK_OVERLAP") or "150"),
-        chunking_strategy=env.get("RAG_CHUNKING_STRATEGY") or "hybrid_semantic",
+        chunking_strategy=chunking_strategy,
         semantic_embedding_provider=None,
         semantic_target_chars=int(env.get("RAG_SEMANTIC_TARGET_CHARS") or "1400"),
         semantic_max_chars=int(env.get("RAG_SEMANTIC_MAX_CHARS") or "3500"),
@@ -1049,11 +1051,17 @@ def project_chunker_chunks(
         "file_name": document.file_name,
         "ingestion_version": "chunking-benchmark-2026-05-07",
     }
-    chunking_metrics = ChunkingMetrics()
-    parts: list[str] = []
-    for parent_section in chunker._parse_parent_sections(document.text, metadata):
-        parts.extend(chunker._split_text(parent_section.text, chunking_metrics))
-    return map_parts_to_chunks(method="project_chunker", document=document, parts=parts)
+    document_chunks = chunker.chunk_markdown(document.text, metadata=metadata)
+    return map_parts_to_chunks(
+        method="project_chunker",
+        document=document,
+        parts=[chunk.text for chunk in document_chunks.child_chunks],
+    )
+
+
+def project_chunking_strategy(env: dict[str, str | None]) -> str:
+    """Return the benchmark project chunker strategy with current default."""
+    return env.get("RAG_CHUNKING_STRATEGY") or DEFAULT_PROJECT_CHUNKING_STRATEGY
 
 
 def source_hash(text: str) -> str:
@@ -2063,7 +2071,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
                 else "not_included_without_configured_policy"
             ),
             "llm_stats": llm_stats,
-            "rag_chunking_strategy": env.get("RAG_CHUNKING_STRATEGY"),
+            "rag_chunking_strategy": project_chunking_strategy(env),
             "rag_child_chunk_max_chars": env.get("RAG_CHILD_CHUNK_MAX_CHARS"),
             "rag_child_chunk_overlap": env.get("RAG_CHILD_CHUNK_OVERLAP"),
             "project_chunker_benchmark_mode": (

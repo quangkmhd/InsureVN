@@ -23,7 +23,14 @@ from qdrant_client import QdrantClient
 from src.core.config import settings
 from src.core.logger import get_logger
 from src.core.vietnamese_text import slugify_vietnamese, transliterate_vietnamese
-from src.services.document_chunker import ChildChunk, DocumentChunker
+from src.services.document_chunker import (
+    HIERARCHICAL_NON_EMPTY_QDRANT_PAYLOAD_FIELDS,
+    HIERARCHICAL_QDRANT_PAYLOAD_FIELDS,
+    NON_EMPTY_QDRANT_PAYLOAD_FIELDS,
+    REQUIRED_QDRANT_PAYLOAD_FIELDS,
+    ChildChunk,
+    DocumentChunker,
+)
 from src.services.knowledge_graph.graph_json_serializer import GraphJsonSerializer
 from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
 from src.services.knowledge_graph.llm_graph_document_extractor import (
@@ -208,7 +215,16 @@ def run_indexing_pipeline(
     document_paths = discover_markdown_documents(markdown_dir, limit=limit)
     table_mapping = load_table_mapping(table_mapping_path)
     dense_embedding_provider = semantic_embedding_provider
-    if dense_embedding_provider is None and not dry_run and not skip_qdrant:
+    needs_dense_embedding_provider = (
+        not dry_run
+        and not skip_qdrant
+        and (
+            qdrant_retriever is None
+            or (chunking_strategy or settings.RAG_CHUNKING_STRATEGY)
+            == "hybrid_semantic"
+        )
+    )
+    if dense_embedding_provider is None and needs_dense_embedding_provider:
         dense_embedding_provider = build_dense_embedding_provider()
 
     chunker = build_document_chunker(
@@ -277,6 +293,10 @@ def run_indexing_pipeline(
         "chunk_export_path": str(chunk_export_path) if chunk_export_path else None,
         "graph_json_path": str(graph_json_path) if graph_json_path else None,
         "graph_report": graph_report,
+        "chunk_metadata_quality": build_chunk_metadata_quality_report(
+            index_inputs.chunks,
+            expected_chunking_strategy=chunker.chunking_strategy,
+        ),
     }
     logger.info("Completed health Markdown RAG indexing", extra=report)
     return report
@@ -312,7 +332,7 @@ def build_dense_embedding_provider() -> GoogleGenAIEmbeddingProvider:
         )
     return GoogleGenAIEmbeddingProvider(
         model_name=settings.RAG_EMBEDDING_MODEL,
-        google_api_key=settings.GOOGLE_API_KEY,
+        google_api_key=settings.RAG_EMBEDDING_API_KEY,
         vector_size=settings.RAG_DENSE_VECTOR_SIZE,
         batch_size=settings.RAG_EMBEDDING_BATCH_SIZE,
         document_task_type=settings.RAG_EMBEDDING_TASK_TYPE_DOCUMENT,
@@ -415,6 +435,85 @@ def write_chunk_export(chunks: list[ChildChunk], output_path: Path) -> None:
     )
 
 
+def build_chunk_metadata_quality_report(
+    chunks: list[ChildChunk],
+    *,
+    expected_chunking_strategy: str | None = None,
+) -> dict[str, Any]:
+    """Summarize missing and null chunk metadata before indexing."""
+    required_fields = list(REQUIRED_QDRANT_PAYLOAD_FIELDS)
+    non_empty_fields = list(NON_EMPTY_QDRANT_PAYLOAD_FIELDS)
+    if expected_chunking_strategy == "hierarchical_header_recursive":
+        required_fields.extend(HIERARCHICAL_QDRANT_PAYLOAD_FIELDS)
+        non_empty_fields.extend(HIERARCHICAL_NON_EMPTY_QDRANT_PAYLOAD_FIELDS)
+
+    missing_required_counts = dict.fromkeys(required_fields, 0)
+    empty_required_counts = dict.fromkeys(non_empty_fields, 0)
+    invalid_required_counts: dict[str, int] = {}
+    optional_null_counts: dict[str, int] = {}
+    for chunk in chunks:
+        payload = chunk.payload
+        for field in required_fields:
+            if field not in payload:
+                missing_required_counts[field] += 1
+        for field in non_empty_fields:
+            if field in payload and is_missing_or_blank(payload.get(field)):
+                empty_required_counts[field] += 1
+        if expected_chunking_strategy == "hierarchical_header_recursive":
+            update_hierarchical_metadata_invalid_counts(
+                payload,
+                invalid_required_counts,
+            )
+        for field, value in payload.items():
+            if value is None and field not in required_fields:
+                optional_null_counts[field] = optional_null_counts.get(field, 0) + 1
+    missing_required_counts = {
+        field: count for field, count in missing_required_counts.items() if count
+    }
+    empty_required_counts = {
+        field: count for field, count in empty_required_counts.items() if count
+    }
+    return {
+        "chunk_count": len(chunks),
+        "missing_required_counts": missing_required_counts,
+        "empty_required_counts": empty_required_counts,
+        "invalid_required_counts": dict(sorted(invalid_required_counts.items())),
+        "optional_null_counts": dict(sorted(optional_null_counts.items())),
+        "required_metadata_valid": (
+            not missing_required_counts
+            and not empty_required_counts
+            and not invalid_required_counts
+        ),
+    }
+
+
+def update_hierarchical_metadata_invalid_counts(
+    payload: dict[str, Any],
+    invalid_required_counts: dict[str, int],
+) -> None:
+    """Record invalid hierarchical lineage metadata in-place."""
+    if payload.get("chunking_strategy") != "hierarchical_header_recursive":
+        increment_count(invalid_required_counts, "chunking_strategy")
+    header_hierarchy = payload.get("header_hierarchy")
+    if not isinstance(header_hierarchy, list) or any(
+        is_missing_or_blank(header) for header in header_hierarchy
+    ):
+        increment_count(invalid_required_counts, "header_hierarchy")
+    header_level = payload.get("header_level")
+    if not isinstance(header_level, int) or header_level < 0:
+        increment_count(invalid_required_counts, "header_level")
+
+
+def increment_count(counts: dict[str, int], field: str) -> None:
+    """Increment a per-field counter."""
+    counts[field] = counts.get(field, 0) + 1
+
+
+def is_missing_or_blank(value: Any) -> bool:
+    """Return true for null or whitespace-only string metadata values."""
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
 def infer_document_type(relative_key: str) -> str:
     """Infer a coarse document type from available folder and file names."""
     normalized_key = normalized_lookup_text(relative_key)
@@ -496,7 +595,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument(
         "--chunking-strategy",
-        choices=["recursive", "hybrid_semantic"],
+        choices=["recursive", "hybrid_semantic", "hierarchical_header_recursive"],
         default=None,
     )
     args = parser.parse_args()

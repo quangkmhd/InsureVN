@@ -1,213 +1,235 @@
-# InsureVN - AI Engineering Portfolio Project
+<p align="center">
+  <a href="README.md"><b>Tiếng Việt</b></a> | <a href="docs/README.en.md">English</a>
+</p>
 
-> README này được viết cho nhà tuyển dụng và reviewer kỹ thuật. Mục tiêu không phải là hướng dẫn cộng đồng sử dụng thư viện, mà là thể hiện phạm vi công việc, năng lực kỹ thuật và các quyết định engineering tôi đã trực tiếp xây dựng trong dự án.
+<p align="center">
+  <img src="asset/insurevn_logo.png" width="150" alt="InsureVN Logo"/>
+</p>
 
-## Tóm tắt cho nhà tuyển dụng
+<h1 align="center">InsureVN: Hybrid Full-Agent Swarm Platform</h1>
 
-InsureVN là dự án AI Engineering cho ngành bảo hiểm sức khỏe Việt Nam. Tôi xây hệ thống từ tầng dữ liệu đến agent: thu thập PDF bảo hiểm, chuyển đổi tài liệu không cấu trúc thành dữ liệu có lineage, xây SQLite database, indexing vào Qdrant/Knowledge Graph, thiết kế MCP tools, và phát triển agent có observability.
+<p align="center">
+  <b>Nền tảng Multi-Agent Swarm tối ưu hóa quy trình bảo hiểm Việt Nam dựa trên bằng chứng tri thức minh bạch</b>
+</p>
 
-Điểm chính nhà tuyển dụng có thể đánh giá:
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12.3-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Framework-LangGraph-orange?style=flat&logo=langchain&logoColor=white" alt="LangGraph">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat" alt="License">
+  <br>
+  <img src="https://img.shields.io/badge/Agents-9-blueviolet" alt="Agents">
+  <img src="https://img.shields.io/badge/Retrieval-Quad_Engine-red" alt="Retrieval">
+  <img src="https://img.shields.io/badge/Graph-Neo4j-008CC1?logo=neo4j&logoColor=white" alt="Graph">
+  <img src="https://img.shields.io/badge/Observability-Langfuse-black" alt="Langfuse">
+</p>
 
-- Năng lực thiết kế hệ thống AI nhiều tầng: data pipeline, retrieval, graph, database, agent orchestration.
-- Kinh nghiệm xử lý dữ liệu thực tế: PDF tiếng Việt, bảng biểu bảo hiểm, schema không đồng nhất, OCR noise, mapping JSON sang SQL.
-- Kinh nghiệm agentic AI production patterns: MCP server, LangChain/LangGraph, RAG evidence, citation, hard filters, Langfuse tracing.
-- Tư duy engineering: source lineage, read-only database tools, cấu hình tập trung, unit/integration/e2e tests, logging và observability.
+<p align="center">
+  <a href="#-tính-năng-cốt-lõi">Tính năng</a>  · 
+  <a href="#-kiến-trúc-hệ-thống">Kiến trúc</a>  · 
+  <a href="#-quy-trình-dữ-liệu">Data Pipeline</a>  · 
+  <a href="#-chunking-mastery">Chunking</a>  · 
+  <a href="#-production-infrastructure">Infrastructure</a>  · 
+  <a href="#-roadmap">Roadmap</a>  · 
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-## Điểm nổi bật cho nhà tuyển dụng
+---
 
-**Vai trò:** AI Engineer / Backend Developer
+### 📢 Tin tức mới (Latest News)
 
-**Tech stack:** Python, FastAPI, LangChain, LangGraph, Deep Agents, MCP/FastMCP, SQLite, Qdrant, Neo4j, NetworkX, Langfuse, Ollama, Gemini, NVIDIA, OpenRouter, Marker, Datalab, CUDA, pytest, ruff.
+- **[09/05/2026]** 📊 **Optimization Decision**: Sau khi đánh giá 9 chiến lược, hệ thống chính thức áp dụng `hierarchical_header_recursive` với cấu hình `900/150` tokens để đạt recall cao nhất.
+- **[08/05/2026]** 🗄️ **Data Scale Milestone**: Hoàn tất nạp dữ liệu từ 83 tài liệu gốc, trích xuất **7,004 bệnh viện**, **3,766 quyền lợi** và **1,771 biểu phí** vào SQLite qua FastMCP.
+- **[07/05/2026]** ⚖️ **LLM-as-a-Judge**: Hoàn thành chấm điểm tự động cho 1,350 trường hợp truy xuất bằng pool LLM đa nguồn (Gemini, NVIDIA, Ollama).
+- **[06/05/2026]** 🎯 **Automated Ground Truth**: Triển khai quy trình tạo tập dữ liệu kiểm thử tự động dựa trên cấu trúc tài liệu (H1/H2) và Keyword Extraction.
+- **[05/05/2026]** 🕸️ **KG Automation**: Tự động hóa việc khám phá (Discover) và chuẩn hóa (Canonicalize) Schema cho Knowledge Graph từ dữ liệu Markdown.
+- **[04/05/2026]** 🧠 **Gemma4 Fine-tuned**: Huấn luyện thành công mô hình Vision-Language (VLM) chuyên biệt cho việc trích xuất bảng biểu bảo hiểm Việt Nam.
+- **[03/05/2026]** 🏗️ **Quad-Retrieval**: Phê duyệt thiết kế kiến trúc 4 tầng (Vector + BM25 + Graph + SQL) nhằm triệt tiêu hoàn toàn Hallucination.
 
-- Thiết kế và xây dựng nền tảng AI multi-agent cho bảo hiểm sức khỏe Việt Nam, hỗ trợ policy Q&A, product comparison, claim advisory và claim/payout draft workflows bằng FastAPI, LangChain, LangGraph, Deep Agents và shared evidence foundation.
-- Xây dựng pipeline tài liệu end-to-end để thu thập, phân loại, chuyển đổi, trích xuất, đánh giá và ingest PDF bảo hiểm tiếng Việt vào SQLite, Qdrant và Knowledge Graph.
-- Tự động hóa thu thập dữ liệu từ 9+ nguồn bảo hiểm như AIA, Bảo Việt, Bảo Minh, BIC, Liberty, PTI, PVI, Generali và Pacific Cross bằng crawler, Firecrawl và deep search workflows.
-- Phát triển pipeline xử lý tài liệu bằng LLM/VLM với Marker, Datalab, CUDA và multi-provider LLMs để phân loại PDF bảo hiểm sức khỏe, loại bỏ tài liệu không liên quan, chuyển PDF sang Markdown, trích xuất bảng/ảnh/structured JSON, chuyển bảng phức tạp thành narrative text và ánh xạ output không đồng nhất vào SQLite.
-- Thiết kế SQLite database schema có khả năng truy vết nguồn dữ liệu, chuẩn hóa gói bảo hiểm và lưu domain tables; chuẩn hóa dữ liệu từ 6 công ty, 83 PDFs, 644 source tables, 424 plans, 3,766 benefit values, 1,771 premium rows, 7,004 hospitals, 290 glossary terms và 551 claim payout records.
-- Xây dựng read-only SQLite MCP server với 21 insurance domain tools và tích hợp với LangChain DatabaseAgent, dedicated LLM configuration, Langfuse tracing và prompt management để truy vấn an toàn các dữ liệu về benefits, premiums, hospitals, waiting periods, claim payouts và exclusions dựa trên evidence.
-- Thiết kế Quad-Retrieval RAG architecture kết hợp SQLite structured facts, Qdrant dense vector search, sparse/BM25 keyword search và Knowledge Graph reasoning, kèm shared Evidence layer cho normalization, deduplication, conflict detection, reranking và citation formatting.
-- Triển khai retrieval foundation với parent-child chunking, table-aware chunking, bảo toàn legal context, Qdrant dense/sparse indexing, hard filters theo company/plan/document/section và production readiness checks.
-- Xây dựng Knowledge Graph và GraphRAG services cho schema discovery, LLM graph extraction, NetworkX diagnostics, Neo4j import/query, graph traversal và graph quality validation, giúp giảm rủi ro trộn dữ liệu giữa các công ty có ngôn ngữ hợp đồng bảo hiểm tương tự nhau.
-- Xây dựng AI-assisted graph schema discovery pipeline để quét tài liệu bảo hiểm, đề xuất candidate nodes, relationships và properties, sau đó lọc, gộp và canonicalize thành domain-specific Knowledge Graph schema với 42 node types, 68 relationship types, 127 node properties và 27 relationship properties.
-- Xây dựng retrieval evaluation workflows để chọn chiến lược chunking phù hợp nhất cho tài liệu bảo hiểm tiếng Việt, so sánh 9 strategies trên 150 QA cases và 1,350 metric rows; best full benchmark đạt 40.67% Primary Hit@5, 26.71% MRR@5 và 26.61% Required Source Recall@5.
-- Chạy persisted Qdrant evaluation trên 91 cases, với strategy tốt nhất đạt 74.73% Primary Hit@5 và 55.44% MRR@5; đồng thời xây context-level RAG benchmarks, streaming chunking/embedding ingestion trên 86 expected-source files và LLM chunking comparison với 172/172 file-strategy rows hoàn tất, 0 failures.
-- Xây dựng AI judge evaluation pipeline cho 1,350 strategy-case pairs, hoàn tất 1,350/1,350 evaluations với 0 failures sau retry timeout/rate-limit.
-- Triển khai FastAPI runtime, health checks, lifecycle logging, structured JSON logs, typed configuration cho LLM providers/Qdrant/Neo4j/Langfuse, và Langfuse observability cho agent execution, MCP tool calls, HTTP tracing, service duration, error metadata và prompt versioning.
-- Duy trì codebase gồm 76 source files, 71 Python scripts, 64 documentation files và 48 test files, có unit, integration và e2e test structure.
+<details>
+<summary>Tin tức cũ hơn</summary>
 
-## Vai trò của tôi trong dự án
+- **2026-05-02** 📑 **Table-to-Text & MCP Integration**: Tích hợp công cụ chuyển đổi bảng biểu sang văn bản tự sự và kết nối Database Agent với SQLite MCP Server.
+- **2026-05-01** 🏷️ **JSON Classification Pipeline**: Hoàn thiện quy trình phân loại và trích xuất dữ liệu có cấu trúc từ tài liệu bảo hiểm.
+- **2026-04-28** 📄 **Document AI Pipeline**: Khởi động chiến lược xây dựng pipeline xử lý tài liệu bảo hiểm thông minh (PDF-to-AI-ready).
 
-Tôi đóng vai trò owner/AI engineer chính của dự án:
+</details>
 
-- Thiết kế kiến trúc tổng thể cho một hệ thống multi-agent insurance assistant.
-- Xây pipeline 6 giai đoạn để biến PDF bảo hiểm thành tri thức có thể truy vấn.
-- Thiết kế SQLite schema theo hướng audit được, có source lineage từ database về JSON/PDF gốc.
-- Xây SQLite MCP server để agent truy vấn dữ liệu bằng tool an toàn thay vì gọi database trực tiếp.
-- Xây DatabaseAgent và các service nền cho retrieval, evidence merging, citation và observability.
-- Thiết kế kiến trúc Quad-Retrieval RAG kết hợp SQLite, Qdrant, BM25/sparse search và Knowledge Graph.
-- Chuẩn bị pipeline fine-tuning/evaluation cho VLM xử lý bảng biểu bảo hiểm tiếng Việt.
+---
 
-## Bài toán kỹ thuật
+## 💡 Tầm nhìn & Sứ mệnh (Vision)
 
-Tài liệu bảo hiểm sức khỏe ở Việt Nam có nhiều đặc điểm khó cho AI:
+> **"Thứ khó nhất không phải là Prompt, mà là Production Infrastructure."**
 
-- Dữ liệu nằm trong PDF, bảng biểu, ảnh scan, brochure và điều khoản pháp lý dài.
-- Cùng một khái niệm bảo hiểm nhưng mỗi công ty đặt tên gói, quyền lợi và cột bảng khác nhau.
-- Câu trả lời phải chính xác về số tiền, thời gian chờ, điều khoản loại trừ và nguồn trích dẫn.
-- RAG thuần vector dễ lẫn dữ liệu giữa các công ty vì ngôn ngữ hợp đồng bảo hiểm rất giống nhau.
+InsureVN không phải là một chatbot RAG đơn thuần, mà là một **Nền tảng Tác vụ thông minh (Agent Swarm Platform)** với hạ tầng tri thức tri-canonical, nơi mọi câu trả lời của AI đều có thể truy vết ngược lại tài liệu gốc với độ chính xác tuyệt đối.
 
-Cách tôi giải quyết là tách rõ dữ liệu có cấu trúc và không cấu trúc:
+---
 
-- SQLite giữ facts chính xác: quyền lợi, phí, bệnh viện, thời gian chờ, tỷ lệ chi trả.
-- Qdrant giữ văn bản/chunk phục vụ semantic search và keyword search.
-- Knowledge Graph giữ quan hệ giữa công ty, sản phẩm, gói, quyền lợi, điều khoản.
-- Evidence layer hợp nhất kết quả, khử trùng lặp, phát hiện xung đột và format citation.
+## ✨ Tính năng cốt lõi
 
-## Kết quả định lượng hiện có
+### 🌟 Tính năng nổi bật (Core Features)
 
-| Hạng mục                            | Kết quả |
-| ------------------------------------- | --------: |
-| Công ty bảo hiểm đã chuẩn hóa  |         6 |
-| PDF gốc trong SQLite lineage         |        83 |
-| JSON/source tables đã trích xuất  |       644 |
-| Gói bảo hiểm đã normalize        |       424 |
-| Hạng mục quyền lợi                |     1,236 |
-| Giá trị quyền lợi theo từng plan |     3,766 |
-| Dòng phí bảo hiểm                 |     1,771 |
-| Bệnh viện/phòng khám              |     7,004 |
-| Thuật ngữ bảo hiểm                |       290 |
-| Tỷ lệ chi trả claim                |       551 |
-| Test files hiện có                    |        48 |
+- **✅ Hệ thống Quad-Retrieval Engine**: Kết hợp Vector (Qdrant), BM25, Graph (NetworkX) và SQL (SQLite) để triệt tiêu Hallucination. [Xem thiết kế](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md)
+- **✅ [Pipeline 6 giai đoạn](docs/work_log/work_history.md)**: Quy trình xử lý dữ liệu bảo hiểm tự động từ PDF thô sang tri thức có cấu trúc.
+- **✅ Benchmark V2 & Evaluation**: Hệ thống đánh giá chunking và retrieval tự động với bộ chỉ số chính xác cao.
+- **🚧 Hybrid Agent Swarm (In Dev)**: Hệ thống đa tác vụ (Supervisor, Policy, Claim, Advisor...) đang được tích hợp qua LangGraph.
+- **✅ Observability**: Giám sát toàn bộ luồng suy luận và hiệu suất hệ thống qua Langfuse.
+- **✅ Document Extraction**: Công nghệ Table-to-Narrative giúp AI hiểu 100% các bảng biểu bảo hiểm phức tạp.
 
-Nguồn số liệu database: [docs/database/sqlite_database_schema_specification.md](docs/database/sqlite_database_schema_specification.md). Số lượng test files lấy từ inventory hiện tại của repository.
+---
 
-## Kiến trúc hệ thống
+## 🏗️ Kiến trúc Hệ thống (System Architecture)
 
-![InsureVN architecture](asset/insurevn-Architecture.png)
+Dự án áp dụng mô hình **Hybrid Full Agent Swarm**, được điều phối bởi LangGraph để đảm bảo tính tin cậy cao nhất qua Quad-Retrieval Engine.
 
-### Data pipeline 6 giai đoạn
+<p align="center">
+  <img src="asset/insurevn-Architecture.png" alt="InsureVN Architecture Diagram" width="800px" />
+</p>
 
-1. Acquisition: crawler và Firecrawl scripts thu thập PDF từ các công ty bảo hiểm.
-2. Preprocessing & QA: phân loại PDF, lọc tài liệu không liên quan, tổ chức thư mục dữ liệu.
-3. Conversion & Interpretation: chuyển PDF sang Markdown, xử lý bảng biểu bằng Marker/Datalab và table-to-narrative.
-4. Extraction: dùng Vision LLM/OCR để trích xuất Markdown + JSON, lọc Good/Trash, phân loại schema.
-5. Training & Eval: chuẩn bị dataset và scripts fine-tune/evaluate Gemma 4 Vision cho bảng biểu bảo hiểm.
-6. Ingestion: map JSON không đồng nhất vào SQLite, index Markdown vào Qdrant và Knowledge Graph.
+### Quy trình 4 tầng truy vấn (Quad-Retrieval)
 
-Tài liệu liên quan: [docs/work_log/data_pipeline_processing_log.md](docs/work_log/data_pipeline_processing_log.md).
+| Phương thức             | Công nghệ | Vai trò trong InsureVN                                                       |
+| :------------------------- | :---------- | :---------------------------------------------------------------------------- |
+| **Vector Search**    | Qdrant      | Tìm kiếm ngữ nghĩa, hiểu ngữ cảnh câu hỏi của người dùng.        |
+| **Keyword Search**   | BM25        | Trích xuất chính xác tên bệnh, thuốc và các thuật ngữ pháp lý.   |
+| **Graph Retrieval**  | Neo4j       | Suy luận quan hệ đa tầng (Entity-Relationship) giữa các điều khoản.  |
+| **Structured Query** | SQLite      | Truy xuất con số chính xác về phí, hạn mức và danh mục bệnh viện. |
+| **Search Agent**     | Tavily      | Tìm kiếm thông tin thị trường thời gian thực (Optional Tool).      |
 
-### Retrieval và evidence system
+### 📚 Cơ sở hạ tầng Tri thức (Tri-Canonical Knowledge Base)
 
-Tôi thiết kế retrieval theo hướng evidence-first thay vì chỉ gọi LLM trả lời:
+Hệ thống duy trì sự nhất quán tri thức qua 3 kênh lưu trữ chuyên biệt:
+- **SQLite (Structured Facts):** Lưu trữ 100% các con số "cứng" (**7,004 bệnh viện**, **3,766 quyền lợi**, **1,771 biểu phí**). Truy vấn qua **FastMCP Server** với [15+ công cụ nghiệp vụ](docs/database/mcp_insurevn_db_reference.md). [Chi tiết Schema](docs/database/sqlite_database_schema_specification.md).
+- **Qdrant (Document Context):** Lưu trữ hàng chục ngàn đoạn văn bản (chunks) từ **83 tài liệu bảo hiểm** gốc, hỗ trợ tìm kiếm Hybrid (Dense + Sparse).
+- **Knowledge Graph (NetworkX/Neo4j):** Bản đồ hóa các mối liên kết thực thể (Entity-Relationship) giữa Công ty → Gói bảo hiểm → Điều khoản loại trừ.
 
-- Dense vector search trên Qdrant cho câu hỏi ngữ nghĩa.
-- Sparse/BM25-style search cho mã sản phẩm, tên bệnh, thuật ngữ và con số cụ thể.
-- SQLite structured facts cho phí, hạn mức, bệnh viện, waiting periods và claim payouts.
-- Knowledge Graph cho quan hệ nhiều bước giữa công ty, gói, quyền lợi và điều khoản.
-- EvidenceMerger hợp nhất bằng chứng, rerank, phát hiện xung đột và chuẩn hóa citation.
+---
 
-Tài liệu liên quan: [docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md) và [docs/work_log/ensemble_retriever_log.md](docs/work_log/ensemble_retriever_log.md).
+## ⚙️ Quy trình xử lý dữ liệu (Data Pipeline)
 
-### Agent và MCP
+| Giai đoạn                | Hành động                                       | Kết quả đầu ra                                             |
+| :------------------------- | :------------------------------------------------- | :------------------------------------------------------------- |
+| **1. Acquisition**   | Crawl/Scrape PDF từ các hãng bảo hiểm.        | Kho PDF thô (Raw PDF).                                        |
+| **2. Preprocessing** | Phân loại, lọc nhiễu và làm sạch dữ liệu. | Dữ liệu được tổ chức theo thư mục chuẩn.             |
+| **3. Conversion**    | PDF -> Markdown & Narrative Table.                 | Bảng biểu phức tạp được chuyển sang văn bản tự sự. |
+| **4. Extraction**    | Trích xuất Schema.                               | Dữ liệu JSON/SQL có cấu trúc.                             |
+| **5. Graph Build**   | Chuẩn hóa thực thể (Canonicalization).         | Đồ thị tri thức Neo4j                                      |
+| **6. Ingestion**     | Indexing vào Vector & Graph DB.                   | Hệ thống sẵn sàng truy vấn (Ready for RAG).               |
 
-Phần agent hiện tập trung vào structured data specialist:
+---
 
-- `DatabaseAgent` nhận câu hỏi tự nhiên và gọi SQLite MCP tools qua LangChain.
-- SQLite MCP server expose domain tools như `search_benefits`, `compare_benefits`, `get_premium_quotes`, `search_hospitals`, `search_waiting_periods`, `search_claim_payouts`.
-- MCP server enforce read-only queries và SQL parameterization để giảm rủi ro tool misuse.
-- Langfuse được tích hợp để trace agent execution, tool calls, prompt versioning và metadata theo session.
+## 🧩 Chunking Mastery
 
-Tài liệu liên quan:
+### So sánh & Đánh giá (Evaluation)
 
-- [docs/database/database_agent.md](docs/database/database_agent.md)
-- [docs/database/mcp_insurevn_db_reference.md](docs/database/mcp_insurevn_db_reference.md)
-- [docs/observability/langfuse_integration.md](docs/observability/langfuse_integration.md)
+Chúng tôi sử dụng hệ thống đánh giá tự động chuyên sâu để so sánh các chiến lược chunking, tập trung vào khả năng truy xuất bằng chứng (Evidence Retrieval).
 
-## Công nghệ sử dụng
+- **Chiến lược tối ưu:** `hierarchical_header_recursive` (Phân tách theo cấp bậc tiêu đề và đệ quy) được xác định là phương pháp hiệu quả nhất cho các văn bản bảo hiểm phức tạp.
+- **Cấu hình chuẩn:** Kích thước chunk **900 tokens** với độ chồng lấp (overlap) **150 tokens** mang lại recall tốt nhất trên tập dữ liệu thực tế.
+- **Bộ chỉ số đánh giá:**
+  - **Retrieval:** Hit@5 (Primary), MRR@5, Required Source Recall và Line Overlap Recall.
+  - **Quality:** Redundancy ratio, Mid-sentence cut ratio, Table/Heading integrity.
 
-| Nhóm              | Công nghệ                                  |
-| ------------------ | -------------------------------------------- |
-| Language           | Python 3.12                                  |
-| API                | FastAPI                                      |
-| Agent framework    | LangChain, LangGraph, Deep Agents            |
-| LLM/VLM            | Gemini, Gemma 4, Ollama-compatible providers |
-| Vector retrieval   | Qdrant, dense/sparse retrieval, reranking    |
-| Structured storage | SQLite                                       |
-| Graph retrieval    | NetworkX/Neo4j-oriented services             |
-| Agent tools        | MCP, FastMCP, langchain-mcp-adapters         |
-| Observability      | Langfuse, structured JSON logging            |
-| Quality            | pytest, pytest-asyncio, ruff, pyright        |
+> [!TIP]
+> Xem chi tiết báo cáo đánh giá mới nhất (Benchmark V2) tại: `docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-report.md`
 
-## Những phần nên xem khi review kỹ thuật
+### Tự động tạo Ground Truth (Benchmark V2)
 
-| Mục cần đánh giá    | File/thư mục                                                    |
-| ------------------------ | ----------------------------------------------------------------- |
-| FastAPI entrypoint       | [src/main.py](src/main.py)                                           |
-| DatabaseAgent            | [src/agents/database_agent.py](src/agents/database_agent.py)         |
-| SQLite MCP server        | [src/mcp_servers/sqlite/server.py](src/mcp_servers/sqlite/server.py) |
-| MCP client binding       | [src/tools/mcp_client.py](src/tools/mcp_client.py)                   |
-| Qdrant retrieval         | [src/services/qdrant_retriever.py](src/services/qdrant_retriever.py) |
-| Document chunking        | [src/services/document_chunker.py](src/services/document_chunker.py) |
-| Evidence merging         | [src/services/evidence_merger.py](src/services/evidence_merger.py)   |
-| Knowledge Graph services | [src/services/knowledge_graph/](src/services/knowledge_graph/)       |
-| Data acquisition scripts | [scripts/01_acquisition/](scripts/01_acquisition/)                   |
-| Extraction scripts       | [scripts/04_extraction/](scripts/04_extraction/)                     |
-| Training/eval scripts    | [scripts/05_training_eval/](scripts/05_training_eval/)               |
-| DB ingestion/indexing    | [scripts/06_db_ingestion/](scripts/06_db_ingestion/)                 |
-| Tests                    | [tests/](tests/)                                                     |
+InsureVN triển khai quy trình tạo tập dữ liệu kiểm thử tự động V2 (Benchmark V2) sử dụng LLM để thay thế phương pháp TF-IDF cũ, giúp đánh giá RAG chuyên sâu hơn:
 
-## Engineering decisions đáng chú ý
+1. **Context Sampling:** Tự động lấy mẫu các khối văn bản lớn (~1500 tokens) từ corpus, đảm bảo bao phủ đầy đủ các kịch bản (single-context, multi-context, table-context).
+2. **LLM Synthesis:** Sử dụng pool LLM slot (Gemini, Ollama, NVIDIA...) để tự động hóa việc tạo câu hỏi (Question), câu trả lời vàng (Gold Answer) và trích dẫn (Evidence Quotes).
+3. **Multi-Context Reasoning:** Tự động ghép nối 2-3 ngữ cảnh từ cùng một tài liệu để tạo ra các câu hỏi so sánh và tổng hợp, kiểm tra khả năng suy luận phức tạp của Agent.
+4. **Evidence Grounding:** Đối soát và lưu trữ chính xác `chunk_id`, `line_range` và copy nguyên văn trích dẫn để đảm bảo tính minh bạch của bằng chứng.
+5. **10-Point Scoring Schema:** Đánh giá chi tiết dựa trên 5 tiêu chí: Retrieval Recall (3), Answer Faithfulness (3), Evidence Integrity (2), Citation Correctness (1) và Context Adherence (1).
 
-- Source lineage là bắt buộc: mọi row domain trong SQLite có thể truy ngược về `source_table_id`, JSON gốc và PDF.
-- Long/narrow schema được dùng cho benefit/premium values để so sánh plan cross-company dễ hơn.
-- Agent không truy cập database trực tiếp; agent dùng MCP tools có domain boundary rõ ràng.
-- Read-only database policy được enforce trong MCP server cho raw query tools.
-- Hard filters theo company/plan/document được ưu tiên trong RAG để tránh trộn dữ liệu giữa các công ty.
-- Table-heavy chunking giữ header bảng và context để retrieval không làm mất nghĩa của từng dòng.
-- Observability được đặt ở cả tầng agent và MCP tool để debug được reasoning path lẫn tool result.
+> [!NOTE]
+> Xem chi tiết logic tạo benchmark tại: [Benchmark V2 Generation Logic](docs/architecture/2026-05-09-benchmark-v2-generation-logic.md)
 
-## Trạng thái hiện tại
+### 📚 Cơ sở khoa học (Scientific Foundation)
 
-Đã hoàn thành hoặc có implementation đáng review:
+Kiến trúc của InsureVN được xây dựng dựa trên các nghiên cứu hàng đầu về RAG và Chunking:
+- **Adaptive Chunking (LREC 2026):** [Optimizing Chunking-Method Selection for RAG](https://arxiv.org/pdf/2603.25333).
+- **LightRAG Pattern:** Sử dụng Dual-level Graph Retrieval để tăng cường tính liên kết của tri thức.
+- **NVIDIA Research:** [Finding the Best Chunking Strategy for Accurate AI Responses](https://developer.nvidia.com/blog/finding-the-best-chunking-strategy-for-accurate-ai-responses/).
 
-- Data pipeline từ PDF/Markdown/JSON đến SQLite, Qdrant và Knowledge Graph services.
-- SQLite schema, ingestion mapping và domain tables cho bảo hiểm sức khỏe.
-- SQLite MCP server với các tool phục vụ truy vấn bảo hiểm.
-- DatabaseAgent tích hợp LangChain, MCP và Langfuse.
-- Retrieval foundation: document chunking, Qdrant retriever, evidence objects, merger, citation formatter.
-- Test suite gồm unit, integration và e2e structure.
+---
 
-Đang tiếp tục phát triển:
+## 🏗️ Production Infrastructure
 
-- Orchestrator bằng LangGraph để route giữa DatabaseAgent, PolicyAgent, ClaimAgent và FraudAgent.
-- PolicyAgent RAG trả lời điều khoản có citation đầy đủ.
-- ClaimAgent cho eligibility, payout calculation và human-in-the-loop review.
-- Eval harness với benchmark intents và Langfuse scoring.
-- Production deployment hardening.
+Dự án đối mặt với thách thức lớn nhất: **Maintenance Nightmare** (Sự thay đổi chóng mặt của AI Stack). Chúng tôi giải quyết bằng một hạ tầng vững chắc:
 
-## Review nhanh trong local
+- **Observability & Monitoring:** Tích hợp **Langfuse** để theo dõi Telemetry, Latency, Throughput và Cost Tracking cho từng yêu cầu.
+- **Human-in-the-loop:** Cơ chế **Human Approval** cho các luồng rủi ro cao (Bồi thường/Chi trả).
+- **Quality Gates:** Hệ thống **Eval & Guardrails** tự động kiểm tra tính an toàn và trung thực của câu trả lời trước khi gửi tới người dùng.
+- **Reliability:** Triển khai cơ chế **Retries**, **Queue** xử lý bất đồng bộ và **Caching** để giảm thiểu chi phí API.
+- **DevOps:** Quy trình **CI/CD** tự động, quản lý **Secrets** nghiêm ngặt và kiến trúc sẵn sàng cho việc **Scaling**.
 
-Các lệnh dưới đây dành cho reviewer kỹ thuật muốn kiểm tra codebase:
+---
 
-```bash
-pip install -e ".[dev]"
-pytest
-ruff check src tests
-ruff format --check src tests
+## 🤖 Đội ngũ Agent Swarm
+
+| Agent                 | Nhiệm vụ chính (Trạng thái thiết kế)                                                               |
+| :-------------------- | :------------------------------------------------------------------------------ |
+| **Supervisor**  | Phân loại ý định, đánh giá rủi ro và điều hướng luồng. (Design ✅) |
+| **Policy**      | Chuyên gia phân tích văn bản điều khoản pháp lý. (Design ✅) |
+| **Comparison**  | Chuyên gia so sánh sản phẩm và tư vấn cá nhân hóa. (Design ✅) |
+| **Claim**       | Xử lý nghiệp vụ bồi thường và dự thảo phản hồi. (Design ✅) |
+| **Validation**  | "Thẩm phán" thực hiện kiểm chứng chéo (Blind Review). (Design ✅) |
+| **Calculation** | Thực hiện tính toán số học xác định (Deterministic). (Design ✅) |
+| **Verifier**    | Kiểm soát an toàn, tuân thủ và độ đầy đủ của trích dẫn. (Design ✅) |
+
+> [!NOTE]
+> Các Agent trên hiện đang trong quá trình tích hợp vào luồng LangGraph. Xem chi tiết tại [Platform Design](docs/architecture/2026-05-03-multi-agent-platform-design.md).
+
+---
+
+## 🗺 Roadmap & Trạng thái phát triển
+
+Dự án được triển khai theo 8 giai đoạn (Phases) chiến lược, từ hạ tầng dữ liệu đến Swarm tự trị:
+
+### ✅ Giai đoạn nền tảng (Completed)
+- **[Phase 00: Project Bootstrap](docs/blueprints/phase_00_project_bootstrap_and_api_foundation.md)**: Khởi tạo FastAPI, cấu hình Pydantic Settings và hạ tầng logging.
+- **[Phase 01: Evidence Foundation](docs/blueprints/phase_01_evidence_foundation.md)**: Xây dựng hệ thống Merger, Citation lineage và chuẩn hóa Evidence model.
+- **[Phase 02: Qdrant Document Retrieval](docs/blueprints/phase_02_qdrant_document_retrieval.md)**: Triển khai Vector Search, BM25 Hybrid và Evaluation hệ thống chunking.
+- **[Phase 06: Evaluation Harness (Part 1)](docs/blueprints/phase_06_synthetic_dataset_eval_harness.md)**: Hoàn thành Benchmark V2 cho Retrieval và Chunking.
+
+### 🚧 Giai đoạn triển khai (Ongoing)
+- **[Phase 03: Knowledge Graph Foundation](docs/blueprints/phase_03_knowledge_graph_foundation.md)**: Tích hợp NetworkX/Neo4j để xử lý quan hệ đa tầng.
+- **[Phase 04: Supervisor Routing Graph](docs/blueprints/phase_04_supervisor_routing_graph.md)**: Xây dựng LangGraph Supervisor để phân loại ý định (Intent) và rủi ro (Risk).
+- **[Phase 06: Evaluation Harness (Part 2)](docs/blueprints/phase_06_synthetic_dataset_eval_harness.md)**: Mở rộng đánh giá E2E cho luồng suy luận của Agent Swarm.
+
+### 🎯 Giai đoạn nâng cao (Planned)
+- **[Phase 05: Specialist Workflows](docs/blueprints/phase_05_specialist_workflows.md)**: Triển khai logic nghiệp vụ cho PolicyAgent, ClaimAgent và AdvisorAgent.
+- **[Phase 07: HITL Operational Review](docs/blueprints/phase_07_hitl_operational_review.md)**: Tích hợp cổng phê duyệt của con người (Human-in-the-loop) cho các quyết định bồi thường.
+- **Deep Agents Integration**: Nâng cấp khả năng tự trị và xử lý tác vụ dài hơi (long-running) cho các specialist.
+
+---
+
+## 📁 Cấu trúc dự án (Project Structure)
+
+<details>
+<summary><b>Click để xem chi tiết cấu trúc thư mục</b></summary>
+
+```text
+InsureVN/
+├── src/                    # Mã nguồn lõi
+│   ├── agents/             # Logic điều phối các Agent
+│   ├── services/           # Dịch vụ xử lý (Retrieval, Evidence, Graph)
+│   ├── tools/              # Các công cụ bổ trợ (Search, MCP)
+│   └── models/             # Định nghĩa Schema dữ liệu
+├── scripts/                # Data Pipeline & Evaluation scripts
+├── docs/                   # Tài liệu thiết kế, ADR & Work Logs
+├── tests/                  # Hệ thống kiểm thử (Unit, Integration, E2E)
+├── database/               # File cơ sở dữ liệu local (SQLite)
+├── data/                   # Dữ liệu bảo hiểm (Raw, Processed)
+└── asset/                  # Hình ảnh kiến trúc và tài sản dự án
 ```
 
-Health API:
+</details>
 
-```bash
-uvicorn src.main:app --reload
-curl http://localhost:8000/health
-```
+---
 
-## Tài liệu chuyên sâu
-
-- [Multi-agent platform design](docs/architecture/2026-05-03-multi-agent-platform-design.md)
-- [Quad-retrieval RAG architecture](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md)
-- [SQLite schema specification](docs/database/sqlite_database_schema_specification.md)
-- [Database MCP reference](docs/database/mcp_insurevn_db_reference.md)
-- [Langfuse integration](docs/observability/langfuse_integration.md)
-- [Data pipeline work log](docs/work_log/data_pipeline_processing_log.md)
+<p align="center">
+  Cảm ơn bạn đã ghé thăm <b>InsureVN</b> ✨
+</p>

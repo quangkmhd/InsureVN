@@ -3,16 +3,28 @@ import glob
 import json
 import time
 import re
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from ollama import Client
 
+# Add REPO_ROOT to sys.path
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.core.config import settings
+
 # Load environment variables from .env file
 load_dotenv()
 
-OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "https://ollama.com")
-OLLAMA_MODEL = "gemma4:31b-cloud"
-API_KEY = os.environ.get("API_KEY") or os.environ.get("OllAMA_API_Key_1")
+OLLAMA_API_URL = settings.OLLAMA_BASE_URLS[0]
+OLLAMA_MODEL = settings.LLM_MODEL
+API_KEY = settings.LLM_API_KEY or (settings._gather_numbered_keys("OllAMA")[0] if settings._gather_numbered_keys("OllAMA") else None)
+
+if not API_KEY:
+    # Try one more fallback to match the old logic precisely if needed
+    API_KEY = os.environ.get("API_KEY") or os.environ.get("OllAMA_API_Key_1")
 
 if not API_KEY:
     print("[Error] API_KEY not found in .env file.")

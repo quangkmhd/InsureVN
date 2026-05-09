@@ -109,11 +109,22 @@ _ADAPTIVE_DENSITY_STOP_WORDS = {
 }
 
 
+import sys
+from pathlib import Path
+
+# Add REPO_ROOT to sys.path
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.core.config import settings as app_settings
+
+
 class ChunkingCompareSettings:
     """Settings scoped to the local chunking comparison playground."""
 
     def __init__(self) -> None:
-        """Load script settings from the repository `.env`."""
+        """Load script settings from the centralized app settings."""
         self.SEMANTIC_CHUNKING_EMBEDDING_PROVIDER: str = os.getenv(
             "SEMANTIC_CHUNKING_EMBEDDING_PROVIDER", "ollama"
         )
@@ -123,32 +134,21 @@ class ChunkingCompareSettings:
         self.SEMANTIC_CHUNKING_OLLAMA_BASE_URL: str = os.getenv(
             "SEMANTIC_CHUNKING_OLLAMA_BASE_URL", "http://127.0.0.1:11434"
         )
-        self.LLM_CHUNKING_PROVIDER: str = os.getenv(
-            "LLM_CHUNKING_PROVIDER",
-            os.getenv("LLM_PROVIDER", "google_genai"),
-        )
-        self.LLM_CHUNKING_MODEL: str = os.getenv(
-            "LLM_CHUNKING_MODEL",
-            os.getenv("LLM_MODEL", "gemma-4-31b-it"),
-        )
-        self.LLM_CHUNKING_MAX_INPUT_CHARS: int = int(
-            os.getenv("LLM_CHUNKING_MAX_INPUT_CHARS", "50000")
-        )
-        self.LLM_CHUNKING_TIMEOUT_SECONDS: int = int(
-            os.getenv("LLM_CHUNKING_TIMEOUT_SECONDS", "90")
-        )
-        self.LLM_CHUNKING_CACHE_PATH: Path = Path(
-            os.getenv(
-                "LLM_CHUNKING_CACHE_PATH",
-                "reports/chunking_compare_llm/llm_chunk_cache.json",
-            )
-        )
-        self.LLM_CHUNKING_UNIT_PREVIEW_CHARS: int = int(
-            os.getenv("LLM_CHUNKING_UNIT_PREVIEW_CHARS", "220")
-        )
-        self.GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-        self.GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-        self.LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
+        
+        # Delegate to centralized app settings
+        self.LLM_CHUNKING_PROVIDER: str = app_settings.LLM_CHUNKING_PROVIDER
+        self.LLM_CHUNKING_MODEL: str = app_settings.LLM_CHUNKING_MODEL
+        self.LLM_CHUNKING_API_KEY: str = app_settings.LLM_CHUNKING_API_KEY
+        self.LLM_CHUNKING_BASE_URL: str = app_settings.LLM_CHUNKING_BASE_URL
+        
+        self.LLM_CHUNKING_MAX_INPUT_CHARS: int = app_settings.LLM_CHUNKING_MAX_INPUT_CHARS
+        self.LLM_CHUNKING_TIMEOUT_SECONDS: float = app_settings.LLM_CHUNKING_TIMEOUT_SECONDS
+        self.LLM_CHUNKING_CACHE_PATH: Path = Path(app_settings.LLM_CHUNKING_CACHE_PATH)
+        self.LLM_CHUNKING_UNIT_PREVIEW_CHARS: int = app_settings.LLM_CHUNKING_UNIT_PREVIEW_CHARS
+        
+        self.GOOGLE_API_KEY: str = app_settings.GOOGLE_API_KEY
+        self.GEMINI_API_KEY: str = app_settings.GEMINI_API_KEY
+        self.LLM_API_KEY: str = app_settings.LLM_API_KEY
 
 
 settings = ChunkingCompareSettings()

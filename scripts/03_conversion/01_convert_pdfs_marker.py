@@ -9,6 +9,13 @@ import torch
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Add REPO_ROOT to sys.path
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.core.config import settings
+
 # Set PyTorch memory optimization
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
@@ -43,14 +50,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 def get_api_keys():
-    keys = []
-    for i in range(1, 6):
-        key = os.getenv(f"GEMINI_API_KEY_{i}")
-        if key: keys.append(key)
-    if not keys:
-        default_key = os.getenv("GEMINI_API_KEY")
-        if default_key: keys.append(default_key)
-    return keys
+    return settings.GOOGLE_API_KEYS
 
 def get_output_dir(pdf_path: Path, base_input_dir: Path, base_output_dir: Path) -> Path:
     relative_path = pdf_path.parent.relative_to(base_input_dir)

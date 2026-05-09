@@ -359,13 +359,13 @@ This is a **production-grade product**, not an MVP. Build with:
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-08 1:15pm GMT+7
+# [InsureVN] recent context, 2026-05-09 10:43am GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 31 obs (9,747t read) | 278,875t work | 97% savings
+Stats: 44 obs (13,764t read) | 386,774t work | 96% savings
 
 ### May 3, 2026
 1 10:14p 🔵 Command execution failed due to bwrap permission error
@@ -404,6 +404,20 @@ Stats: 31 obs (9,747t read) | 278,875t work | 97% savings
 30 " 🟣 Added Adaptive Semantic Density data models and constants
 ### May 8, 2026
 31 11:45a 🟣 New InsureVN Chunking Evaluation System Implemented
+S1 Code review for adding semantic chunking to a comparison playground (May 8, 3:04 PM)
+32 3:04p 🟣 InsureVN Chunking Evaluation System Implemented
+33 3:07p 🔵 write_stdin operation failed due to unknown process ID
+34 3:08p 🔵 write_stdin operation failed due to unknown process ID
+35 " 🔵 write_stdin operation failed due to unknown process ID
+36 3:09p 🔵 Process "ten_file_chunking_retrieval_minilm_cuda_deterministic_tables" is not running
+37 " 🔵 No report files found in `/tmp/insurevn_10doc_eval/reports`
+38 3:10p 🔵 Implementation details of LLM-guided Markdown chunking strategy
+39 3:11p 🔵 Process "ten_file_chunking_retrieval_minilm_cuda_deterministic_tables" remains inactive
+40 " 🔵 Torch and TorchAO version incompatibility detected
+41 3:12p 🔵 Discovered existing vector database directories for chunking strategies
+42 " 🔵 Disk usage of evaluation run directory confirmed
+43 3:13p 🔵 Discovered additional vector database directories for chunking strategies
+44 6:36p 🔵 Progress update on LLM chunking evaluation run
 
-Access 279k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 387k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

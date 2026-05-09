@@ -12,6 +12,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_SPARSE_MODEL", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_OVERLAP", raising=False)
+    monkeypatch.delenv("RAG_CHUNKING_STRATEGY", raising=False)
     monkeypatch.delenv("RAG_PARENT_SECTION_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TOP_K", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", raising=False)
@@ -32,6 +33,7 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert isinstance(settings.RAG_CHILD_CHUNK_MAX_CHARS, int)
     assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 1200
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 150
+    assert settings.RAG_CHUNKING_STRATEGY == "hierarchical_header_recursive"
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 6000
     assert settings.RAG_RETRIEVAL_TOP_K == 5
     assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 30.0

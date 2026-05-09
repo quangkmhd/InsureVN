@@ -1,6 +1,7 @@
 import unicodedata
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.embeddings import Embeddings
 
 from src.services.document_chunker import DocumentChunker
@@ -172,6 +173,14 @@ def test_document_chunker_validates_required_payload_fields() -> None:
         raise AssertionError("Expected missing company_code to fail validation.")
 
 
+def test_document_chunker_rejects_blank_required_payload_fields() -> None:
+    chunker = DocumentChunker()
+    metadata = {**_metadata(), "company_code": "   "}
+
+    with pytest.raises(ValueError, match="company_code"):
+        chunker.chunk_markdown("## Section\n\nBlank company code.", metadata=metadata)
+
+
 def test_document_chunker_allows_optional_filter_payload_fields() -> None:
     chunker = DocumentChunker(child_chunk_chars=120, child_chunk_overlap=20)
 
@@ -271,6 +280,107 @@ def test_document_chunker_adds_production_payload_lineage_fields() -> None:
         .child_chunks[0]
         .payload["content_hash"]
     )
+
+
+def test_document_chunker_hierarchical_strategy_adds_header_payload_metadata() -> None:
+    markdown_text = (
+        "# Bao hiem suc khoe\n\n"
+        "Mo dau san pham.\n\n"
+        "## Quyen loi noi tru\n\n"
+        "Chi tra chi phi nam vien theo han muc."
+    )
+    chunker = DocumentChunker(
+        child_chunk_chars=120,
+        child_chunk_overlap=0,
+        chunking_strategy="hierarchical_header_recursive",
+    )
+
+    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
+
+    benefit_chunk = next(
+        child_chunk
+        for child_chunk in document_chunks.child_chunks
+        if "Chi tra chi phi nam vien" in child_chunk.text
+    )
+    payload = benefit_chunk.payload
+    assert payload["chunking_strategy"] == "hierarchical_header_recursive"
+    assert payload["header_hierarchy"] == [
+        "Bao hiem suc khoe",
+        "Quyen loi noi tru",
+    ]
+    assert payload["header_path"] == "Bao hiem suc khoe > Quyen loi noi tru"
+    assert payload["header_level"] == 2
+    assert payload["section_heading"] == "Quyen loi noi tru"
+    assert payload["header_1"] == "Bao hiem suc khoe"
+    assert payload["header_2"] == "Quyen loi noi tru"
+    assert payload["section_type"] == "quyen_loi_noi_tru"
+    assert "parent_text" not in payload
+    assert all(
+        payload[field] not in {None, ""}
+        for field in (
+            "company_code",
+            "document_id",
+            "document_type",
+            "document_name",
+            "product_line",
+            "section_type",
+            "parent_section_id",
+            "file_name",
+            "content_hash",
+            "ingestion_version",
+            "header_path",
+            "section_heading",
+        )
+    )
+
+
+def test_document_chunker_requires_hierarchical_lineage_payload_fields() -> None:
+    payload = {
+        "company_code": "AIA",
+        "document_id": "doc-aia-health",
+        "document_type": "policy",
+        "document_name": "AIA Health Policy",
+        "product_line": "health",
+        "section_type": "benefit",
+        "chunk_index": 0,
+        "parent_section_id": "doc-aia-health:benefit:0",
+        "file_name": "health.md",
+        "content_hash": "abc",
+        "ingestion_version": "test-v1",
+    }
+
+    with pytest.raises(ValueError, match="chunking_strategy"):
+        DocumentChunker.validate_payload(
+            payload,
+            expected_chunking_strategy="hierarchical_header_recursive",
+        )
+
+
+def test_document_chunker_rejects_invalid_hierarchical_lineage_values() -> None:
+    payload = {
+        "company_code": "AIA",
+        "document_id": "doc-aia-health",
+        "document_type": "policy",
+        "document_name": "AIA Health Policy",
+        "product_line": "health",
+        "section_type": "benefit",
+        "chunk_index": 0,
+        "parent_section_id": "doc-aia-health:benefit:0",
+        "file_name": "health.md",
+        "content_hash": "abc",
+        "ingestion_version": "test-v1",
+        "chunking_strategy": "hierarchical_header_recursive",
+        "header_hierarchy": "Benefit",
+        "header_path": "Benefit",
+        "header_level": -1,
+        "section_heading": "Benefit",
+    }
+
+    with pytest.raises(ValueError, match="header_hierarchy"):
+        DocumentChunker.validate_payload(
+            payload,
+            expected_chunking_strategy="hierarchical_header_recursive",
+        )
 
 
 def test_document_chunker_uses_semantic_chunking_with_size_guard() -> None:
@@ -501,8 +611,7 @@ Chi tra chi phi nam vien.
         "AIA Health Policy" in headings
         or "Introduction" in headings
         or any(
-            "AIA logo" in section.text
-            for section in document_chunks.parent_sections
+            "AIA logo" in section.text for section in document_chunks.parent_sections
         )
     )
     assert "SỐNG KHỎE HƠN" in all_chunk_text

@@ -70,15 +70,7 @@ from src.eval.models import BenchmarkCase, CorpusDocument, TextChunk
 from src.eval.runner import primary_source_paths
 from src.eval.vector_database import QdrantStrategyDatabase
 
-SAFE_STREAMING_STRATEGY_NAMES = (
-    "semantic_embedding",
-    "heading_level_table_safe",
-    "markdown_header_recursive_table",
-    "insurance_contract_hybrid_late",
-    "markdown_then_semantic",
-    "table_as_one_hybrid",
-    "hierarchical_header_recursive",
-)
+SAFE_STREAMING_STRATEGY_NAMES = ("hierarchical_header_recursive",)
 LLM_STREAMING_STRATEGY_NAMES = (
     "llm_markdown_optimal",
     "llamaindex_markdown_element",

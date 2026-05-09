@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
@@ -10,7 +12,6 @@ from langchain_text_splitters import (
 from src.eval.chunking.base import (
     ChunkingStrategy,
     chunks_from_langchain_documents,
-    header_path,
 )
 from src.eval.config import DEFAULT_MARKDOWN_HEADERS
 from src.eval.models import CorpusDocument, TextChunk
@@ -38,11 +39,29 @@ class HierarchicalHeaderRecursiveChunking(ChunkingStrategy):
 
         parent_documents = self.header_splitter.split_text(document.text)
         for parent_document in parent_documents:
-            parent_document.metadata["header_path"] = header_path(
-                parent_document.metadata
+            header_values = header_hierarchy(parent_document.metadata)
+            fallback_title = Path(document.source_path).stem
+            section_title = header_values[-1] if header_values else fallback_title
+            parent_document.metadata["document_source_path"] = document.source_path
+            parent_document.metadata["document_provider"] = document.provider
+            parent_document.metadata["header_hierarchy"] = header_values
+            parent_document.metadata["header_path"] = (
+                " > ".join(header_values) if header_values else fallback_title
             )
+            parent_document.metadata["header_level"] = len(header_values)
+            parent_document.metadata["section_title"] = section_title
             parent_document.metadata["parent_section_length"] = len(
                 parent_document.page_content
             )
         split_documents = self.child_splitter.split_documents(parent_documents)
         return chunks_from_langchain_documents(document, self.name, split_documents)
+
+
+def header_hierarchy(metadata: dict[str, object]) -> list[str]:
+    """Return ordered, non-empty Markdown header values from splitter metadata."""
+
+    return [
+        str(metadata[key])
+        for key in sorted(metadata)
+        if key.startswith("Header ") and metadata.get(key)
+    ]

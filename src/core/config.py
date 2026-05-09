@@ -110,7 +110,7 @@ class Settings:
             os.getenv("RAG_CHILD_CHUNK_OVERLAP", "150")
         )
         self.RAG_CHUNKING_STRATEGY: str = os.getenv(
-            "RAG_CHUNKING_STRATEGY", "hybrid_semantic"
+            "RAG_CHUNKING_STRATEGY", "hierarchical_header_recursive"
         )
         self.RAG_SEMANTIC_TARGET_CHARS: int = int(
             os.getenv("RAG_SEMANTIC_TARGET_CHARS", "1400")

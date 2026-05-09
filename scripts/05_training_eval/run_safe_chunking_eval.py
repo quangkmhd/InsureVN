@@ -43,15 +43,18 @@ DEFAULT_REPORT_PATH = (
     / "work_log"
     / "2026-05-08-safe-ten-file-chunking-eval-report.md"
 )
-CORE_STRATEGIES = (
+SELECTABLE_STRATEGIES = (
     "semantic_embedding",
     "heading_level_table_safe",
     "markdown_header_recursive_table",
     "insurance_contract_hybrid_late",
     "markdown_then_semantic",
     "table_as_one_hybrid",
+    "llm_markdown_optimal",
+    "llamaindex_markdown_element",
     "hierarchical_header_recursive",
 )
+DEFAULT_STRATEGIES = ("hierarchical_header_recursive",)
 SKIPPED_FULL_STRATEGIES = (
     "llm_markdown_optimal",
     "llamaindex_markdown_element",
@@ -105,7 +108,7 @@ def main() -> int:
     )
 
     statuses: list[StrategyRunStatus] = []
-    for strategy in CORE_STRATEGIES:
+    for strategy in args.strategies:
         status = run_strategy(
             strategy=strategy,
             benchmark_path=args.benchmark_path,
@@ -165,7 +168,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-process-cpu-percent", type=float, default=0.0)
     parser.add_argument("--cpu-check-interval-seconds", type=float, default=2.0)
     parser.add_argument("--cpu-limit-grace-seconds", type=float, default=6.0)
-    return parser.parse_args()
+    parser.add_argument(
+        "--strategies",
+        default=",".join(DEFAULT_STRATEGIES),
+        help=(
+            "Comma-separated chunking strategy names. Defaults to "
+            "hierarchical_header_recursive."
+        ),
+    )
+    args = parser.parse_args()
+    try:
+        args.strategies = parse_strategy_names(args.strategies)
+    except ValueError as exc:
+        parser.error(str(exc))
+    return args
+
+
+def parse_strategy_names(value: str) -> tuple[str, ...]:
+    """Parse and validate a comma-separated strategy list."""
+    strategy_names = tuple(name.strip() for name in value.split(",") if name.strip())
+    if not strategy_names:
+        raise ValueError("At least one strategy name is required.")
+    unknown_strategies = sorted(set(strategy_names) - set(SELECTABLE_STRATEGIES))
+    if unknown_strategies:
+        known = ", ".join(SELECTABLE_STRATEGIES)
+        raise ValueError(
+            f"Unknown chunking strategies: {unknown_strategies}. "
+            f"Known strategies: {known}"
+        )
+    return strategy_names
 
 
 def reset_directory(path: Path) -> None:

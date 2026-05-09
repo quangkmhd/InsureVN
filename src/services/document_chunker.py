@@ -8,12 +8,20 @@ from typing import Any, Literal
 
 from langchain_core.embeddings import Embeddings
 from langchain_experimental.text_splitter import SemanticChunker
-from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from langchain_text_splitters import (
+    Language,
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
 
 from src.core.vietnamese_text import slugify_vietnamese
 from src.services.observability import add_current_service_metadata, service_observe
 
-ChunkingStrategy = Literal["recursive", "hybrid_semantic"]
+ChunkingStrategy = Literal[
+    "recursive",
+    "hybrid_semantic",
+    "hierarchical_header_recursive",
+]
 SemanticBreakpointType = Literal[
     "percentile",
     "standard_deviation",
@@ -33,6 +41,38 @@ REQUIRED_QDRANT_PAYLOAD_FIELDS = (
     "file_name",
     "content_hash",
     "ingestion_version",
+)
+HIERARCHICAL_QDRANT_PAYLOAD_FIELDS = (
+    "chunking_strategy",
+    "header_hierarchy",
+    "header_path",
+    "header_level",
+    "section_heading",
+)
+NON_EMPTY_QDRANT_PAYLOAD_FIELDS = (
+    "company_code",
+    "document_id",
+    "document_type",
+    "document_name",
+    "product_line",
+    "section_type",
+    "parent_section_id",
+    "file_name",
+    "content_hash",
+    "ingestion_version",
+)
+HIERARCHICAL_NON_EMPTY_QDRANT_PAYLOAD_FIELDS = (
+    "chunking_strategy",
+    "header_path",
+    "section_heading",
+)
+MARKDOWN_HEADER_SPLIT_LEVELS = (
+    ("#", "Header 1"),
+    ("##", "Header 2"),
+    ("###", "Header 3"),
+    ("####", "Header 4"),
+    ("#####", "Header 5"),
+    ("######", "Header 6"),
 )
 INTERPRETATION_MARKER_RE = re.compile(
     r"^\s*(?:\*\*)?Diễn giải dữ liệu:(?:\*\*)?",
@@ -122,9 +162,14 @@ class DocumentChunker:
             raise ValueError("child_chunk_overlap cannot be negative.")
         if child_chunk_overlap >= child_chunk_chars:
             raise ValueError("child_chunk_overlap must be smaller than chunk size.")
-        if chunking_strategy not in {"recursive", "hybrid_semantic"}:
+        if chunking_strategy not in {
+            "recursive",
+            "hybrid_semantic",
+            "hierarchical_header_recursive",
+        }:
             raise ValueError(
-                "chunking_strategy must be 'recursive' or 'hybrid_semantic'."
+                "chunking_strategy must be 'recursive', 'hybrid_semantic', "
+                "or 'hierarchical_header_recursive'."
             )
         if semantic_target_chars <= 0:
             raise ValueError("semantic_target_chars must be positive.")
@@ -153,6 +198,15 @@ class DocumentChunker:
             chunk_size=child_chunk_chars,
             chunk_overlap=child_chunk_overlap,
         )
+        self._hierarchical_header_splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=list(MARKDOWN_HEADER_SPLIT_LEVELS),
+            strip_headers=False,
+        )
+        self._hierarchical_child_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=child_chunk_chars,
+            chunk_overlap=child_chunk_overlap,
+            length_function=len,
+        )
 
     @service_observe(
         name="service.document_chunker.chunk_markdown", component="document_chunker"
@@ -172,6 +226,12 @@ class DocumentChunker:
             Parsed parent sections and Qdrant-ready child chunks.
         """
         normalized_text = unicodedata.normalize("NFC", markdown_text)
+        if self.chunking_strategy == "hierarchical_header_recursive":
+            return self._chunk_markdown_hierarchically(
+                markdown_text=normalized_text,
+                metadata=metadata,
+            )
+
         parent_sections = self._parse_parent_sections(normalized_text, metadata)
         chunking_metrics = ChunkingMetrics()
         child_chunks: list[ChildChunk] = []
@@ -185,7 +245,10 @@ class DocumentChunker:
                     child_text=child_text,
                     chunk_index=chunk_index,
                 )
-                self.validate_payload(payload)
+                self.validate_payload(
+                    payload,
+                    expected_chunking_strategy=self.chunking_strategy,
+                )
                 chunk_id = f"{parent_section.section_id}:chunk:{chunk_index}"
                 child_chunks.append(
                     ChildChunk(
@@ -211,15 +274,183 @@ class DocumentChunker:
         name="service.document_chunker.validate_payload",
         component="document_chunker",
     )
-    def validate_payload(cls, payload: dict[str, Any]) -> None:
+    def validate_payload(
+        cls,
+        payload: dict[str, Any],
+        *,
+        expected_chunking_strategy: ChunkingStrategy | None = None,
+    ) -> None:
         """Validate required Qdrant citation payload fields."""
         missing_fields = [
             field for field in REQUIRED_QDRANT_PAYLOAD_FIELDS if field not in payload
         ]
+        requires_hierarchical_metadata = (
+            expected_chunking_strategy == "hierarchical_header_recursive"
+            or payload.get("chunking_strategy") == "hierarchical_header_recursive"
+        )
+        if requires_hierarchical_metadata:
+            missing_fields.extend(
+                field
+                for field in HIERARCHICAL_QDRANT_PAYLOAD_FIELDS
+                if field not in payload
+            )
         if missing_fields:
             raise ValueError(
                 "Missing Qdrant payload field(s): " + ", ".join(missing_fields)
             )
+        empty_fields = [
+            field
+            for field in NON_EMPTY_QDRANT_PAYLOAD_FIELDS
+            if field in payload and _is_missing_or_blank(payload.get(field))
+        ]
+        if requires_hierarchical_metadata:
+            empty_fields.extend(
+                field
+                for field in HIERARCHICAL_NON_EMPTY_QDRANT_PAYLOAD_FIELDS
+                if field in payload and _is_missing_or_blank(payload.get(field))
+            )
+        if empty_fields:
+            raise ValueError(
+                "Empty Qdrant payload field(s): " + ", ".join(empty_fields)
+            )
+        if requires_hierarchical_metadata:
+            cls._validate_hierarchical_payload(payload)
+
+    @staticmethod
+    def _validate_hierarchical_payload(payload: dict[str, Any]) -> None:
+        invalid_fields: list[str] = []
+        if payload.get("chunking_strategy") != "hierarchical_header_recursive":
+            invalid_fields.append("chunking_strategy")
+        header_hierarchy = payload.get("header_hierarchy")
+        if not isinstance(header_hierarchy, list) or any(
+            _is_missing_or_blank(header) for header in header_hierarchy
+        ):
+            invalid_fields.append("header_hierarchy")
+        header_level = payload.get("header_level")
+        if not isinstance(header_level, int) or header_level < 0:
+            invalid_fields.append("header_level")
+        if invalid_fields:
+            raise ValueError(
+                "Invalid hierarchical Qdrant payload field(s): "
+                + ", ".join(invalid_fields)
+            )
+
+    def _chunk_markdown_hierarchically(
+        self,
+        *,
+        markdown_text: str,
+        metadata: dict[str, Any],
+    ) -> ChunkedDocument:
+        parent_sections = self._parse_hierarchical_parent_sections(
+            markdown_text,
+            metadata,
+        )
+        child_chunks: list[ChildChunk] = []
+        chunking_metrics = ChunkingMetrics(recursive_section_count=len(parent_sections))
+
+        for parent_section in parent_sections:
+            child_texts = self._clean_chunks(
+                self._hierarchical_child_splitter.split_text(parent_section.text)
+            )
+            if not child_texts and parent_section.text.strip():
+                child_texts = [parent_section.text.strip()]
+            for chunk_index, child_text in enumerate(child_texts):
+                payload = self._build_payload(
+                    parent_section=parent_section,
+                    child_text=child_text,
+                    chunk_index=chunk_index,
+                )
+                self.validate_payload(
+                    payload,
+                    expected_chunking_strategy=self.chunking_strategy,
+                )
+                child_chunks.append(
+                    ChildChunk(
+                        chunk_id=f"{parent_section.section_id}:chunk:{chunk_index}",
+                        parent_section_id=parent_section.section_id,
+                        text=child_text,
+                        payload=payload,
+                    )
+                )
+
+        chunked_document = ChunkedDocument(
+            parent_sections=parent_sections,
+            child_chunks=child_chunks,
+        )
+        self._update_langfuse_chunking_summary(
+            chunked_document=chunked_document,
+            chunking_metrics=chunking_metrics,
+        )
+        return chunked_document
+
+    def _parse_hierarchical_parent_sections(
+        self,
+        markdown_text: str,
+        metadata: dict[str, Any],
+    ) -> list[ParentSection]:
+        split_documents = self._hierarchical_header_splitter.split_text(markdown_text)
+        if not split_documents and markdown_text.strip():
+            return [
+                ParentSection(
+                    section_id=f"{metadata['document_id']}:document",
+                    heading=str(metadata["document_name"]),
+                    level=1,
+                    text=markdown_text.strip(),
+                    metadata={
+                        **metadata,
+                        **self._hierarchical_header_metadata({}, metadata),
+                    },
+                )
+            ]
+
+        sections: list[ParentSection] = []
+        for index, split_document in enumerate(split_documents):
+            section_text = split_document.page_content.strip()
+            if not section_text:
+                continue
+            header_metadata = self._hierarchical_header_metadata(
+                split_document.metadata,
+                metadata,
+            )
+            heading = str(header_metadata["section_heading"])
+            sections.append(
+                ParentSection(
+                    section_id=(
+                        f"{metadata['document_id']}:{self._slugify(heading)}:{index}"
+                    ),
+                    heading=heading,
+                    level=int(header_metadata["header_level"]) or 1,
+                    text=section_text,
+                    metadata={**metadata, **header_metadata},
+                )
+            )
+        return sections
+
+    @staticmethod
+    def _hierarchical_header_metadata(
+        raw_metadata: dict[str, Any],
+        document_metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        header_values = [
+            str(raw_metadata[key])
+            for key in sorted(raw_metadata)
+            if key.startswith("Header ") and raw_metadata.get(key)
+        ]
+        fallback_heading = str(document_metadata.get("document_name") or "document")
+        section_heading = header_values[-1] if header_values else fallback_heading
+        header_metadata: dict[str, Any] = {
+            "chunking_strategy": "hierarchical_header_recursive",
+            "header_hierarchy": header_values,
+            "header_path": " > ".join(header_values)
+            if header_values
+            else section_heading,
+            "header_level": len(header_values),
+            "section_heading": section_heading,
+        }
+        for key, value in raw_metadata.items():
+            if key.startswith("Header ") and value:
+                header_metadata[key.lower().replace(" ", "_")] = str(value)
+        return header_metadata
 
     def _parse_parent_sections(
         self,
@@ -626,7 +857,6 @@ class DocumentChunker:
             "chunk_index": chunk_index,
             "parent_section_id": parent_section.section_id,
             "text": child_text,
-            "parent_text": parent_section.text,
             "content_hash": content_hash,
             "ingestion_version": ingestion_version,
         }
@@ -662,3 +892,7 @@ def _qdrant_payload_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     if "file_name" not in payload_metadata and source_path:
         payload_metadata["file_name"] = Path(str(source_path)).name
     return payload_metadata
+
+
+def _is_missing_or_blank(value: Any) -> bool:
+    return value is None or (isinstance(value, str) and not value.strip())

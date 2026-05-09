@@ -13,6 +13,28 @@ InsureVN là dự án AI Engineering cho ngành bảo hiểm sức khỏe Việt
 - Kinh nghiệm agentic AI production patterns: MCP server, LangChain/LangGraph, RAG evidence, citation, hard filters, Langfuse tracing.
 - Tư duy engineering: source lineage, read-only database tools, cấu hình tập trung, unit/integration/e2e tests, logging và observability.
 
+## Điểm nổi bật cho nhà tuyển dụng
+
+**Vai trò:** AI Engineer / Backend Developer
+
+**Tech stack:** Python, FastAPI, LangChain, LangGraph, Deep Agents, MCP/FastMCP, SQLite, Qdrant, Neo4j, NetworkX, Langfuse, Ollama, Gemini, NVIDIA, OpenRouter, Marker, Datalab, CUDA, pytest, ruff.
+
+- Thiết kế và xây dựng nền tảng AI multi-agent cho bảo hiểm sức khỏe Việt Nam, hỗ trợ policy Q&A, product comparison, claim advisory và claim/payout draft workflows bằng FastAPI, LangChain, LangGraph, Deep Agents và shared evidence foundation.
+- Xây dựng pipeline tài liệu end-to-end để thu thập, phân loại, chuyển đổi, trích xuất, đánh giá và ingest PDF bảo hiểm tiếng Việt vào SQLite, Qdrant và Knowledge Graph.
+- Tự động hóa thu thập dữ liệu từ 9+ nguồn bảo hiểm như AIA, Bảo Việt, Bảo Minh, BIC, Liberty, PTI, PVI, Generali và Pacific Cross bằng crawler, Firecrawl và deep search workflows.
+- Phát triển pipeline xử lý tài liệu bằng LLM/VLM với Marker, Datalab, CUDA và multi-provider LLMs để phân loại PDF bảo hiểm sức khỏe, loại bỏ tài liệu không liên quan, chuyển PDF sang Markdown, trích xuất bảng/ảnh/structured JSON, chuyển bảng phức tạp thành narrative text và ánh xạ output không đồng nhất vào SQLite.
+- Thiết kế SQLite database schema có khả năng truy vết nguồn dữ liệu, chuẩn hóa gói bảo hiểm và lưu domain tables; chuẩn hóa dữ liệu từ 6 công ty, 83 PDFs, 644 source tables, 424 plans, 3,766 benefit values, 1,771 premium rows, 7,004 hospitals, 290 glossary terms và 551 claim payout records.
+- Xây dựng read-only SQLite MCP server với 21 insurance domain tools và tích hợp với LangChain DatabaseAgent, dedicated LLM configuration, Langfuse tracing và prompt management để truy vấn an toàn các dữ liệu về benefits, premiums, hospitals, waiting periods, claim payouts và exclusions dựa trên evidence.
+- Thiết kế Quad-Retrieval RAG architecture kết hợp SQLite structured facts, Qdrant dense vector search, sparse/BM25 keyword search và Knowledge Graph reasoning, kèm shared Evidence layer cho normalization, deduplication, conflict detection, reranking và citation formatting.
+- Triển khai retrieval foundation với parent-child chunking, table-aware chunking, bảo toàn legal context, Qdrant dense/sparse indexing, hard filters theo company/plan/document/section và production readiness checks.
+- Xây dựng Knowledge Graph và GraphRAG services cho schema discovery, LLM graph extraction, NetworkX diagnostics, Neo4j import/query, graph traversal và graph quality validation, giúp giảm rủi ro trộn dữ liệu giữa các công ty có ngôn ngữ hợp đồng bảo hiểm tương tự nhau.
+- Xây dựng AI-assisted graph schema discovery pipeline để quét tài liệu bảo hiểm, đề xuất candidate nodes, relationships và properties, sau đó lọc, gộp và canonicalize thành domain-specific Knowledge Graph schema với 42 node types, 68 relationship types, 127 node properties và 27 relationship properties.
+- Xây dựng retrieval evaluation workflows để chọn chiến lược chunking phù hợp nhất cho tài liệu bảo hiểm tiếng Việt, so sánh 9 strategies trên 150 QA cases và 1,350 metric rows; best full benchmark đạt 40.67% Primary Hit@5, 26.71% MRR@5 và 26.61% Required Source Recall@5.
+- Chạy persisted Qdrant evaluation trên 91 cases, với strategy tốt nhất đạt 74.73% Primary Hit@5 và 55.44% MRR@5; đồng thời xây context-level RAG benchmarks, streaming chunking/embedding ingestion trên 86 expected-source files và LLM chunking comparison với 172/172 file-strategy rows hoàn tất, 0 failures.
+- Xây dựng AI judge evaluation pipeline cho 1,350 strategy-case pairs, hoàn tất 1,350/1,350 evaluations với 0 failures sau retry timeout/rate-limit.
+- Triển khai FastAPI runtime, health checks, lifecycle logging, structured JSON logs, typed configuration cho LLM providers/Qdrant/Neo4j/Langfuse, và Langfuse observability cho agent execution, MCP tool calls, HTTP tracing, service duration, error metadata và prompt versioning.
+- Duy trì codebase gồm 76 source files, 71 Python scripts, 64 documentation files và 48 test files, có unit, integration và e2e test structure.
+
 ## Vai trò của tôi trong dự án
 
 Tôi đóng vai trò owner/AI engineer chính của dự án:
@@ -55,9 +77,9 @@ Cách tôi giải quyết là tách rõ dữ liệu có cấu trúc và không c
 | Bệnh viện/phòng khám              |     7,004 |
 | Thuật ngữ bảo hiểm                |       290 |
 | Tỷ lệ chi trả claim                |       551 |
-| Test modules                          |        45 |
+| Test files hiện có                    |        48 |
 
-Nguồn số liệu: [docs/database/sqlite_database_schema_specification.md](docs/database/sqlite_database_schema_specification.md)
+Nguồn số liệu database: [docs/database/sqlite_database_schema_specification.md](docs/database/sqlite_database_schema_specification.md). Số lượng test files lấy từ inventory hiện tại của repository.
 
 ## Kiến trúc hệ thống
 

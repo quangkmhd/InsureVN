@@ -2,10 +2,15 @@
 
 All notable changes to the InsureVN project will be documented in this file.
 
-## [Unreleased] - 2026-05-05
+## [Unreleased] - 2026-05-09
 
 ### ✨ New Features
 
+- **Adaptive Semantic Density Chunking**: Implemented a new chunking strategy with an associated benchmark suite and comparison API for optimizing document retrieval.
+- **RAG Evaluation Framework**: Launched a core evaluation framework and LLM infrastructure, including the Health RAG Context Benchmark v2 and specialized benchmarks for health insurance.
+- **Databricks Chunking Integration**: Integrated Databricks chunking strategies to enhance document processing and retrieval quality.
+- **Chunking Comparison Playground**: Introduced a tool and infrastructure for side-by-side comparison of different chunking strategies.
+- **GraphRAG Framework Integration**: Integrated the GraphRAG LangChain framework with custom retrieval and schema configuration for multi-hop reasoning.
 - **Quad-Retrieval Engine**: Integrated Qdrant and Knowledge Graph retrieval systems to support advanced document exploration and multi-dimensional search within LangChain.
 - **Evidence Management System**: Built an end-to-end evidence architecture including adapters, mergers, citation formatters, and document chunk contracts.
 - **Knowledge Graph Foundation**: Implemented a SQLite-based builder and foundation for the application's document knowledge graph.
@@ -13,22 +18,26 @@ All notable changes to the InsureVN project will be documented in this file.
 
 ### 🔧 Improvements
 
-- **Standardized Agent Configuration**: Established a robust, prefix-based configuration architecture. Each agent now has dedicated, isolated parameters (e.g., `DATABASE_LLM_*`, `SEARCH_LLM_*`) managed through a centralized `Settings` registry, eliminating direct dependency on environment variables within agent logic.
-- **Configuration Isolation & Type Safety**: Implemented strict isolation between agent settings to prevent configuration leakage and ensured mandatory type casting for all parameters (e.g., temperature, top_p) at the configuration layer.
-- **Meaningful Naming Refactor**: Systematically renamed internal agent identifiers (e.g., `graph` -> `database_agent`) to align with domain-specific naming standards and improved global searchability within the codebase.
-- **Advanced Text Normalization**: Improved chunking accuracy and slug generation by switching to NFKD text normalization and stripping non-ASCII characters.
+- **Knowledge Graph Pipeline Refactor**: Reorganized the knowledge graph schema discovery and build pipeline to improve efficiency and maintainability.
+- **Standardized Agent Configuration**: Established a robust, prefix-based configuration architecture with dedicated, isolated parameters managed through a centralized `Settings` registry.
+- **Parameter Standardization**: Renamed `RAG_CHILD_CHUNK_TOKENS` to `RAG_CHILD_CHUNK_MAX_CHARS` across the configuration and ingestion logic for better clarity.
+- **Meaningful Naming Refactor**: Systematically renamed internal agent identifiers to align with domain-specific naming standards.
+- **Advanced Text Normalization**: Improved chunking accuracy and slug generation by switching to NFKD text normalization.
 - **Citation Traceability**: Added structured logging to the citation formatter to provide deeper visibility into AI evidence tracking.
 
 ### 🐛 Fixes
 
-- Resolved formatting and logic issues in the Phase 01 evidence generation system.
-- Corrected linting and validation checks within the SQLite MCP server.
+- **Security Hardening**: Removed hardcoded NVIDIA AI API keys and sanitized the codebase to prevent credential leakage.
+- **Logic & Validation**: Corrected linting and validation checks within the SQLite MCP server and resolved formatting issues in the Phase 01 evidence generation system.
 
-### 📝 Documentation
+### 📝 Documentation & Testing
 
+- **Implementation Memory Guidelines**: Updated `AGENTS.md` and `GEMINI.md` with new guidelines regarding import locations and tool priority.
+- **KG Refactor Documentation**: Updated agent instructions and the data pipeline work log to reflect the knowledge graph architectural changes.
+- **Test Suite Cleanup**: Cleaned up test initialization files and updated knowledge graph tests to align with the new pipeline structure.
+- **Langfuse Integration Tests**: Added comprehensive integration tests for Langfuse logging and observability.
 - **Project Roadmaps**: Published structured blueprints for Phase 02 and Phase 03 agent workflows.
-- **Quad-Retrieval RAG Design**: Published a new technical specification for the Quad-Retrieval (Vector, Keyword, Graph, SQL) architecture in `docs/superpowers/specs/2026-05-04-quad-retrieval-rag-architecture.md`.
-- **RAG Architecture Updates**: Updated the RAG documentation with Gemini embedding integration support.
+- **Technical Specifications**: Published new specifications for the Quad-Retrieval RAG architecture and updated documentation with Gemini embedding integration support.
 
 ---
 

@@ -405,4 +405,4 @@ def _log_failed_chunk(
 
 
 def _uses_ollama(provider: str, model: str) -> bool:
-    return provider == "ollama" or "ollama" in model.lower()
+    return provider.lower() == "ollama" or "ollama" in model.lower()

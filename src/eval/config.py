@@ -8,7 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from src.eval.llm_provider_slots import (
+from src.core.config import settings
+from src.eval.llms.provider_slots import (
     EvalLLMProviderSlot,
     collect_markdown_element_llm_provider_slots,
 )
@@ -30,6 +31,15 @@ def _env_int(name: str, default: int) -> int:
     value = os.getenv(name)
     if value is None or not value.strip():
         return default
+    return int(value)
+
+
+def _env_optional_int(name: str) -> int | None:
+    """Read an optional integer environment variable."""
+
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return None
     return int(value)
 
 
@@ -88,6 +98,71 @@ def _collect_gemini_api_keys() -> tuple[str, ...]:
     return tuple(unique_keys)
 
 
+def _resolve_eval_google_api_key() -> str:
+    """Return the Google API key used by eval embedding adapters."""
+
+    keys = _collect_eval_google_api_keys()
+    return keys[0] if keys else ""
+
+
+def _resolve_indirect_env_value(value: str) -> str:
+    """Resolve a value that might itself be an environment variable name."""
+
+    if value in os.environ:
+        return os.environ[value]
+    return value
+
+
+def _collect_numbered_env_values(prefix: str) -> tuple[str, ...]:
+    """Collect every numbered env var with the given prefix in numeric order."""
+
+    values: list[tuple[int, str]] = []
+    prefix_with_separator = f"{prefix}_"
+    for environment_name, raw_value in os.environ.items():
+        if not environment_name.startswith(prefix_with_separator):
+            continue
+        suffix = environment_name.removeprefix(prefix_with_separator)
+        if not suffix.isdigit():
+            continue
+        resolved_value = _resolve_indirect_env_value(raw_value.strip())
+        if resolved_value:
+            values.append((int(suffix), resolved_value))
+    return tuple(value for _, value in sorted(values))
+
+
+def _collect_eval_google_api_keys() -> tuple[str, ...]:
+    """Return all Google API keys available for eval embeddings."""
+
+    keys: list[str] = []
+    for env_name in (
+        "CHUNKING_EVAL_EMBEDDING_GOOGLE_API_KEY",
+        "CHUNKING_EVAL_EMBEDDING_GOOGLE_API_KEYS",
+        "RAG_EMBEDDING_API_KEY",
+        "GOOGLE_API_KEY",
+        "GEMINI_API_KEY",
+    ):
+        raw_value = os.getenv(env_name, "").strip()
+        if not raw_value:
+            continue
+        values = [item.strip() for item in raw_value.split(",") if item.strip()]
+        for value in values:
+            resolved_value = _resolve_indirect_env_value(value)
+            if resolved_value:
+                keys.append(resolved_value)
+    keys.extend(_collect_numbered_env_values("GOOGLE_API_KEY"))
+    keys.extend(_collect_numbered_env_values("GEMINI_API_KEY"))
+    for value in settings.GOOGLE_API_KEYS:
+        resolved_value = _resolve_indirect_env_value(value)
+        if resolved_value:
+            keys.append(resolved_value)
+
+    unique_keys: list[str] = []
+    for key in keys:
+        if key not in unique_keys:
+            unique_keys.append(key)
+    return tuple(unique_keys)
+
+
 DEFAULT_BENCHMARK_PATH = (
     PROJECT_ROOT
     / "data"
@@ -106,6 +181,10 @@ DEFAULT_COLLECTION_NAME = "chunks"
 FAST_MULTILINGUAL_EMBEDDING_MODEL = (
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 )
+DEFAULT_EMBEDDING_PROVIDER = os.getenv(
+    "CHUNKING_EVAL_EMBEDDING_PROVIDER",
+    "sentence_transformers",
+)
 DEFAULT_EMBEDDING_MODEL = os.getenv(
     "CHUNKING_EVAL_EMBEDDING_MODEL",
     FAST_MULTILINGUAL_EMBEDDING_MODEL,
@@ -117,6 +196,13 @@ DEFAULT_EMBEDDING_DEVICE = (
     ).strip()
     or None
 )
+DEFAULT_EMBEDDING_GOOGLE_API_KEY = _resolve_eval_google_api_key()
+DEFAULT_EMBEDDING_GOOGLE_API_KEYS = _collect_eval_google_api_keys()
+DEFAULT_EMBEDDING_OUTPUT_DIMENSIONALITY = _env_optional_int(
+    "CHUNKING_EVAL_EMBEDDING_OUTPUT_DIMENSIONALITY"
+)
+if DEFAULT_EMBEDDING_OUTPUT_DIMENSIONALITY is None:
+    DEFAULT_EMBEDDING_OUTPUT_DIMENSIONALITY = settings.RAG_DENSE_VECTOR_SIZE
 DEFAULT_EMBEDDING_CACHE_ENABLED = _env_bool(
     "CHUNKING_EVAL_EMBEDDING_CACHE_ENABLED",
     True,
@@ -221,8 +307,14 @@ class ChunkingRunConfig:
     benchmark_path: Path = DEFAULT_BENCHMARK_PATH
     corpus_dir: Path = DEFAULT_CORPUS_DIR
     output_dir: Path = DEFAULT_OUTPUT_DIR
+    embedding_provider: str = DEFAULT_EMBEDDING_PROVIDER
     embedding_model_name: str = DEFAULT_EMBEDDING_MODEL
     embedding_device: str | None = DEFAULT_EMBEDDING_DEVICE
+    embedding_google_api_key: str = DEFAULT_EMBEDDING_GOOGLE_API_KEY
+    embedding_google_api_keys: tuple[str, ...] = DEFAULT_EMBEDDING_GOOGLE_API_KEYS
+    embedding_output_dimensionality: int | None = (
+        DEFAULT_EMBEDDING_OUTPUT_DIMENSIONALITY
+    )
     embedding_cache_enabled: bool = DEFAULT_EMBEDDING_CACHE_ENABLED
     embedding_cache_path: Path = DEFAULT_EMBEDDING_CACHE_PATH
     collection_name: str = DEFAULT_COLLECTION_NAME

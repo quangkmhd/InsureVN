@@ -32,8 +32,10 @@ from src.services.chunking.document_chunker import (
     DocumentChunker,
 )
 from src.services.document_retrieval.qdrant_retriever import (
-    GoogleGenAIEmbeddingProvider,
     QdrantRetriever,
+)
+from src.services.document_retrieval.qdrant_retriever import (
+    build_dense_embedding_provider as build_production_dense_embedding_provider,
 )
 from src.services.knowledge_graph.graph_json_serializer import GraphJsonSerializer
 from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
@@ -306,20 +308,13 @@ def build_document_chunker(
     )
 
 
-def build_dense_embedding_provider() -> GoogleGenAIEmbeddingProvider:
+def build_dense_embedding_provider() -> Embeddings:
     """Build the configured dense embedding provider for Qdrant indexing."""
-    if settings.RAG_EMBEDDING_PROVIDER != "google_genai":
-        raise ValueError(
-            "Unsupported RAG_EMBEDDING_PROVIDER. "
-            "Use 'google_genai' for health Markdown indexing."
-        )
-    return GoogleGenAIEmbeddingProvider(
+    return build_production_dense_embedding_provider(
+        provider=settings.RAG_EMBEDDING_PROVIDER,
         model_name=settings.RAG_EMBEDDING_MODEL,
-        google_api_key=settings.RAG_EMBEDDING_API_KEY,
         vector_size=settings.RAG_DENSE_VECTOR_SIZE,
         batch_size=settings.RAG_EMBEDDING_BATCH_SIZE,
-        document_task_type=settings.RAG_EMBEDDING_TASK_TYPE_DOCUMENT,
-        query_task_type=settings.RAG_EMBEDDING_TASK_TYPE_QUERY,
     )
 
 

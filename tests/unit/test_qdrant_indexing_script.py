@@ -109,28 +109,25 @@ def test_build_embedding_provider_uses_configured_google_provider(monkeypatch) -
     script = _load_indexing_script()
     captured = {}
 
-    class FakeGoogleGenAIEmbeddingProvider:
-        def __init__(self, **kwargs) -> None:
-            captured.update(kwargs)
-
     monkeypatch.setattr(
         script,
-        "GoogleGenAIEmbeddingProvider",
-        FakeGoogleGenAIEmbeddingProvider,
+        "build_production_dense_embedding_provider",
+        lambda **kwargs: captured.update(kwargs) or "qwen-provider",
     )
 
     provider = script.build_embedding_provider(
-        provider="google_genai",
-        model_name="gemini-embedding-2",
-        google_api_key="test-google-key",
-        vector_size=768,
+        provider="HUGGINGFACE",
+        model_name="Qwen/Qwen3-Embedding-8B",
+        vector_size=4096,
+        batch_size=4,
     )
 
-    assert isinstance(provider, FakeGoogleGenAIEmbeddingProvider)
+    assert provider == "qwen-provider"
     assert captured == {
-        "model_name": "gemini-embedding-2",
-        "google_api_key": "test-google-key",
-        "vector_size": 768,
+        "provider": "HUGGINGFACE",
+        "model_name": "Qwen/Qwen3-Embedding-8B",
+        "vector_size": 4096,
+        "batch_size": 4,
     }
 
 
@@ -200,12 +197,11 @@ def test_build_embedding_provider_rejects_unimplemented_provider() -> None:
         script.build_embedding_provider(
             provider="custom",
             model_name="custom-model",
-            google_api_key="",
             vector_size=768,
         )
     except ValueError as exc:
         message = str(exc)
         assert "Unsupported RAG_EMBEDDING_PROVIDER" in message
-        assert "google_genai" in message
+        assert "HUGGINGFACE" in message
     else:
         raise AssertionError("Unsupported embedding providers must fail explicitly.")

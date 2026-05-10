@@ -55,6 +55,10 @@ def main() -> int:
         strategies=strategies,
         limit_documents=args.limit_documents if args.limit_documents > 0 else None,
         source_selection=args.source_selection,
+        embedding_provider=args.embedding_provider,
+        embedding_model_name=args.embedding_model_name,
+        embedding_device=args.embedding_device,
+        embedding_output_dimensionality=args.embedding_output_dimensionality,
         embedding_batch_size=args.embedding_batch_size,
         keep_qdrant=args.keep_qdrant,
         max_chunks_per_file=args.max_chunks_per_file,
@@ -133,6 +137,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=sorted(SUPPORTED_SOURCE_SELECTIONS),
         default=SOURCE_SELECTION_PRIMARY,
         help="Select primary source paths or every expected source path from JSONL.",
+    )
+    parser.add_argument(
+        "--embedding-provider",
+        default=StreamingChunkEmbeddingConfig.embedding_provider,
+    )
+    parser.add_argument(
+        "--embedding-model-name",
+        default=StreamingChunkEmbeddingConfig.embedding_model_name,
+    )
+    parser.add_argument(
+        "--embedding-device",
+        default=StreamingChunkEmbeddingConfig.embedding_device,
+    )
+    parser.add_argument(
+        "--embedding-output-dimensionality",
+        type=int,
+        default=StreamingChunkEmbeddingConfig.embedding_output_dimensionality,
     )
     parser.add_argument("--embedding-batch-size", type=int, default=8)
     parser.add_argument("--max-chunks-per-file", type=int)

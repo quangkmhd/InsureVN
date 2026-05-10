@@ -26,8 +26,10 @@ from src.services.chunking.document_chunker import (
     DocumentChunker,
 )
 from src.services.document_retrieval.qdrant_retriever import (
-    GoogleGenAIEmbeddingProvider,
     QdrantRetriever,
+)
+from src.services.document_retrieval.qdrant_retriever import (
+    build_dense_embedding_provider as build_production_dense_embedding_provider,
 )
 
 logger = get_logger("qdrant_indexer")
@@ -199,32 +201,25 @@ def build_embedding_provider(
     *,
     provider: str,
     model_name: str,
-    google_api_key: str,
     vector_size: int,
+    batch_size: int = settings.RAG_EMBEDDING_BATCH_SIZE,
 ) -> Embeddings:
     """Build the configured embedding provider.
 
     Args:
         provider: Embedding provider configured by `RAG_EMBEDDING_PROVIDER`.
         model_name: Embedding model configured by `RAG_EMBEDDING_MODEL`.
-        google_api_key: Google API key for Gemini embedding providers.
         vector_size: Dense vector dimension configured by `RAG_DENSE_VECTOR_SIZE`.
+        batch_size: Dense embedding batch size for provider-side batching.
 
     Returns:
         Embedding provider for indexing and retrieval.
-
-    Raises:
-        ValueError: If the configured model is not implemented in this phase.
     """
-    if provider == "google_genai":
-        return GoogleGenAIEmbeddingProvider(
-            model_name=model_name,
-            google_api_key=google_api_key,
-            vector_size=vector_size,
-        )
-    raise ValueError(
-        "Unsupported RAG_EMBEDDING_PROVIDER. "
-        "Use 'google_genai' with GOOGLE_API_KEY configured."
+    return build_production_dense_embedding_provider(
+        provider=provider,
+        model_name=model_name,
+        vector_size=vector_size,
+        batch_size=batch_size,
     )
 
 
@@ -289,8 +284,8 @@ def main() -> None:
     embedding_provider = build_embedding_provider(
         provider=settings.RAG_EMBEDDING_PROVIDER,
         model_name=settings.RAG_EMBEDDING_MODEL,
-        google_api_key=settings.GOOGLE_API_KEY,
         vector_size=settings.RAG_DENSE_VECTOR_SIZE,
+        batch_size=settings.RAG_EMBEDDING_BATCH_SIZE,
     )
     chunks = build_chunks(
         document_paths=document_paths,

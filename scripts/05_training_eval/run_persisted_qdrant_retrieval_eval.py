@@ -41,8 +41,10 @@ def main() -> int:
         output_dir=args.output_dir,
         top_k=args.top_k,
         embedding_batch_size=args.embedding_batch_size,
+        embedding_provider=args.embedding_provider,
         embedding_model_name=args.embedding_model_name,
         embedding_device=args.embedding_device,
+        embedding_output_dimensionality=args.embedding_output_dimensionality,
         embedding_cache_path=args.embedding_cache_path,
         strategies=strategies,
     )
@@ -70,8 +72,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--top-k", type=int, default=DEFAULT_EVAL_TOP_K)
     parser.add_argument("--embedding-batch-size", type=int, default=2)
+    parser.add_argument("--embedding-provider")
     parser.add_argument("--embedding-model-name")
     parser.add_argument("--embedding-device")
+    parser.add_argument("--embedding-output-dimensionality", type=int)
     parser.add_argument("--embedding-cache-path", type=Path)
     parser.add_argument(
         "--strategies",

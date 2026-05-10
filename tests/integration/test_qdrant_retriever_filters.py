@@ -8,19 +8,13 @@ from src.core.config import settings
 from src.models.evidence import HardFilters, RetrievalMode, RetrievalPlan, SourceType
 from src.services.chunking.document_chunker import DocumentChunker
 from src.services.document_retrieval.qdrant_retriever import (
-    GoogleGenAIEmbeddingProvider,
     QdrantRetriever,
     RetrievalReadinessError,
+    build_dense_embedding_provider,
     normalize_vietnamese_text,
 )
 
-pytestmark = [
-    pytest.mark.real_api,
-    pytest.mark.skipif(
-        not settings.GOOGLE_API_KEY,
-        reason="GOOGLE_API_KEY is required for real Qdrant retriever tests.",
-    ),
-]
+pytestmark = [pytest.mark.real_api]
 
 
 def _chunk_policy(
@@ -44,6 +38,7 @@ def _chunk_policy(
             "file_name": f"{document_id}.md",
             "source_table_id": f"documents:{document_id}",
             "effective_date": "2026-01-01",
+            "ingestion_version": "qwen-integration-test",
         },
     ).child_chunks
 
@@ -52,10 +47,16 @@ def _build_retriever() -> QdrantRetriever:
     retriever = QdrantRetriever(
         client=QdrantClient(":memory:"),
         collection_name="phase_02_test_chunks",
-        embedding_provider=GoogleGenAIEmbeddingProvider(
+        embedding_provider=build_dense_embedding_provider(
+            provider=settings.RAG_EMBEDDING_PROVIDER,
             model_name=settings.RAG_EMBEDDING_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
             vector_size=settings.RAG_DENSE_VECTOR_SIZE,
+            batch_size=1,
+            max_length=settings.RAG_EMBEDDING_MAX_LENGTH,
+            load_in_4bit=settings.RAG_EMBEDDING_LOAD_IN_4BIT,
+            device_map=settings.RAG_EMBEDDING_DEVICE_MAP,
+            attn_implementation=settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION,
+            query_task_description=settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION,
         ),
         keyword_enabled=True,
     )
@@ -97,10 +98,16 @@ def test_retriever_sets_up_named_dense_and_sparse_vectors() -> None:
     retriever = QdrantRetriever(
         client=QdrantClient(":memory:"),
         collection_name="named_vector_chunks",
-        embedding_provider=GoogleGenAIEmbeddingProvider(
+        embedding_provider=build_dense_embedding_provider(
+            provider=settings.RAG_EMBEDDING_PROVIDER,
             model_name=settings.RAG_EMBEDDING_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
             vector_size=settings.RAG_DENSE_VECTOR_SIZE,
+            batch_size=1,
+            max_length=settings.RAG_EMBEDDING_MAX_LENGTH,
+            load_in_4bit=settings.RAG_EMBEDDING_LOAD_IN_4BIT,
+            device_map=settings.RAG_EMBEDDING_DEVICE_MAP,
+            attn_implementation=settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION,
+            query_task_description=settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION,
         ),
         keyword_enabled=True,
         dense_vector_name="text_dense",
@@ -179,10 +186,16 @@ def test_production_readiness_rejects_dense_only_degraded_mode() -> None:
     retriever = QdrantRetriever(
         client=QdrantClient(":memory:"),
         collection_name="dense_only_chunks",
-        embedding_provider=GoogleGenAIEmbeddingProvider(
+        embedding_provider=build_dense_embedding_provider(
+            provider=settings.RAG_EMBEDDING_PROVIDER,
             model_name=settings.RAG_EMBEDDING_MODEL,
-            google_api_key=settings.GOOGLE_API_KEY,
             vector_size=settings.RAG_DENSE_VECTOR_SIZE,
+            batch_size=1,
+            max_length=settings.RAG_EMBEDDING_MAX_LENGTH,
+            load_in_4bit=settings.RAG_EMBEDDING_LOAD_IN_4BIT,
+            device_map=settings.RAG_EMBEDDING_DEVICE_MAP,
+            attn_implementation=settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION,
+            query_task_description=settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION,
         ),
         keyword_enabled=False,
         allow_dense_only_degraded_mode=True,

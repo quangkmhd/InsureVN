@@ -1,58 +1,74 @@
 from src.services.document_retrieval import qdrant_retriever
-
-
-def test_google_genai_embedding_provider_uses_configured_vector_size(
-    monkeypatch,
-) -> None:
-    captured: dict[str, object] = {}
-
-    class FakeGoogleGenerativeAIEmbeddings:
-        def __init__(self, **kwargs) -> None:
-            captured["init"] = kwargs
-
-        def embed_documents(self, texts: list[str], **kwargs) -> list[list[float]]:
-            captured["document_texts"] = texts
-            captured["document_kwargs"] = kwargs
-            return [[1.0, 0.0, 0.0] for _ in texts]
-
-        def embed_query(self, text: str, **kwargs) -> list[float]:
-            captured["query_text"] = text
-            captured["query_kwargs"] = kwargs
-            return [0.0, 1.0, 0.0]
-
-    monkeypatch.setattr(
-        qdrant_retriever,
-        "GoogleGenerativeAIEmbeddings",
-        FakeGoogleGenerativeAIEmbeddings,
-    )
-
-    provider = qdrant_retriever.GoogleGenAIEmbeddingProvider(
-        model_name="gemini-embedding-2",
-        google_api_key="test-google-key",
-        vector_size=3,
-    )
-
-    assert provider.vector_size == 3
-    assert provider.embed_documents(["policy text"]) == [[1.0, 0.0, 0.0]]
-    assert provider.embed_query("policy query") == [0.0, 1.0, 0.0]
-    assert captured["init"] == {
-        "model": "gemini-embedding-2",
-        "google_api_key": "test-google-key",
-        "output_dimensionality": 3,
-    }
-    assert captured["document_texts"] == ["policy text"]
-    assert captured["document_kwargs"] == {
-        "batch_size": 1,
-        "task_type": "RETRIEVAL_DOCUMENT",
-        "output_dimensionality": 3,
-    }
-    assert captured["query_text"] == "policy query"
-    assert captured["query_kwargs"] == {
-        "task_type": "RETRIEVAL_QUERY",
-        "output_dimensionality": 3,
-    }
+from src.services.document_retrieval.qwen_embedding_provider import (
+    QWEN3_DEFAULT_QUERY_TASK_DESCRIPTION,
+    Qwen3EmbeddingProvider,
+)
 
 
 def test_legacy_local_embedding_provider_is_not_exposed() -> None:
     legacy_provider_name = "".join(["Hash", "ing", "EmbeddingProvider"])
     assert not hasattr(qdrant_retriever, legacy_provider_name)
+
+
+def test_build_dense_embedding_provider_uses_qwen_provider(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeQwen3EmbeddingProvider:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(
+        qdrant_retriever,
+        "Qwen3EmbeddingProvider",
+        FakeQwen3EmbeddingProvider,
+    )
+
+    provider = qdrant_retriever.build_dense_embedding_provider(
+        provider="HUGGINGFACE",
+        model_name="Qwen/Qwen3-Embedding-8B",
+        vector_size=4096,
+        batch_size=4,
+        max_length=8192,
+        load_in_4bit=True,
+        device_map="auto",
+        attn_implementation="flash_attention_2",
+        query_task_description=QWEN3_DEFAULT_QUERY_TASK_DESCRIPTION,
+    )
+
+    assert isinstance(provider, FakeQwen3EmbeddingProvider)
+    assert captured == {
+        "model_name": "Qwen/Qwen3-Embedding-8B",
+        "vector_size": 4096,
+        "batch_size": 4,
+        "max_length": 8192,
+        "query_task_description": QWEN3_DEFAULT_QUERY_TASK_DESCRIPTION,
+        "load_in_4bit": True,
+        "device_map": "auto",
+        "attn_implementation": "flash_attention_2",
+    }
+
+
+def test_build_dense_embedding_provider_rejects_google_provider() -> None:
+    try:
+        qdrant_retriever.build_dense_embedding_provider(
+            provider="GOOGLE",
+            model_name="gemini-embedding-2",
+            vector_size=768,
+        )
+    except ValueError as exc:
+        assert "Unsupported RAG_EMBEDDING_PROVIDER" in str(exc)
+        assert "HUGGINGFACE" in str(exc)
+    else:
+        raise AssertionError("Google embedding provider must be rejected.")
+
+
+def test_qwen_provider_formats_query_with_instruction() -> None:
+    provider = Qwen3EmbeddingProvider(
+        model_name="Qwen/Qwen3-Embedding-8B",
+        vector_size=4096,
+    )
+
+    assert provider._prepare_query_text("Thời gian chờ bệnh đặc biệt là bao lâu?") == (
+        f"Instruct: {QWEN3_DEFAULT_QUERY_TASK_DESCRIPTION}\n"
+        "Query:Thời gian chờ bệnh đặc biệt là bao lâu?"
+    )

@@ -1,3 +1,4 @@
+import src.eval.config as eval_config
 from src.core.config import Settings
 
 
@@ -8,6 +9,8 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_DENSE_VECTOR_NAME", raising=False)
     monkeypatch.delenv("RAG_SPARSE_VECTOR_NAME", raising=False)
     monkeypatch.delenv("RAG_EMBEDDING_PROVIDER", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_MODEL", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_API_KEY", raising=False)
     monkeypatch.delenv("RAG_DENSE_VECTOR_SIZE", raising=False)
     monkeypatch.delenv("RAG_SPARSE_MODEL", raising=False)
     monkeypatch.delenv("RAG_CHILD_CHUNK_MAX_CHARS", raising=False)
@@ -18,6 +21,13 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("RAG_REQUIRE_HYBRID_SEARCH", raising=False)
     monkeypatch.delenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_BATCH_SIZE", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_MAX_LENGTH", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_LOAD_IN_4BIT", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_DEVICE_MAP", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_ATTN_IMPLEMENTATION", raising=False)
+    monkeypatch.delenv("RAG_EMBEDDING_QUERY_TASK_DESCRIPTION", raising=False)
+    monkeypatch.delenv("QWEN_EMBEDDING_MODEL", raising=False)
 
     settings = Settings()
 
@@ -26,9 +36,10 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.RAG_QDRANT_COLLECTION == "insurevn_policy_chunks"
     assert settings.RAG_DENSE_VECTOR_NAME == "text_dense"
     assert settings.RAG_SPARSE_VECTOR_NAME == "text_sparse"
-    assert settings.RAG_EMBEDDING_PROVIDER == "google_genai"
-    assert settings.RAG_EMBEDDING_MODEL == "gemini-embedding-2"
-    assert settings.RAG_DENSE_VECTOR_SIZE == 768
+    assert settings.RAG_EMBEDDING_PROVIDER == "HUGGINGFACE"
+    assert settings.RAG_EMBEDDING_MODEL == "Qwen/Qwen3-Embedding-8B"
+    assert settings.RAG_EMBEDDING_API_KEY == ""
+    assert settings.RAG_DENSE_VECTOR_SIZE == 4096
     assert settings.RAG_SPARSE_MODEL == "Qdrant/bm25"
     assert isinstance(settings.RAG_CHILD_CHUNK_MAX_CHARS, int)
     assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 1200
@@ -39,28 +50,64 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 30.0
     assert settings.RAG_REQUIRE_HYBRID_SEARCH is True
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is False
+    assert settings.RAG_EMBEDDING_BATCH_SIZE == 4
+    assert settings.RAG_EMBEDDING_MAX_LENGTH == 8192
+    assert settings.RAG_EMBEDDING_LOAD_IN_4BIT is True
+    assert settings.RAG_EMBEDDING_DEVICE_MAP == "auto"
+    assert settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION == ""
+    assert (
+        settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION
+        == "Given a web search query, retrieve relevant passages that answer the query"
+    )
 
 
 def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("RAG_CHILD_CHUNK_MAX_CHARS", "900")
     monkeypatch.setenv("RAG_CHILD_CHUNK_OVERLAP", "90")
     monkeypatch.setenv("RAG_PARENT_SECTION_MAX_CHARS", "4500")
-    monkeypatch.setenv("RAG_DENSE_VECTOR_SIZE", "512")
+    monkeypatch.setenv("RAG_DENSE_VECTOR_SIZE", "1024")
     monkeypatch.setenv("RAG_RETRIEVAL_TOP_K", "8")
     monkeypatch.setenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "12.5")
     monkeypatch.setenv("RAG_REQUIRE_HYBRID_SEARCH", "false")
     monkeypatch.setenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", "true")
+    monkeypatch.setenv("RAG_EMBEDDING_BATCH_SIZE", "2")
+    monkeypatch.setenv("RAG_EMBEDDING_MAX_LENGTH", "4096")
+    monkeypatch.setenv("RAG_EMBEDDING_LOAD_IN_4BIT", "false")
+    monkeypatch.setenv("RAG_EMBEDDING_DEVICE_MAP", "cpu")
+    monkeypatch.setenv("RAG_EMBEDDING_ATTN_IMPLEMENTATION", "flash_attention_2")
+    monkeypatch.setenv(
+        "RAG_EMBEDDING_QUERY_TASK_DESCRIPTION",
+        "Retrieve Vietnamese insurance clauses relevant to the question",
+    )
 
     settings = Settings()
 
     assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 900
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 90
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 4500
-    assert settings.RAG_DENSE_VECTOR_SIZE == 512
+    assert settings.RAG_DENSE_VECTOR_SIZE == 1024
     assert settings.RAG_RETRIEVAL_TOP_K == 8
     assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 12.5
     assert settings.RAG_REQUIRE_HYBRID_SEARCH is False
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is True
+    assert settings.RAG_EMBEDDING_BATCH_SIZE == 2
+    assert settings.RAG_EMBEDDING_MAX_LENGTH == 4096
+    assert settings.RAG_EMBEDDING_LOAD_IN_4BIT is False
+    assert settings.RAG_EMBEDDING_DEVICE_MAP == "cpu"
+    assert settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION == "flash_attention_2"
+    assert (
+        settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION
+        == "Retrieve Vietnamese insurance clauses relevant to the question"
+    )
+
+
+def test_rag_embedding_api_key_supports_indirect_env_alias(monkeypatch) -> None:
+    monkeypatch.setenv("RAG_EMBEDDING_API_KEY", "QWEN_LOCAL_PLACEHOLDER_KEY")
+    monkeypatch.setenv("QWEN_LOCAL_PLACEHOLDER_KEY", "resolved-qwen-key")
+
+    settings = Settings()
+
+    assert settings.RAG_EMBEDDING_API_KEY == "resolved-qwen-key"
 
 
 def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
@@ -97,14 +144,14 @@ def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.GRAPH_EAGER_START_K == 1
     assert settings.GRAPH_EAGER_MAX_DEPTH == 2
     assert settings.GRAPH_MIN_CONFIDENCE == 0.75
-    assert settings.KG_EXTRACTION_LLM_PROVIDER == "ollama"
-    assert settings.KG_EXTRACTION_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.KG_EXTRACTION_LLM_PROVIDER == ""
+    assert settings.KG_EXTRACTION_LLM_MODEL == ""
     assert settings.KG_EXTRACTION_LLM_API_KEY == ""
     assert settings.KG_EXTRACTION_LLM_BASE_URL == "http://localhost:11434"
     assert settings.KG_EXTRACTION_LLM_TEMPERATURE == 0.0
     assert settings.KG_EXTRACTION_MAX_RETRIES == 2
-    assert settings.KG_CYPHER_QA_LLM_PROVIDER == "ollama"
-    assert settings.KG_CYPHER_QA_LLM_MODEL == "gemma4:31b-cloud"
+    assert settings.KG_CYPHER_QA_LLM_PROVIDER == ""
+    assert settings.KG_CYPHER_QA_LLM_MODEL == ""
 
 
 def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
@@ -166,16 +213,85 @@ def test_langfuse_settings_prefer_current_base_url(monkeypatch) -> None:
     assert settings.LANGFUSE_HOST == "http://langfuse.local:3000"
 
 
+def test_settings_collect_all_numbered_google_api_keys_even_with_gaps(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("PRIMARY_GOOGLE_KEY", "google-key-0")
+    monkeypatch.setenv("GOOGLE_API_KEY", "PRIMARY_GOOGLE_KEY")
+    for index in range(1, 12):
+        monkeypatch.delenv(f"GOOGLE_API_KEY_{index}", raising=False)
+        monkeypatch.delenv(f"GEMINI_API_KEY_{index}", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GOOGLE_API_KEY_1", "google-key-1")
+    monkeypatch.setenv("GOOGLE_API_KEY_3", "google-key-3")
+    monkeypatch.setenv("GOOGLE_API_KEY_10", "google-key-10")
+
+    settings = Settings()
+
+    assert settings.GOOGLE_API_KEYS == [
+        "google-key-0",
+        "google-key-1",
+        "google-key-3",
+        "google-key-10",
+    ]
+
+
+def test_eval_config_collects_all_google_keys_from_aliases_and_numbered_env(
+    monkeypatch,
+) -> None:
+    for env_name in (
+        "CHUNKING_EVAL_EMBEDDING_GOOGLE_API_KEY",
+        "CHUNKING_EVAL_EMBEDDING_GOOGLE_API_KEYS",
+        "RAG_EMBEDDING_API_KEY",
+        "GOOGLE_API_KEY",
+        "GEMINI_API_KEY",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
+    for index in range(1, 8):
+        monkeypatch.delenv(f"GOOGLE_API_KEY_{index}", raising=False)
+        monkeypatch.delenv(f"GEMINI_API_KEY_{index}", raising=False)
+
+    monkeypatch.setenv(
+        "CHUNKING_EVAL_EMBEDDING_GOOGLE_API_KEYS",
+        "GOOGLE_API_KEY_1,inline-google-key",
+    )
+    monkeypatch.setenv("RAG_EMBEDDING_API_KEY", "GOOGLE_API_KEY_3")
+    monkeypatch.setenv("GOOGLE_API_KEY_1", "google-key-1")
+    monkeypatch.setenv("GOOGLE_API_KEY_3", "google-key-3")
+    monkeypatch.setenv("GOOGLE_API_KEY_5", "google-key-5")
+    monkeypatch.setattr(
+        eval_config.settings,
+        "GOOGLE_API_KEYS",
+        ["google-key-1", "settings-google-key-9"],
+    )
+
+    assert eval_config._collect_eval_google_api_keys() == (
+        "google-key-1",
+        "inline-google-key",
+        "google-key-3",
+        "google-key-5",
+        "settings-google-key-9",
+    )
+
+
 def test_agent_llm_settings_inherit_global_llm_config(monkeypatch) -> None:
     """Verify agent-owned settings inherit shared global LLM defaults."""
     monkeypatch.setenv("LLM_PROVIDER", "nvidia")
     monkeypatch.setenv("LLM_MODEL", "global-model")
     monkeypatch.setenv("LLM_API_KEY", "global-key")
     monkeypatch.setenv("LLM_BASE_URL", "https://global.example")
+    monkeypatch.delenv("SQL_AGENT_PROVIDER", raising=False)
+    monkeypatch.delenv("SQL_AGENT_MODEL", raising=False)
+    monkeypatch.delenv("SQL_AGENT_API_KEY", raising=False)
+    monkeypatch.delenv("SQL_AGENT_BASE_URL", raising=False)
     monkeypatch.delenv("DATABASE_LLM_PROVIDER", raising=False)
     monkeypatch.delenv("DATABASE_LLM_MODEL", raising=False)
     monkeypatch.delenv("DATABASE_LLM_API_KEY", raising=False)
     monkeypatch.delenv("DATABASE_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("SEARCH_AGENT_PROVIDER", raising=False)
+    monkeypatch.delenv("SEARCH_AGENT_MODEL", raising=False)
+    monkeypatch.delenv("SEARCH_AGENT_API_KEY", raising=False)
+    monkeypatch.delenv("SEARCH_AGENT_BASE_URL", raising=False)
     monkeypatch.delenv("SEARCH_LLM_PROVIDER", raising=False)
     monkeypatch.delenv("SEARCH_LLM_MODEL", raising=False)
     monkeypatch.delenv("SEARCH_LLM_API_KEY", raising=False)

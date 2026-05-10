@@ -1,19 +1,23 @@
 import pytest
 
 from src.core.config import settings
-from src.services.document_retrieval.qdrant_retriever import GoogleGenAIEmbeddingProvider
+from src.services.document_retrieval.qdrant_retriever import (
+    build_dense_embedding_provider,
+)
 
 
 @pytest.mark.real_api
-@pytest.mark.skipif(
-    not settings.GOOGLE_API_KEY,
-    reason="GOOGLE_API_KEY is required for real Google embedding tests.",
-)
-def test_real_google_embedding_provider_uses_env_credentials() -> None:
-    provider = GoogleGenAIEmbeddingProvider(
+def test_real_qwen_embedding_provider_uses_production_config() -> None:
+    provider = build_dense_embedding_provider(
+        provider=settings.RAG_EMBEDDING_PROVIDER,
         model_name=settings.RAG_EMBEDDING_MODEL,
-        google_api_key=settings.GOOGLE_API_KEY,
         vector_size=settings.RAG_DENSE_VECTOR_SIZE,
+        batch_size=1,
+        max_length=settings.RAG_EMBEDDING_MAX_LENGTH,
+        load_in_4bit=settings.RAG_EMBEDDING_LOAD_IN_4BIT,
+        device_map=settings.RAG_EMBEDDING_DEVICE_MAP,
+        attn_implementation=settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION,
+        query_task_description=settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION,
     )
 
     document_vectors = provider.embed_documents(

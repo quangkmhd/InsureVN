@@ -5,12 +5,11 @@ from __future__ import annotations
 import hashlib
 import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_qdrant import FastEmbedSparse, SparseEmbeddings
 from langchain_qdrant import RetrievalMode as LangChainQdrantRetrievalMode
 from qdrant_client import QdrantClient, models
@@ -25,6 +24,10 @@ from src.services.document_retrieval.qdrant_collection_manager import (
     QdrantCollectionManager,
 )
 from src.services.document_retrieval.qdrant_vector_store import QdrantVectorStoreFactory
+from src.services.document_retrieval.qwen_embedding_provider import (
+    Qwen3EmbeddingProvider,
+    is_qwen3_embedding_model_name,
+)
 from src.services.evidence.qdrant_evidence import QdrantEvidenceMapper
 from src.services.observability import service_observe
 
@@ -42,58 +45,47 @@ class EmbeddingProvider(Embeddings):
 
 
 @dataclass(frozen=True)
-class GoogleGenAIEmbeddingProvider(EmbeddingProvider):
-    """Google Generative AI embedding provider with explicit vector sizing."""
-
-    model_name: str
-    google_api_key: str
-    vector_size: int
-    batch_size: int = 1
-    document_task_type: str = "RETRIEVAL_DOCUMENT"
-    query_task_type: str = "RETRIEVAL_QUERY"
-    _google_genai_embeddings: GoogleGenerativeAIEmbeddings = field(
-        init=False,
-        repr=False,
-        compare=False,
-    )
-
-    def __post_init__(self) -> None:
-        """Initialize the underlying LangChain Google embedding client."""
-        if not self.google_api_key:
-            raise ValueError("GOOGLE_API_KEY is required for Google GenAI embeddings.")
-        object.__setattr__(
-            self,
-            "_google_genai_embeddings",
-            GoogleGenerativeAIEmbeddings(
-                model=self.model_name,
-                google_api_key=self.google_api_key,
-                output_dimensionality=self.vector_size,
-            ),
-        )
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed documents into dense vectors."""
-        return self._google_genai_embeddings.embed_documents(
-            texts,
-            batch_size=self.batch_size,
-            task_type=self.document_task_type,
-            output_dimensionality=self.vector_size,
-        )
-
-    def embed_query(self, text: str) -> list[float]:
-        """Embed query text into a dense vector."""
-        return self._google_genai_embeddings.embed_query(
-            text,
-            task_type=self.query_task_type,
-            output_dimensionality=self.vector_size,
-        )
-
-
-@dataclass(frozen=True)
 class _ScoredPayload:
     point_id: str
     payload: dict[str, Any]
     score: float
+
+
+def build_dense_embedding_provider(
+    *,
+    provider: str,
+    model_name: str,
+    vector_size: int,
+    batch_size: int = settings.RAG_EMBEDDING_BATCH_SIZE,
+    max_length: int = settings.RAG_EMBEDDING_MAX_LENGTH,
+    load_in_4bit: bool = settings.RAG_EMBEDDING_LOAD_IN_4BIT,
+    device_map: str = settings.RAG_EMBEDDING_DEVICE_MAP,
+    attn_implementation: str = settings.RAG_EMBEDDING_ATTN_IMPLEMENTATION,
+    query_task_description: str = settings.RAG_EMBEDDING_QUERY_TASK_DESCRIPTION,
+) -> EmbeddingProvider:
+    """Build the configured dense embedding provider for production retrieval."""
+    normalized_provider = provider.strip().upper()
+    if normalized_provider in {"HUGGINGFACE", "TRANSFORMERS", "QWEN"}:
+        if not is_qwen3_embedding_model_name(model_name):
+            raise ValueError(
+                "Unsupported local Hugging Face embedding model for production path: "
+                f"{model_name}. The current production implementation supports "
+                "`Qwen/Qwen3-Embedding-8B` via a dedicated transformers adapter."
+            )
+        return Qwen3EmbeddingProvider(
+            model_name=model_name,
+            vector_size=vector_size,
+            batch_size=batch_size,
+            max_length=max_length,
+            query_task_description=query_task_description,
+            load_in_4bit=load_in_4bit,
+            device_map=device_map,
+            attn_implementation=attn_implementation or None,
+        )
+    raise ValueError(
+        f"Unsupported RAG_EMBEDDING_PROVIDER: {provider}. "
+        "Supported providers: HUGGINGFACE, TRANSFORMERS, QWEN."
+    )
 
 
 class QdrantRetriever:

@@ -20,7 +20,9 @@ from src.eval.config import (
     DEFAULT_EMBEDDING_CACHE_ENABLED,
     DEFAULT_EMBEDDING_CACHE_PATH,
     DEFAULT_EMBEDDING_DEVICE,
+    DEFAULT_EMBEDDING_OUTPUT_DIMENSIONALITY,
     DEFAULT_EMBEDDING_MODEL,
+    DEFAULT_EMBEDDING_PROVIDER,
     DEFAULT_HEADING_CUT_LEVEL,
     DEFAULT_HEADING_MAX_CHARS,
     DEFAULT_HEADING_MAX_TABLE_ROWS,
@@ -59,8 +61,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--run-id",
         help="Stable report run id for resumable runs under output-dir/reports.",
     )
+    run_parser.add_argument(
+        "--embedding-provider",
+        default=DEFAULT_EMBEDDING_PROVIDER,
+    )
     run_parser.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL)
     run_parser.add_argument("--embedding-device", default=DEFAULT_EMBEDDING_DEVICE)
+    run_parser.add_argument(
+        "--embedding-output-dimensionality",
+        type=int,
+        default=DEFAULT_EMBEDDING_OUTPUT_DIMENSIONALITY,
+    )
     run_parser.add_argument(
         "--embedding-cache-path",
         type=Path,
@@ -189,8 +200,10 @@ def main() -> None:
         corpus_dir=args.corpus_dir,
         output_dir=args.output_dir,
         run_id=args.run_id,
+        embedding_provider=args.embedding_provider,
         embedding_model_name=args.embedding_model,
         embedding_device=args.embedding_device,
+        embedding_output_dimensionality=args.embedding_output_dimensionality,
         embedding_cache_enabled=not args.disable_embedding_cache,
         embedding_cache_path=args.embedding_cache_path,
         chunk_size=args.chunk_size,

@@ -8,11 +8,14 @@ from src.services.document_retrieval.qdrant_collection_manager import (
     QdrantCollectionManager,
 )
 from src.services.document_retrieval.qdrant_retriever import (
-    GoogleGenAIEmbeddingProvider,
     QdrantRetriever,
+    build_dense_embedding_provider,
 )
 from src.services.document_retrieval.qdrant_vector_store import (
     QdrantVectorStoreFactory,
+)
+from src.services.document_retrieval.qwen_embedding_provider import (
+    Qwen3EmbeddingProvider,
 )
 from src.services.document_retrieval.retrieval_readiness import (
     ProductionReadinessError,
@@ -20,12 +23,13 @@ from src.services.document_retrieval.retrieval_readiness import (
 )
 
 __all__ = [
-    "GoogleGenAIEmbeddingProvider",
     "JinaRerankCrossEncoder",
     "ProductionReadinessError",
     "QdrantCollectionConfig",
     "QdrantCollectionManager",
     "QdrantRetriever",
     "QdrantVectorStoreFactory",
+    "Qwen3EmbeddingProvider",
     "RetrievalReadinessReport",
+    "build_dense_embedding_provider",
 ]

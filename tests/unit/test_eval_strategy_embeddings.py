@@ -13,6 +13,16 @@ from src.eval.chunking.registry import default_strategy_names, validate_strategy
 from src.eval.chunking.semantic import SemanticChunking
 from src.eval.config import FAST_MULTILINGUAL_EMBEDDING_MODEL, ChunkingRunConfig
 from src.eval.corpus import build_line_offsets
+from src.eval.embeddings import (
+    build_retrieval_embeddings,
+    prepare_qwen3_retrieval_texts,
+    prepare_sentence_transformer_texts,
+)
+from src.eval.embeddings.adapters import (
+    GoogleGenAIEmbeddings,
+    Qwen3AutoModelEmbeddings,
+    extract_google_retry_delay_seconds,
+)
 from src.eval.models import CorpusDocument
 from src.eval.runner import can_reuse_retrieval_embeddings_for_semantic_chunking
 
@@ -156,3 +166,145 @@ def test_runner_does_not_reuse_retrieval_embeddings_for_other_semantic_provider(
     )
 
     assert not can_reuse_retrieval_embeddings_for_semantic_chunking(config)
+
+
+def test_runner_does_not_reuse_google_retrieval_embeddings_for_semantic_chunking() -> (
+    None
+):
+    config = ChunkingRunConfig(
+        embedding_provider="google_genai",
+        embedding_model_name="gemini-embedding-2",
+        embedding_device=None,
+        semantic_chunking_embedding_provider="sentence_transformers",
+        semantic_chunking_embedding_model=FAST_MULTILINGUAL_EMBEDDING_MODEL,
+        semantic_chunking_embedding_device="cuda",
+    )
+
+    assert not can_reuse_retrieval_embeddings_for_semantic_chunking(config)
+
+
+def test_prepare_sentence_transformer_texts_adds_e5_retrieval_prefixes() -> None:
+    assert prepare_sentence_transformer_texts(
+        model_name="intfloat/multilingual-e5-large",
+        texts=["Quyền lợi nội trú"],
+        purpose="retrieval_query",
+    ) == ["query: Quyền lợi nội trú"]
+    assert prepare_sentence_transformer_texts(
+        model_name="intfloat/multilingual-e5-large",
+        texts=["Điều khoản chi trả"],
+        purpose="retrieval_document",
+    ) == ["passage: Điều khoản chi trả"]
+
+
+def test_prepare_qwen3_retrieval_texts_adds_query_prompt() -> None:
+    assert prepare_qwen3_retrieval_texts(
+        texts=["Quyền lợi nội trú là gì?"],
+        purpose="retrieval_query",
+    ) == [
+        "Instruct: Given a web search query, retrieve relevant passages "
+        "that answer the query\nQuery: Quyền lợi nội trú là gì?"
+    ]
+    assert prepare_qwen3_retrieval_texts(
+        texts=["Điều khoản chi trả"],
+        purpose="retrieval_document",
+    ) == ["Điều khoản chi trả"]
+
+
+def test_build_retrieval_embeddings_uses_qwen3_transformers_adapter() -> None:
+    embeddings = build_retrieval_embeddings(
+        provider="sentence_transformers",
+        model_name="Qwen/Qwen3-Embedding-8B",
+        batch_size=4,
+        device="cuda",
+    )
+
+    assert isinstance(embeddings, Qwen3AutoModelEmbeddings)
+    assert embeddings.batch_size == 4
+
+
+def test_extract_google_retry_delay_seconds_from_quota_error() -> None:
+    error = RuntimeError(
+        "ClientError: 429 RESOURCE_EXHAUSTED. Please retry in 51.96621762s."
+    )
+
+    assert extract_google_retry_delay_seconds(error) == 51.96621762
+
+
+def test_google_embeddings_wait_for_retry_delay_when_all_keys_hit_quota(
+    monkeypatch,
+) -> None:
+    embeddings = GoogleGenAIEmbeddings(
+        model_name="gemini-embedding-2",
+        google_api_key="key-1",
+        google_api_keys=("key-1", "key-2"),
+        batch_size=2,
+    )
+    embeddings._clients = [object(), object()]
+    sleep_calls: list[float] = []
+    fake_time = {"now": 100.0}
+
+    def fake_monotonic() -> float:
+        return fake_time["now"]
+
+    def fake_sleep(seconds: float) -> None:
+        sleep_calls.append(seconds)
+        fake_time["now"] += seconds
+
+    monkeypatch.setattr(
+        "src.eval.embeddings.adapters.time.monotonic",
+        fake_monotonic,
+    )
+    call_count = 0
+
+    def fake_embed(
+        _client: object, _texts: list[str], _task_type: str
+    ) -> list[list[float]]:
+        nonlocal call_count
+        call_count += 1
+        if call_count <= 2:
+            raise RuntimeError(
+                "ClientError: 429 RESOURCE_EXHAUSTED. "
+                "Please retry in 1.5s. "
+                "{'details': [{'@type': 'type.googleapis.com/google.rpc.RetryInfo', "
+                "'retryDelay': '1s'}]}"
+            )
+        return [[0.1, 0.2]]
+
+    monkeypatch.setattr("src.eval.embeddings.adapters.time.sleep", fake_sleep)
+
+    assert embeddings._embed_with_failover(
+        fake_embed,
+        ["quyen loi noi tru"],
+        "RETRIEVAL_DOCUMENT",
+    ) == [[0.1, 0.2]]
+    assert sleep_calls == [1.5]
+    assert embeddings._client_index == 0
+
+
+def test_google_embeddings_disable_invalid_key_after_first_failure() -> None:
+    embeddings = GoogleGenAIEmbeddings(
+        model_name="gemini-embedding-2",
+        google_api_key="key-1",
+        google_api_keys=("key-1", "key-2"),
+        batch_size=2,
+    )
+    invalid_client = object()
+    valid_client = object()
+    embeddings._clients = [invalid_client, valid_client]
+    calls: list[object] = []
+
+    def fake_embed(
+        client: object, _texts: list[str], _task_type: str
+    ) -> list[list[float]]:
+        calls.append(client)
+        if client is invalid_client:
+            raise RuntimeError("400 API_KEY_INVALID")
+        return [[0.3, 0.4]]
+
+    assert embeddings._embed_with_failover(
+        fake_embed,
+        ["quyen loi noi tru"],
+        "RETRIEVAL_DOCUMENT",
+    ) == [[0.3, 0.4]]
+    assert calls == [invalid_client, valid_client]
+    assert embeddings._client_disabled == [True, False]

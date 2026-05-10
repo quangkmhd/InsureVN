@@ -209,27 +209,16 @@ def run_indexing_pipeline(
     neo4j_store: Any | None = None,
     graph_extractor: Any | None = None,
     chunking_strategy: str | None = None,
-    semantic_embedding_provider: Embeddings | None = None,
 ) -> dict[str, Any]:
     """Index Markdown documents into Qdrant hybrid search and Neo4j graph."""
     document_paths = discover_markdown_documents(markdown_dir, limit=limit)
     table_mapping = load_table_mapping(table_mapping_path)
-    dense_embedding_provider = semantic_embedding_provider
-    needs_dense_embedding_provider = (
-        not dry_run
-        and not skip_qdrant
-        and (
-            qdrant_retriever is None
-            or (chunking_strategy or settings.RAG_CHUNKING_STRATEGY)
-            == "hybrid_semantic"
-        )
-    )
-    if dense_embedding_provider is None and needs_dense_embedding_provider:
+    dense_embedding_provider = None
+    if not dry_run and not skip_qdrant and qdrant_retriever is None:
         dense_embedding_provider = build_dense_embedding_provider()
 
     chunker = build_document_chunker(
         chunking_strategy=chunking_strategy or settings.RAG_CHUNKING_STRATEGY,
-        semantic_embedding_provider=dense_embedding_provider,
     )
     index_inputs = build_index_inputs(
         document_paths=document_paths,
@@ -305,21 +294,12 @@ def run_indexing_pipeline(
 def build_document_chunker(
     *,
     chunking_strategy: str,
-    semantic_embedding_provider: Embeddings | None,
 ) -> DocumentChunker:
     """Build the configured Markdown chunker for indexing."""
     return DocumentChunker(
         child_chunk_chars=settings.RAG_CHILD_CHUNK_MAX_CHARS,
         child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
         chunking_strategy=chunking_strategy,
-        semantic_embedding_provider=semantic_embedding_provider,
-        semantic_target_chars=settings.RAG_SEMANTIC_TARGET_CHARS,
-        semantic_max_chars=settings.RAG_SEMANTIC_MAX_CHARS,
-        semantic_min_chars=settings.RAG_SEMANTIC_MIN_CHARS,
-        semantic_breakpoint_type=settings.RAG_SEMANTIC_BREAKPOINT_TYPE,
-        semantic_breakpoint_amount=settings.RAG_SEMANTIC_BREAKPOINT_AMOUNT,
-        table_line_ratio_threshold=settings.RAG_TABLE_LINE_RATIO_THRESHOLD,
-        table_chunk_chars=settings.RAG_TABLE_CHUNK_MAX_CHARS,
     )
 
 
@@ -595,7 +575,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument(
         "--chunking-strategy",
-        choices=["recursive", "hybrid_semantic", "hierarchical_header_recursive"],
+        choices=["hierarchical_header_recursive"],
         default=None,
     )
     args = parser.parse_args()

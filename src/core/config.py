@@ -161,27 +161,6 @@ class Settings:
         self.RAG_CHUNKING_STRATEGY: str = os.getenv(
             "RAG_CHUNKING_STRATEGY", "hierarchical_header_recursive"
         )
-        self.RAG_SEMANTIC_TARGET_CHARS: int = int(
-            os.getenv("RAG_SEMANTIC_TARGET_CHARS", "1400")
-        )
-        self.RAG_SEMANTIC_MAX_CHARS: int = int(
-            os.getenv("RAG_SEMANTIC_MAX_CHARS", "3500")
-        )
-        self.RAG_SEMANTIC_MIN_CHARS: int = int(
-            os.getenv("RAG_SEMANTIC_MIN_CHARS", "350")
-        )
-        self.RAG_SEMANTIC_BREAKPOINT_TYPE: str = os.getenv(
-            "RAG_SEMANTIC_BREAKPOINT_TYPE", "interquartile"
-        )
-        self.RAG_SEMANTIC_BREAKPOINT_AMOUNT: float = float(
-            os.getenv("RAG_SEMANTIC_BREAKPOINT_AMOUNT", "1.5")
-        )
-        self.RAG_TABLE_LINE_RATIO_THRESHOLD: float = float(
-            os.getenv("RAG_TABLE_LINE_RATIO_THRESHOLD", "0.55")
-        )
-        self.RAG_TABLE_CHUNK_MAX_CHARS: int = int(
-            os.getenv("RAG_TABLE_CHUNK_MAX_CHARS", "3500")
-        )
         self.RAG_PARENT_SECTION_MAX_CHARS: int = int(
             os.getenv("RAG_PARENT_SECTION_MAX_CHARS", "6000")
         )

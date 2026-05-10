@@ -359,29 +359,15 @@ This is a **production-grade product**, not an MVP. Build with:
 <claude-mem-context>
 # Memory Context
 
-# [InsureVN] recent context, 2026-05-09 10:43am GMT+7
+# [InsureVN] recent context, 2026-05-10 7:47am GMT+7
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 44 obs (13,764t read) | 386,774t work | 96% savings
+Stats: 50 obs (15,752t read) | 409,219t work | 96% savings
 
-### May 3, 2026
-1 10:14p 🔵 Command execution failed due to bwrap permission error
-2 " 🔵 Brainstorming skill guidelines loaded successfully
-3 " ✅ Brainstorming plan initialized
-4 10:16p 🔵 Understood Visual Companion Guide workflow and features
-5 10:20p 🟣 Brainstorming server initiated for RAG agent design
-6 " 🟣 RAG Agent Scope Definition Initiated
 ### May 4, 2026
-7 2:07p ⚖️ Prioritized Multi-Agent Platform Design as Primary Build Guide
-8 2:08p ⚖️ Confirmed Implementation Order: Start with Evidence Foundation (Phase 1)
-9 3:53p 🔵 GeminiProvider did not return a response
-10 3:54p 🔵 Architectural Design for Search Component Analysis Planned
-11 " ⚖️ Search component re-designated as a LangChain Tool
-12 3:55p 🔵 Search Tool usage assigned to specific agents
-13 3:57p ⚖️ Refined Search Tool assignment for optimal architecture
 14 3:59p ✅ SearchAgent accessibility updated in design document
 15 4:06p ⚖️ Agent Internal Structure and Capabilities Defined
 ### May 5, 2026
@@ -418,6 +404,27 @@ S1 Code review for adding semantic chunking to a comparison playground (May 8, 3
 42 " 🔵 Disk usage of evaluation run directory confirmed
 43 3:13p 🔵 Discovered additional vector database directories for chunking strategies
 44 6:36p 🔵 Progress update on LLM chunking evaluation run
+### May 9, 2026
+45 8:21p 🔵 Initiated Environment Variable Refactoring Research
+46 8:22p 🔵 Identified Repetitive Environment Variable Patterns in .env.example
+47 " 🔵 Initiated Search for LLM Model Environment Variable Usage
+48 " 🔵 Reading Database Agent Configuration
+49 " 🔵 Identified Knowledge Graph Script Files for Analysis
+50 " 🔵 Located Knowledge Graph Schema Discovery Script
+51 8:23p 🔵 Initiated Comprehensive Search for Direct Environment Variable Access
+52 8:24p 🔵 Initiated Refactoring of Configuration Layer with Hierarchical LLM Settings
+53 " 🔵 Reading Current Configuration File for Refactoring
+54 8:25p 🔵 Viewing End of Configuration File
+55 " 🔵 Analyzing Environment Variable Usage in PDF Conversion Script
+56 " 🔵 Detailed Analysis of Knowledge Graph Schema Discovery LLM Configuration
+57 " 🔵 Implemented Hierarchical LLM Configuration in `.env.example`
+58 " 🔵 Initiated Standardization of Script Configuration
+59 " 🔵 Refactored PDF Conversion Script to Use Centralized Configuration
+60 8:26p 🔵 Restored Full Imports and Configuration in PDF Conversion Script
+61 " 🔵 Enhanced Robustness of API Key Gathering in Centralized Configuration
+62 " 🔵 Refactored Ollama Image Extraction Script to Use Centralized Configuration
+### May 10, 2026
+63 7:20a 🔵 User identified unremoved old chunking data
 
-Access 387k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 409k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

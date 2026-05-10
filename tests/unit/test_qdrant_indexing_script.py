@@ -64,8 +64,8 @@ def test_dry_run_report_counts_parent_sections_and_child_chunks(tmp_path) -> Non
     )
 
     assert report["document_count"] == 1
-    assert report["parent_section_count"] == 2
-    assert report["chunk_count"] == 2
+    assert report["parent_section_count"] == 1
+    assert report["chunk_count"] == 1
     assert report["skipped_duplicate_count"] == 0
     assert report["readiness_result"] == "not_checked_dry_run"
     assert report["documents"][0]["file_name"] == markdown_path.name
@@ -100,9 +100,9 @@ def test_dry_run_report_counts_duplicate_chunks(tmp_path) -> None:
     )
 
     assert report["document_count"] == 2
-    assert report["chunk_count"] == 4
-    assert report["unique_chunk_count"] == 2
-    assert report["skipped_duplicate_count"] == 2
+    assert report["chunk_count"] == 2
+    assert report["unique_chunk_count"] == 1
+    assert report["skipped_duplicate_count"] == 1
 
 
 def test_build_embedding_provider_uses_configured_google_provider(monkeypatch) -> None:
@@ -134,14 +134,13 @@ def test_build_embedding_provider_uses_configured_google_provider(monkeypatch) -
     }
 
 
-def test_build_chunks_passes_hybrid_semantic_configuration(
+def test_build_chunks_passes_hierarchical_configuration(
     monkeypatch,
     tmp_path,
 ) -> None:
     script = _load_indexing_script()
     markdown_path = tmp_path / "aia_health.md"
-    markdown_path.write_text("## Section\n\nSemantic text.", encoding="utf-8")
-    semantic_embedding_provider = object()
+    markdown_path.write_text("## Section\n\nPolicy text.", encoding="utf-8")
     captured = {}
 
     class FakeDocumentChunker:
@@ -169,22 +168,11 @@ def test_build_chunks_passes_hybrid_semantic_configuration(
         },
         child_chunk_chars=1200,
         child_chunk_overlap=150,
-        chunking_strategy="hybrid_semantic",
-        semantic_embedding_provider=semantic_embedding_provider,
-        semantic_target_chars=1400,
-        semantic_max_chars=3500,
-        semantic_min_chars=350,
-        semantic_breakpoint_type="interquartile",
-        semantic_breakpoint_amount=1.5,
-        table_line_ratio_threshold=0.55,
-        table_chunk_chars=3500,
+        chunking_strategy="hierarchical_header_recursive",
     )
 
     assert chunks == ["child-chunk"]
-    assert captured["chunking_strategy"] == "hybrid_semantic"
-    assert captured["semantic_embedding_provider"] is semantic_embedding_provider
-    assert captured["semantic_target_chars"] == 1400
-    assert captured["table_chunk_chars"] == 3500
+    assert captured["chunking_strategy"] == "hierarchical_header_recursive"
     assert captured["metadata"]["file_name"] == markdown_path.name
     assert "source_path" not in captured["metadata"]
 

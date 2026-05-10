@@ -2,26 +2,8 @@ import unicodedata
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_core.embeddings import Embeddings
 
 from src.services.document_chunker import DocumentChunker
-
-
-class RecordingEmbeddings(Embeddings):
-    """Deterministic embeddings that record semantic splitter usage."""
-
-    def __init__(self) -> None:
-        """Initialize the call recorder."""
-        self.document_batches: list[list[str]] = []
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Return stable vectors for document texts."""
-        self.document_batches.append(texts)
-        return [[1.0, 0.0] for _ in texts]
-
-    def embed_query(self, _text: str) -> list[float]:
-        """Return a stable vector for query text."""
-        return [1.0, 0.0]
 
 
 def _metadata() -> dict:
@@ -38,7 +20,7 @@ def _metadata() -> dict:
     }
 
 
-def test_document_chunker_parses_parent_sections_and_child_chunks() -> None:
+def test_document_chunker_defaults_to_hierarchical_chunks() -> None:
     markdown_text = """# Bao hiem suc khoe
 
 ## Quyen loi nam vien
@@ -67,14 +49,14 @@ Benh dac biet co thoi gian cho 90 ngay.
         },
     )
 
+    assert chunker.chunking_strategy == "hierarchical_header_recursive"
     assert [section.heading for section in document_chunks.parent_sections] == [
-        "Bao hiem suc khoe",
         "Quyen loi nam vien",
         "Thoi gian cho",
     ]
     assert document_chunks.child_chunks
     assert document_chunks.child_chunks[0].chunk_id.startswith(
-        "doc-aia-health:bao-hiem-suc-khoe:0"
+        "doc-aia-health:quyen-loi-nam-vien:0"
     )
     assert document_chunks.child_chunks[0].parent_section_id == (
         document_chunks.parent_sections[0].section_id
@@ -82,8 +64,11 @@ Benh dac biet co thoi gian cho 90 ngay.
     assert document_chunks.child_chunks[0].payload["company_code"] == "AIA"
     assert document_chunks.child_chunks[0].payload["file_name"] == "health.md"
     assert "source_path" not in document_chunks.child_chunks[0].payload
+    assert document_chunks.child_chunks[0].payload["chunking_strategy"] == (
+        "hierarchical_header_recursive"
+    )
     assert document_chunks.child_chunks[0].payload["section_type"] == (
-        "bao_hiem_suc_khoe"
+        "quyen_loi_nam_vien"
     )
 
 
@@ -144,10 +129,10 @@ Bảo vệ từ 30 ngày tuổi đến 100 tuổi.
 
     chunk_ids = [child_chunk.chunk_id for child_chunk in document_chunks.child_chunks]
     assert len(chunk_ids) == len(set(chunk_ids))
-    assert chunk_ids == [
-        "doc-aia-health:an-tam-tron-doi:0:chunk:0",
-        "doc-aia-health:an-tam-tron-doi:1:chunk:0",
-    ]
+    assert all(
+        chunk_id.startswith("doc-aia-health:an-tam-tron-doi:0:chunk:")
+        for chunk_id in chunk_ids
+    )
 
 
 def test_document_chunker_validates_required_payload_fields() -> None:
@@ -234,7 +219,6 @@ def test_document_chunker_marks_table_payload_content_type() -> None:
     chunker = DocumentChunker(
         child_chunk_chars=200,
         child_chunk_overlap=0,
-        table_line_ratio_threshold=0.4,
     )
 
     document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
@@ -383,166 +367,10 @@ def test_document_chunker_rejects_invalid_hierarchical_lineage_values() -> None:
         )
 
 
-def test_document_chunker_uses_semantic_chunking_with_size_guard() -> None:
-    embeddings = RecordingEmbeddings()
-    markdown_text = (
-        "## Dieu tri noi tru\n\n"
-        + "Chi phi nam vien duoc chi tra theo gioi han chuong trinh. " * 8
-        + "Ho so boi thuong can co hoa don va chi dinh cua bac si. " * 8
-    )
-    chunker = DocumentChunker(
-        child_chunk_chars=120,
-        child_chunk_overlap=0,
-        chunking_strategy="hybrid_semantic",
-        semantic_embedding_provider=embeddings,
-        semantic_target_chars=10000,
-        semantic_max_chars=160,
-        semantic_min_chars=40,
-    )
-
-    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
-
-    assert embeddings.document_batches
-    assert len(document_chunks.child_chunks) > 1
-    assert all(
-        len(child_chunk.text) <= 160 for child_chunk in document_chunks.child_chunks
-    )
-
-
-def test_document_chunker_splits_table_heavy_sections_with_repeated_header() -> None:
-    table_rows = "\n".join(
-        f"| {index} | Benh vien {index} | Ha Noi |" for index in range(1, 10)
-    )
-    markdown_text = (
-        "# Danh sach co so y te\n\n"
-        "| STT | Ten co so y te | Tinh thanh |\n"
-        "|---|---|---|\n"
-        f"{table_rows}\n"
-    )
-    chunker = DocumentChunker(
-        child_chunk_chars=120,
-        child_chunk_overlap=0,
-        chunking_strategy="hybrid_semantic",
-        table_chunk_chars=170,
-        table_line_ratio_threshold=0.4,
-    )
-
-    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
-    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
-
-    assert len(child_texts) > 1
-    assert all("| STT | Ten co so y te | Tinh thanh |" in text for text in child_texts)
-    assert any("Benh vien 1" in text for text in child_texts)
-    assert any("Benh vien 9" in text for text in child_texts)
-
-
-def test_document_chunker_keeps_table_and_interpretation_together() -> None:
-    markdown_text = (
-        "### THƯƠNG TẬT TOÀN BỘ\n\n"
-        "| | |\n"
-        "|---|---|\n"
-        "| 1. Mù hoặc mất hoàn toàn hai mắt..... | 100% |\n"
-        "| 2. Hỏng toàn bộ chức năng nhai và nói..... | 100% |\n"
-        "\n\n"
-        "**Diễn giải dữ liệu:**\n"
-        "Quyền lợi bảo hiểm được chi trả ở mức 100% đối với các trường hợp "
-        "thương tật toàn bộ nêu trong bảng.\n"
-    )
-    chunker = DocumentChunker(
-        child_chunk_chars=180,
-        child_chunk_overlap=0,
-        chunking_strategy="hybrid_semantic",
-        table_chunk_chars=1200,
-        table_line_ratio_threshold=0.4,
-    )
-
-    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
-    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
-
-    assert any(
-        "| 1. Mù hoặc mất hoàn toàn hai mắt..... | 100% |" in text
-        and "**Diễn giải dữ liệu:**" in text
-        for text in child_texts
-    )
-    assert not any(
-        "**Diễn giải dữ liệu:**" in text and "|" not in text for text in child_texts
-    )
-
-
-def test_document_chunker_repeats_interpretation_for_split_table_chunks() -> None:
-    table_rows = "\n".join(
-        f"| {index}. Tổn thương chi tiết {index}..... | {index * 5}% |"
-        for index in range(1, 7)
-    )
-    markdown_text = (
-        "### THƯƠNG TẬT TẠM THỜI\n\n"
-        "| Tổn thương | Tỷ lệ |\n"
-        "|---|---|\n"
-        f"{table_rows}\n"
-        "\n\n"
-        "**Diễn giải dữ liệu:**\n"
-        "Các tỷ lệ chi trả trong bảng được áp dụng theo từng tổn thương tương ứng.\n"
-    )
-    chunker = DocumentChunker(
-        child_chunk_chars=180,
-        child_chunk_overlap=0,
-        chunking_strategy="hybrid_semantic",
-        table_chunk_chars=360,
-        table_line_ratio_threshold=0.4,
-    )
-
-    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
-    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
-
-    assert len(child_texts) > 1
-    assert all("| Tổn thương | Tỷ lệ |" in text for text in child_texts)
-    assert all("**Diễn giải dữ liệu:**" in text for text in child_texts)
-    assert not any(
-        "**Diễn giải dữ liệu:**" in text and "|" not in text for text in child_texts
-    )
-
-
-def test_document_chunker_keeps_interpreted_table_pair_in_mixed_section() -> None:
-    long_intro = "Đoạn mô tả quyền lợi trước bảng cần được giữ lại. " * 12
-    long_table_row = (
-        '<b>Bao gồm:</b> <ul style="list-style-type: none"> '
-        "<li>Phí khám, tư vấn, xét nghiệm và chẩn đoán</li> "
-        "<li>Chẩn đoán hình ảnh theo chỉ định</li> "
-        "<li>Cạo vôi răng tối đa 2 lần/năm</li> "
-        "<li>Nhổ răng, điều trị tủy răng</li> "
-        "<li>Bọc răng, loại trừ implant</li> </ul>"
-    )
-    markdown_text = (
-        "### Quyền lợi bảo hiểm\n\n"
-        f"{long_intro}\n\n"
-        "| Quyền lợi | Hạn mức |\n"
-        "|---|---|\n"
-        "| Điều trị nội trú | 100.000.000 đồng |\n"
-        f"| {long_table_row} | AIA Việt Nam chi trả 80% chi phí y tế |\n"
-        "\n\n"
-        "**Diễn giải dữ liệu:**\n"
-        "Quyền lợi điều trị nội trú có hạn mức 100.000.000 đồng. "
-        "Các dịch vụ nha khoa trong bảng được chi trả 80% chi phí y tế.\n"
-    )
-    chunker = DocumentChunker(
-        child_chunk_chars=300,
-        child_chunk_overlap=0,
-        chunking_strategy="hybrid_semantic",
-        table_chunk_chars=1800,
-        table_line_ratio_threshold=0.55,
-    )
-
-    document_chunks = chunker.chunk_markdown(markdown_text, metadata=_metadata())
-    child_texts = [child_chunk.text for child_chunk in document_chunks.child_chunks]
-
-    assert any("Đoạn mô tả quyền lợi trước bảng" in text for text in child_texts)
-    assert any(
-        "Bọc răng, loại trừ implant" in text and "**Diễn giải dữ liệu:**" in text
-        for text in child_texts
-    )
-    assert not any(
-        "**Diễn giải dữ liệu:**" in text and "|" not in text for text in child_texts
-    )
+def test_document_chunker_rejects_removed_legacy_strategies() -> None:
+    for removed_strategy in ("recursive", "hybrid_semantic"):
+        with pytest.raises(ValueError, match="hierarchical_header_recursive"):
+            DocumentChunker(chunking_strategy=removed_strategy)
 
 
 def test_document_chunker_updates_langfuse_with_chunking_summary() -> None:
@@ -557,9 +385,6 @@ def test_document_chunker_updates_langfuse_with_chunking_summary() -> None:
     chunker = DocumentChunker(
         child_chunk_chars=80,
         child_chunk_overlap=0,
-        chunking_strategy="hybrid_semantic",
-        table_chunk_chars=120,
-        table_line_ratio_threshold=0.4,
     )
 
     with patch(
@@ -575,16 +400,15 @@ def test_document_chunker_updates_langfuse_with_chunking_summary() -> None:
 
     assert chunking_metadata_calls
     chunking_metadata = chunking_metadata_calls[-1]
-    assert chunking_metadata["strategy"] == "hybrid_semantic"
+    assert chunking_metadata["strategy"] == "hierarchical_header_recursive"
     assert chunking_metadata["parent_section_count"] == len(
         document_chunks.parent_sections
     )
     assert chunking_metadata["child_chunk_count"] == len(document_chunks.child_chunks)
-    assert chunking_metadata["table_heavy_section_count"] == 1
-    assert chunking_metadata["semantic_section_count"] == 0
-    assert chunking_metadata["recursive_section_count"] == 0
+    assert chunking_metadata["recursive_section_count"] == len(
+        document_chunks.parent_sections
+    )
     assert chunking_metadata["empty_section_count"] == 0
-    assert chunking_metadata["fallback_chunk_count"] == 0
     assert chunking_metadata["chunk_length_max"] == max(
         len(child_chunk.text) for child_chunk in document_chunks.child_chunks
     )

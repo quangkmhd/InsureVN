@@ -166,3 +166,6 @@ unsloth_compiled_cache/
 .crush/
 .goose/
 database/
+AGENTS.md
+GEMINI.md
+.claude

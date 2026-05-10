@@ -134,7 +134,7 @@ def test_run_indexing_pipeline_indexes_qdrant_and_imports_neo4j(tmp_path) -> Non
         qdrant_retriever=qdrant_retriever,
         neo4j_store=neo4j_store,
         graph_extractor=FakeGraphExtractor(),
-        chunking_strategy="recursive",
+        chunking_strategy="hierarchical_header_recursive",
     )
 
     assert report["document_count"] == 1
@@ -179,7 +179,7 @@ def test_run_indexing_pipeline_skips_graph_extraction_when_graph_outputs_disable
         skip_neo4j=True,
         graph_json_path=None,
         graph_extractor=FailingGraphExtractor(),
-        chunking_strategy="recursive",
+        chunking_strategy="hierarchical_header_recursive",
     )
 
     assert report["document_count"] == 1

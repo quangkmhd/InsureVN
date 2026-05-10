@@ -1022,25 +1022,12 @@ def project_chunker_chunks(
     *,
     env: dict[str, str | None],
 ) -> list[Chunk]:
-    """Split with the project table-aware DocumentChunker configuration."""
+    """Split with the project hierarchical DocumentChunker configuration."""
     chunking_strategy = project_chunking_strategy(env)
     chunker = DocumentChunker(
         child_chunk_chars=int(env.get("RAG_CHILD_CHUNK_MAX_CHARS") or "1200"),
         child_chunk_overlap=int(env.get("RAG_CHILD_CHUNK_OVERLAP") or "150"),
         chunking_strategy=chunking_strategy,
-        semantic_embedding_provider=None,
-        semantic_target_chars=int(env.get("RAG_SEMANTIC_TARGET_CHARS") or "1400"),
-        semantic_max_chars=int(env.get("RAG_SEMANTIC_MAX_CHARS") or "3500"),
-        semantic_min_chars=int(env.get("RAG_SEMANTIC_MIN_CHARS") or "350"),
-        semantic_breakpoint_type=env.get("RAG_SEMANTIC_BREAKPOINT_TYPE")
-        or "interquartile",
-        semantic_breakpoint_amount=float(
-            env.get("RAG_SEMANTIC_BREAKPOINT_AMOUNT") or "1.5"
-        ),
-        table_line_ratio_threshold=float(
-            env.get("RAG_TABLE_LINE_RATIO_THRESHOLD") or "0.55"
-        ),
-        table_chunk_chars=int(env.get("RAG_TABLE_CHUNK_MAX_CHARS") or "3500"),
     )
     metadata = {
         "company_code": slugify(document.file_name.split("__", maxsplit=1)[0]).upper(),

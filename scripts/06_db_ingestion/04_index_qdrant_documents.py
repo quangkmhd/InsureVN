@@ -24,7 +24,6 @@ from src.services.document_chunker import (
     ChildChunk,
     ChunkingStrategy,
     DocumentChunker,
-    SemanticBreakpointType,
 )
 from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRetriever
 
@@ -37,15 +36,7 @@ def build_dry_run_report(
     metadata: dict[str, Any],
     child_chunk_chars: int,
     child_chunk_overlap: int,
-    chunking_strategy: ChunkingStrategy = "recursive",
-    semantic_embedding_provider: Embeddings | None = None,
-    semantic_target_chars: int = 1400,
-    semantic_max_chars: int = 3500,
-    semantic_min_chars: int = 350,
-    semantic_breakpoint_type: SemanticBreakpointType = "interquartile",
-    semantic_breakpoint_amount: float = 1.5,
-    table_line_ratio_threshold: float = 0.55,
-    table_chunk_chars: int = 3500,
+    chunking_strategy: ChunkingStrategy = "hierarchical_header_recursive",
     mapping_data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a dry-run indexing report for Markdown documents.
@@ -56,14 +47,6 @@ def build_dry_run_report(
         child_chunk_chars: Maximum child chunk size in characters.
         child_chunk_overlap: Character overlap between adjacent chunks.
         chunking_strategy: Document chunking strategy.
-        semantic_embedding_provider: Optional embeddings for semantic chunking.
-        semantic_target_chars: Target semantic chunk size.
-        semantic_max_chars: Maximum semantic chunk size before fallback splitting.
-        semantic_min_chars: Minimum semantic chunk size.
-        semantic_breakpoint_type: Semantic breakpoint strategy.
-        semantic_breakpoint_amount: Semantic breakpoint threshold amount.
-        table_line_ratio_threshold: Ratio that marks table-heavy sections.
-        table_chunk_chars: Maximum table chunk size.
         mapping_data: Optional mapping from md file to tables.
 
     Returns:
@@ -73,14 +56,6 @@ def build_dry_run_report(
         child_chunk_chars=child_chunk_chars,
         child_chunk_overlap=child_chunk_overlap,
         chunking_strategy=chunking_strategy,
-        semantic_embedding_provider=semantic_embedding_provider,
-        semantic_target_chars=semantic_target_chars,
-        semantic_max_chars=semantic_max_chars,
-        semantic_min_chars=semantic_min_chars,
-        semantic_breakpoint_type=semantic_breakpoint_type,
-        semantic_breakpoint_amount=semantic_breakpoint_amount,
-        table_line_ratio_threshold=table_line_ratio_threshold,
-        table_chunk_chars=table_chunk_chars,
     )
     documents: list[dict[str, Any]] = []
     parent_section_count = 0
@@ -93,22 +68,34 @@ def build_dry_run_report(
 
         # Look up source_table_id from mapping if available and missing in metadata
         if mapping_data and "source_table_id" not in document_metadata:
-            md_dir = PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns"
+            md_dir = (
+                PROJECT_ROOT
+                / "data"
+                / "health_insurance"
+                / "health_insurance_markdowns"
+            )
             try:
                 rel_path = str(document_path.relative_to(md_dir))
                 if rel_path in mapping_data:
                     tables = mapping_data[rel_path].get("tables", [])
                     if tables:
-                        # Fallback: dùng source_table_id của bảng đầu tiên tìm thấy trong doc
-                        document_metadata["source_table_id"] = tables[0]["source_table_id"]
-                        logger.info(f"Mapped {document_path.name} to source_table_id: {document_metadata['source_table_id']}")
+                        document_metadata["source_table_id"] = tables[0][
+                            "source_table_id"
+                        ]
+                        logger.info(
+                            "Mapped %s to source_table_id: %s",
+                            document_path.name,
+                            document_metadata["source_table_id"],
+                        )
             except ValueError:
                 pass
-        
+
         # Nếu vẫn thiếu, gán fallback ID để không bị crash validate_payload
         if "source_table_id" not in document_metadata:
             document_metadata["source_table_id"] = -1
-            logger.warning(f"No mapping found for {document_path.name}, using source_table_id: -1")
+            logger.warning(
+                f"No mapping found for {document_path.name}, using source_table_id: -1"
+            )
 
         chunked_document = chunker.chunk_markdown(
             document_path.read_text(encoding="utf-8"),
@@ -150,15 +137,7 @@ def build_chunks(
     metadata: dict[str, Any],
     child_chunk_chars: int,
     child_chunk_overlap: int,
-    chunking_strategy: ChunkingStrategy = "recursive",
-    semantic_embedding_provider: Embeddings | None = None,
-    semantic_target_chars: int = 1400,
-    semantic_max_chars: int = 3500,
-    semantic_min_chars: int = 350,
-    semantic_breakpoint_type: SemanticBreakpointType = "interquartile",
-    semantic_breakpoint_amount: float = 1.5,
-    table_line_ratio_threshold: float = 0.55,
-    table_chunk_chars: int = 3500,
+    chunking_strategy: ChunkingStrategy = "hierarchical_header_recursive",
     mapping_data: dict[str, Any] | None = None,
 ) -> list[ChildChunk]:
     """Chunk Markdown documents for indexing."""
@@ -166,14 +145,6 @@ def build_chunks(
         child_chunk_chars=child_chunk_chars,
         child_chunk_overlap=child_chunk_overlap,
         chunking_strategy=chunking_strategy,
-        semantic_embedding_provider=semantic_embedding_provider,
-        semantic_target_chars=semantic_target_chars,
-        semantic_max_chars=semantic_max_chars,
-        semantic_min_chars=semantic_min_chars,
-        semantic_breakpoint_type=semantic_breakpoint_type,
-        semantic_breakpoint_amount=semantic_breakpoint_amount,
-        table_line_ratio_threshold=table_line_ratio_threshold,
-        table_chunk_chars=table_chunk_chars,
     )
     chunks: list[ChildChunk] = []
     for document_path in document_paths:
@@ -181,13 +152,20 @@ def build_chunks(
 
         # Look up source_table_id from mapping if available and missing in metadata
         if mapping_data and "source_table_id" not in document_metadata:
-            md_dir = PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns"
+            md_dir = (
+                PROJECT_ROOT
+                / "data"
+                / "health_insurance"
+                / "health_insurance_markdowns"
+            )
             try:
                 rel_path = str(document_path.relative_to(md_dir))
                 if rel_path in mapping_data:
                     tables = mapping_data[rel_path].get("tables", [])
                     if tables:
-                        document_metadata["source_table_id"] = tables[0]["source_table_id"]
+                        document_metadata["source_table_id"] = tables[0][
+                            "source_table_id"
+                        ]
             except ValueError:
                 # Not in markdown dir, skip mapping
                 pass
@@ -205,28 +183,12 @@ def build_document_chunker(
     child_chunk_chars: int,
     child_chunk_overlap: int,
     chunking_strategy: ChunkingStrategy,
-    semantic_embedding_provider: Embeddings | None,
-    semantic_target_chars: int,
-    semantic_max_chars: int,
-    semantic_min_chars: int,
-    semantic_breakpoint_type: SemanticBreakpointType,
-    semantic_breakpoint_amount: float,
-    table_line_ratio_threshold: float,
-    table_chunk_chars: int,
 ) -> DocumentChunker:
     """Build the configured document chunker."""
     return DocumentChunker(
         child_chunk_chars=child_chunk_chars,
         child_chunk_overlap=child_chunk_overlap,
         chunking_strategy=chunking_strategy,
-        semantic_embedding_provider=semantic_embedding_provider,
-        semantic_target_chars=semantic_target_chars,
-        semantic_max_chars=semantic_max_chars,
-        semantic_min_chars=semantic_min_chars,
-        semantic_breakpoint_type=semantic_breakpoint_type,
-        semantic_breakpoint_amount=semantic_breakpoint_amount,
-        table_line_ratio_threshold=table_line_ratio_threshold,
-        table_chunk_chars=table_chunk_chars,
     )
 
 
@@ -274,31 +236,39 @@ def main() -> None:
     parser.add_argument("--document", action="append", required=True)
     parser.add_argument("--metadata-json", required=True)
     parser.add_argument("--mapping-json", help="Path to table mapping file")
-    parser.add_argument("--output-json", help="Path to save chunks as JSON (skips Qdrant index if provided)")
+    parser.add_argument(
+        "--output-json",
+        help="Path to save chunks as JSON (skips Qdrant index if provided)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--recreate", action="store_true")
     args = parser.parse_args()
 
     document_paths = [Path(document) for document in args.document]
     metadata = json.loads(Path(args.metadata_json).read_text(encoding="utf-8"))
-    
+
     mapping_data = None
     if args.mapping_json:
         mapping_data = json.loads(Path(args.mapping_json).read_text(encoding="utf-8"))
-    elif (PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns" / "table_mapping.json").exists():
+    elif (
+        PROJECT_ROOT
+        / "data"
+        / "health_insurance"
+        / "health_insurance_markdowns"
+        / "table_mapping.json"
+    ).exists():
         # Auto-load if default mapping exists
-        mapping_path = PROJECT_ROOT / "data" / "health_insurance" / "health_insurance_markdowns" / "table_mapping.json"
+        mapping_path = (
+            PROJECT_ROOT
+            / "data"
+            / "health_insurance"
+            / "health_insurance_markdowns"
+            / "table_mapping.json"
+        )
         mapping_data = json.loads(mapping_path.read_text(encoding="utf-8"))
         logger.info(f"Auto-loaded table mapping from {mapping_path}")
     chunking_kwargs = {
         "chunking_strategy": settings.RAG_CHUNKING_STRATEGY,
-        "semantic_target_chars": settings.RAG_SEMANTIC_TARGET_CHARS,
-        "semantic_max_chars": settings.RAG_SEMANTIC_MAX_CHARS,
-        "semantic_min_chars": settings.RAG_SEMANTIC_MIN_CHARS,
-        "semantic_breakpoint_type": settings.RAG_SEMANTIC_BREAKPOINT_TYPE,
-        "semantic_breakpoint_amount": settings.RAG_SEMANTIC_BREAKPOINT_AMOUNT,
-        "table_line_ratio_threshold": settings.RAG_TABLE_LINE_RATIO_THRESHOLD,
-        "table_chunk_chars": settings.RAG_TABLE_CHUNK_MAX_CHARS,
     }
 
     if args.dry_run:
@@ -324,7 +294,6 @@ def main() -> None:
         metadata=metadata,
         child_chunk_chars=settings.RAG_CHILD_CHUNK_MAX_CHARS,
         child_chunk_overlap=settings.RAG_CHILD_CHUNK_OVERLAP,
-        semantic_embedding_provider=embedding_provider,
         mapping_data=mapping_data,
         **chunking_kwargs,
     )
@@ -337,11 +306,14 @@ def main() -> None:
                 "id": c.chunk_id,
                 "parent_id": c.parent_section_id,
                 "text": c.text,
-                "payload": c.payload
+                "payload": c.payload,
             }
             for c in chunks
         ]
-        output_path.write_text(json.dumps(serializable_chunks, ensure_ascii=False, indent=2), encoding="utf-8")
+        output_path.write_text(
+            json.dumps(serializable_chunks, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
         logger.info(f"Saved {len(chunks)} chunks to {args.output_json}")
         return
 

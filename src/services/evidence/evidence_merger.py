@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 
 from src.core.logger import get_logger
 from src.models.evidence import Evidence
-from src.services.document_retrieval.jina_rerank_cross_encoder import (
+from src.services.document_retrieval.rerank_cross_encoder import (
     build_default_rerank_cross_encoder,
 )
 from src.services.observability import add_current_service_metadata, service_observe
@@ -198,7 +198,7 @@ class EvidenceMerger:
 
 def _evidence_to_document(*, evidence: Evidence, index: int) -> Document:
     return Document(
-        page_content=evidence.content,
+        page_content=_evidence_rerank_text(evidence),
         id=evidence.source_id,
         metadata={
             **evidence.metadata,
@@ -209,6 +209,15 @@ def _evidence_to_document(*, evidence: Evidence, index: int) -> Document:
             "confidence": evidence.confidence,
         },
     )
+
+
+def _evidence_rerank_text(evidence: Evidence) -> str:
+    """Build the text sent to cross-encoder rerankers for one evidence item."""
+    content = evidence.content.strip()
+    payload_text = str(evidence.metadata.get("text") or "").strip()
+    if payload_text and payload_text != content:
+        return "\n".join(part for part in (content, payload_text) if part).strip()
+    return content
 
 
 def _rank_documents_with_cross_encoder(

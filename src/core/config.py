@@ -209,24 +209,48 @@ class Settings:
         self.RAG_PARENT_SECTION_MAX_CHARS: int = int(
             os.getenv("RAG_PARENT_SECTION_MAX_CHARS", "6000")
         )
-        self.RAG_RETRIEVAL_TOP_K: int = int(os.getenv("RAG_RETRIEVAL_TOP_K", "5"))
+        self.RAG_RETRIEVAL_TOP_K: int = int(os.getenv("RAG_RETRIEVAL_TOP_K", "10"))
+        self.RAG_RERANK_CANDIDATE_TOP_K: int = int(
+            os.getenv("RAG_RERANK_CANDIDATE_TOP_K", "30")
+        )
         self.RAG_RETRIEVAL_TIMEOUT_SECONDS: float = float(
             os.getenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "30.0")
         )
-        self.JINA_API_KEY: str = os.getenv("JINA_API_KEY", "")
-        self.RAG_RERANK_PROVIDER: str = os.getenv("RAG_RERANK_PROVIDER", "jina")
-        self.RAG_RERANK_MODEL: str = os.getenv("RAG_RERANK_MODEL", "jina-reranker-v3")
-        self.RAG_RERANK_BASE_URL: str = os.getenv(
-            "RAG_RERANK_BASE_URL", "https://api.jina.ai/v1/rerank"
+        self.RAG_RERANK_PROVIDER: str = os.getenv(
+            "RAG_RERANK_PROVIDER", "HUGGINGFACE"
         )
-        self.RAG_RERANK_TIMEOUT_SECONDS: float = float(
-            os.getenv("RAG_RERANK_TIMEOUT_SECONDS", "30.0")
+        self.RAG_RERANK_MODEL: str = self._resolve_indirect(
+            os.getenv("RAG_RERANK_MODEL", "namdp-ptit/ViRanker")
         )
+        self.RAG_RERANK_BATCH_SIZE: int = int(
+            os.getenv("RAG_RERANK_BATCH_SIZE", "8")
+        )
+        self.RAG_RERANK_MAX_LENGTH: int = int(
+            os.getenv("RAG_RERANK_MAX_LENGTH", "1024")
+        )
+        self.RAG_RERANK_DEVICE: str = os.getenv("RAG_RERANK_DEVICE", "cuda")
+        self.RAG_RERANK_TRUST_REMOTE_CODE: bool = _env_bool(
+            "RAG_RERANK_TRUST_REMOTE_CODE", default=False
+        )
+        self.RAG_RERANK_BACKEND: str = os.getenv("RAG_RERANK_BACKEND", "torch")
+        self.RAG_RERANK_LOAD_IN_4BIT: bool = _env_bool(
+            "RAG_RERANK_LOAD_IN_4BIT", default=False
+        )
+        self.RAG_RERANK_DEVICE_MAP: str = os.getenv("RAG_RERANK_DEVICE_MAP", "")
+        self.RAG_RERANK_ATTN_IMPLEMENTATION: str = os.getenv(
+            "RAG_RERANK_ATTN_IMPLEMENTATION", ""
+        ).strip()
+        self.RAG_RERANK_TORCH_DTYPE: str = os.getenv(
+            "RAG_RERANK_TORCH_DTYPE", ""
+        ).strip()
         self.RAG_REQUIRE_HYBRID_SEARCH: bool = _env_bool(
             "RAG_REQUIRE_HYBRID_SEARCH", default=True
         )
         self.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE: bool = _env_bool(
             "RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", default=False
+        )
+        self.RAG_REQUIRE_HARD_FILTERS: bool = _env_bool(
+            "RAG_REQUIRE_HARD_FILTERS", default=True
         )
         self.RAG_EMBEDDING_BATCH_SIZE: int = int(
             os.getenv("RAG_EMBEDDING_BATCH_SIZE", "4")

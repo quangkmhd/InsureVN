@@ -114,8 +114,8 @@
   <g transform="translate(505, 865)" filter="url(#shadow)">
     <rect width="250" height="74" rx="8" fill="#ffffff" stroke="#ddd6fe" stroke-width="1.5"/>
     <text x="125" y="24" text-anchor="middle" class="node-label">Neural Reranker</text>
-    <text x="125" y="43" text-anchor="middle" class="node-detail">optional cross-encoder</text>
-    <text x="125" y="61" text-anchor="middle" class="node-sub">jina_rerank_cross_encoder.py</text>
+    <text x="125" y="43" text-anchor="middle" class="node-detail">hard-filtered ViRanker</text>
+    <text x="125" y="61" text-anchor="middle" class="node-sub">filtered_hybrid_rerank_retriever.py</text>
   </g>
 
   <g transform="translate(820, 865)" filter="url(#shadow)">

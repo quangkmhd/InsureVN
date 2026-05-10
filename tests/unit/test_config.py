@@ -18,9 +18,22 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     monkeypatch.delenv("RAG_CHUNKING_STRATEGY", raising=False)
     monkeypatch.delenv("RAG_PARENT_SECTION_MAX_CHARS", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TOP_K", raising=False)
+    monkeypatch.delenv("RAG_RERANK_CANDIDATE_TOP_K", raising=False)
     monkeypatch.delenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("RAG_RERANK_PROVIDER", raising=False)
+    monkeypatch.delenv("RAG_RERANK_MODEL", raising=False)
+    monkeypatch.delenv("RAG_RERANK_BATCH_SIZE", raising=False)
+    monkeypatch.delenv("RAG_RERANK_MAX_LENGTH", raising=False)
+    monkeypatch.delenv("RAG_RERANK_DEVICE", raising=False)
+    monkeypatch.delenv("RAG_RERANK_TRUST_REMOTE_CODE", raising=False)
+    monkeypatch.delenv("RAG_RERANK_BACKEND", raising=False)
+    monkeypatch.delenv("RAG_RERANK_LOAD_IN_4BIT", raising=False)
+    monkeypatch.delenv("RAG_RERANK_DEVICE_MAP", raising=False)
+    monkeypatch.delenv("RAG_RERANK_ATTN_IMPLEMENTATION", raising=False)
+    monkeypatch.delenv("RAG_RERANK_TORCH_DTYPE", raising=False)
     monkeypatch.delenv("RAG_REQUIRE_HYBRID_SEARCH", raising=False)
     monkeypatch.delenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", raising=False)
+    monkeypatch.delenv("RAG_REQUIRE_HARD_FILTERS", raising=False)
     monkeypatch.delenv("RAG_EMBEDDING_BATCH_SIZE", raising=False)
     monkeypatch.delenv("RAG_EMBEDDING_MAX_LENGTH", raising=False)
     monkeypatch.delenv("RAG_EMBEDDING_LOAD_IN_4BIT", raising=False)
@@ -46,10 +59,23 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 150
     assert settings.RAG_CHUNKING_STRATEGY == "hierarchical_header_recursive"
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 6000
-    assert settings.RAG_RETRIEVAL_TOP_K == 5
+    assert settings.RAG_RETRIEVAL_TOP_K == 10
+    assert settings.RAG_RERANK_CANDIDATE_TOP_K == 30
     assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 30.0
+    assert settings.RAG_RERANK_PROVIDER == "HUGGINGFACE"
+    assert settings.RAG_RERANK_MODEL == "namdp-ptit/ViRanker"
+    assert settings.RAG_RERANK_BATCH_SIZE == 8
+    assert settings.RAG_RERANK_MAX_LENGTH == 1024
+    assert settings.RAG_RERANK_DEVICE == "cuda"
+    assert settings.RAG_RERANK_TRUST_REMOTE_CODE is False
+    assert settings.RAG_RERANK_BACKEND == "torch"
+    assert settings.RAG_RERANK_LOAD_IN_4BIT is False
+    assert settings.RAG_RERANK_DEVICE_MAP == ""
+    assert settings.RAG_RERANK_ATTN_IMPLEMENTATION == ""
+    assert settings.RAG_RERANK_TORCH_DTYPE == ""
     assert settings.RAG_REQUIRE_HYBRID_SEARCH is True
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is False
+    assert settings.RAG_REQUIRE_HARD_FILTERS is True
     assert settings.RAG_EMBEDDING_BATCH_SIZE == 4
     assert settings.RAG_EMBEDDING_MAX_LENGTH == 8192
     assert settings.RAG_EMBEDDING_LOAD_IN_4BIT is True
@@ -67,9 +93,22 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("RAG_PARENT_SECTION_MAX_CHARS", "4500")
     monkeypatch.setenv("RAG_DENSE_VECTOR_SIZE", "1024")
     monkeypatch.setenv("RAG_RETRIEVAL_TOP_K", "8")
+    monkeypatch.setenv("RAG_RERANK_CANDIDATE_TOP_K", "24")
     monkeypatch.setenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "12.5")
+    monkeypatch.setenv("RAG_RERANK_PROVIDER", "HUGGINGFACE")
+    monkeypatch.setenv("RAG_RERANK_MODEL", "Qwen/Qwen3-Reranker-0.6B")
+    monkeypatch.setenv("RAG_RERANK_BATCH_SIZE", "3")
+    monkeypatch.setenv("RAG_RERANK_MAX_LENGTH", "2048")
+    monkeypatch.setenv("RAG_RERANK_DEVICE", "cuda")
+    monkeypatch.setenv("RAG_RERANK_TRUST_REMOTE_CODE", "true")
+    monkeypatch.setenv("RAG_RERANK_BACKEND", "torch")
+    monkeypatch.setenv("RAG_RERANK_LOAD_IN_4BIT", "true")
+    monkeypatch.setenv("RAG_RERANK_DEVICE_MAP", "auto")
+    monkeypatch.setenv("RAG_RERANK_ATTN_IMPLEMENTATION", "flash_attention_2")
+    monkeypatch.setenv("RAG_RERANK_TORCH_DTYPE", "float16")
     monkeypatch.setenv("RAG_REQUIRE_HYBRID_SEARCH", "false")
     monkeypatch.setenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", "true")
+    monkeypatch.setenv("RAG_REQUIRE_HARD_FILTERS", "false")
     monkeypatch.setenv("RAG_EMBEDDING_BATCH_SIZE", "2")
     monkeypatch.setenv("RAG_EMBEDDING_MAX_LENGTH", "4096")
     monkeypatch.setenv("RAG_EMBEDDING_LOAD_IN_4BIT", "false")
@@ -87,9 +126,22 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
     assert settings.RAG_PARENT_SECTION_MAX_CHARS == 4500
     assert settings.RAG_DENSE_VECTOR_SIZE == 1024
     assert settings.RAG_RETRIEVAL_TOP_K == 8
+    assert settings.RAG_RERANK_CANDIDATE_TOP_K == 24
     assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 12.5
+    assert settings.RAG_RERANK_PROVIDER == "HUGGINGFACE"
+    assert settings.RAG_RERANK_MODEL == "Qwen/Qwen3-Reranker-0.6B"
+    assert settings.RAG_RERANK_BATCH_SIZE == 3
+    assert settings.RAG_RERANK_MAX_LENGTH == 2048
+    assert settings.RAG_RERANK_DEVICE == "cuda"
+    assert settings.RAG_RERANK_TRUST_REMOTE_CODE is True
+    assert settings.RAG_RERANK_BACKEND == "torch"
+    assert settings.RAG_RERANK_LOAD_IN_4BIT is True
+    assert settings.RAG_RERANK_DEVICE_MAP == "auto"
+    assert settings.RAG_RERANK_ATTN_IMPLEMENTATION == "flash_attention_2"
+    assert settings.RAG_RERANK_TORCH_DTYPE == "float16"
     assert settings.RAG_REQUIRE_HYBRID_SEARCH is False
     assert settings.RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE is True
+    assert settings.RAG_REQUIRE_HARD_FILTERS is False
     assert settings.RAG_EMBEDDING_BATCH_SIZE == 2
     assert settings.RAG_EMBEDDING_MAX_LENGTH == 4096
     assert settings.RAG_EMBEDDING_LOAD_IN_4BIT is False

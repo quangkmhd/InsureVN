@@ -30,9 +30,25 @@ class MixedRangeCrossEncoder(BaseCrossEncoder):
     """Cross-encoder stub with positive and negative provider scores."""
 
     def score(self, text_pairs: list[tuple[str, str]]) -> list[float]:
-        """Return mixed-range scores like Jina can return."""
+        """Return mixed-range scores from a generic rerank provider."""
         assert len(text_pairs) == 2
         return [0.31, -0.08]
+
+
+class MetadataTextCrossEncoder(BaseCrossEncoder):
+    """Cross-encoder stub that needs Qdrant payload text, not just content."""
+
+    def score(self, text_pairs: list[tuple[str, str]]) -> list[float]:
+        """Return higher scores when metadata text is included in page content."""
+        scores: list[float] = []
+        for _query, text in text_pairs:
+            if "metadata-only expected clause" in text:
+                scores.append(0.99)
+            elif "content-only decoy" in text:
+                scores.append(0.8)
+            else:
+                scores.append(0.1)
+        return scores
 
 
 def test_evidence_merger_deduplication() -> None:
@@ -172,6 +188,32 @@ def test_evidence_merger_applies_top_k_after_reranking() -> None:
 
     assert len(merged.evidences) == 1
     assert merged.evidences[0].source_id == "doc-avastin"
+
+
+def test_evidence_reranker_scores_qdrant_metadata_text_payload() -> None:
+    metadata_only_match = Evidence(
+        source_type=SourceType.QDRANT_CHUNK,
+        source_id="qdrant-chunk-with-payload-text",
+        content="Short extracted heading",
+        metadata={"text": "metadata-only expected clause"},
+        confidence=0.7,
+        retrieved_by="QdrantRetriever",
+    )
+    content_decoy = Evidence(
+        source_type=SourceType.QDRANT_CHUNK,
+        source_id="qdrant-content-decoy",
+        content="content-only decoy",
+        confidence=0.9,
+        retrieved_by="QdrantRetriever",
+    )
+
+    merged = EvidenceMerger.merge(
+        [content_decoy, metadata_only_match],
+        rerank_query="expected clause?",
+        reranker=EvidenceReranker(cross_encoder=MetadataTextCrossEncoder()),
+    )
+
+    assert merged.evidences[0].source_id == "qdrant-chunk-with-payload-text"
 
 
 def test_evidence_reranker_compresses_langchain_documents() -> None:

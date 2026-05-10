@@ -7,7 +7,10 @@ references, project planning, and work history are easy to separate.
 
 - [Architecture: Multi-Agent Platform](architecture/2026-05-03-multi-agent-platform-design.md)
 - [Architecture: Quad-Retrieval RAG](architecture/2026-05-04-quad-retrieval-rag-architecture.md)
-- [Data Pipeline Work Log](work_log/data_pipeline_processing_log.md)
+- [Architecture: KG Schema Discovery & Pipeline](architecture/2026-05-09-knowledge-graph-schema-discovery-pipeline.md)
+- [Architecture: Benchmark V2 Generation Logic](architecture/2026-05-09-benchmark-v2-generation-logic-technical-report.md)
+- [Data Pipeline Work Log](work_log/2026-05-09-data-pipeline-processing-technical-report.md)
+- [Ensemble Retriever Log](work_log/2026-05-09-ensemble-retriever-flow-technical-report.md)
 - [SQLite Schema Specification](database/sqlite_database_schema_specification.md)
 - [Database MCP Reference](database/mcp_insurevn_db_reference.md)
 

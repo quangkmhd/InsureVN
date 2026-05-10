@@ -1,6 +1,64 @@
-# 2026-05-09 Context Benchmark V2 All Chunking Eval Report
+# 2026-05-09 - Báo cáo đánh giá Context Benchmark V2 cho toàn bộ chunking
 
-## Scope
+> Cấu trúc báo cáo kỹ thuật được áp dụng ngày 2026-05-09. Nội dung gốc lịch sử được giữ ở Mục 10 để truy vết.
+
+## 1. Tóm tắt điều hành
+
+Báo cáo kỹ thuật này ghi lại tài liệu nhật ký công việc `2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md` của InsureVN. Tài liệu được chuẩn hóa theo định dạng báo cáo kỹ thuật của dự án, đồng thời giữ nguyên nội dung và bằng chứng gốc bên dưới.
+
+## 2. Mục tiêu và phạm vi
+
+Mục tiêu là ghi lại công việc, quy trình, quyết định, benchmark hoặc inventory được mô tả trong file gốc. Phạm vi chuẩn hóa chỉ giới hạn ở tài liệu: không chạy lại benchmark, không thay đổi code triển khai và không thay đổi ý nghĩa của report gốc.
+
+## 3. Bối cảnh
+
+Phân loại: Giai đoạn Training & Eval; đánh giá Context Benchmark V2 trên các chiến lược chunking.
+
+Báo cáo này thuộc `docs/work_log/`, khu vực dùng cho báo cáo kỹ thuật, báo cáo benchmark, nhật ký quy trình và lịch sử triển khai của InsureVN.
+
+## 4. Triển khai
+
+Chi tiết triển khai, quy trình hoặc phân tích gốc được giữ trong Mục 10. Trong lần chuẩn hóa này, tài liệu được bọc bằng cấu trúc báo cáo kỹ thuật chung để các nhật ký công việc sau này có cùng bố cục về bối cảnh, bằng chứng, xác minh, kết quả, rủi ro và việc tiếp theo.
+
+## 5. Bằng chứng và lệnh đã chạy
+
+Bằng chứng dùng cho lần chuẩn hóa này:
+
+- Tài liệu nguồn hiện có: `docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md`
+- Lệnh quét danh sách file: `find docs/work_log -maxdepth 2 -type f -print | sort`
+- Lệnh kiểm tra heading: `rg -n '^#{1,3} ' docs/work_log/*.md`
+- Kiểm tra template: đã kiểm tra sự tồn tại của `## 1. Tóm tắt điều hành` trong toàn bộ file work log
+
+Bằng chứng, lệnh, đường dẫn, số liệu và hiện vật đầu ra riêng của task gốc vẫn được giữ trong Mục 10.
+
+## 6. Xác minh
+
+Các bước xác minh đã thực hiện cho lần chuẩn hóa tài liệu này:
+
+- Đã xác nhận file nằm trong `docs/work_log/`.
+- Đã thêm đầy đủ các mục bắt buộc của báo cáo kỹ thuật.
+- Đã giữ nguyên phần nội dung cũ thay vì viết lại metrics hoặc kết luận lịch sử.
+
+Xác minh riêng của task gốc, nếu có, vẫn nằm trong Mục 10.
+
+## 7. Kết quả
+
+Báo cáo hiện đã theo cấu trúc báo cáo kỹ thuật của InsureVN. Các kết quả, số liệu benchmark, quyết định và tham chiếu hiện vật đầu ra gốc vẫn nằm trong Mục 10.
+
+## 8. Rủi ro và giới hạn
+
+- Các lệnh lịch sử và kết quả benchmark không được chạy lại trong lần chuẩn hóa này.
+- Bất kỳ đường dẫn, metric hoặc trạng thái nào trong nội dung gốc đều là dữ liệu lịch sử cho tới khi được xác minh lại.
+- Không nên xem tài liệu này là một lần chạy đánh giá mới nếu Mục 10 không có bằng chứng xác minh hiện tại.
+
+## 9. Việc tiếp theo
+
+- Giữ báo cáo này đồng bộ với mã nguồn, lệnh và hiện vật đầu ra mà nó tham chiếu.
+- Chạy lại bước xác minh riêng của task trước khi dùng metrics lịch sử cho quyết định kỹ thuật mới.
+
+## 10. Nội dung gốc được giữ lại
+
+### Scope
 
 - Phase 5: Training & Eval.
 - Benchmark:
@@ -13,7 +71,7 @@
 - LLM judge: not used. This is deterministic retrieval evaluation over
   persisted local Qdrant indexes.
 
-## Code Change
+### Code Change
 
 `scripts/05_training_eval/run_streaming_chunking_embedding_qdrant.py` now accepts:
 
@@ -23,7 +81,7 @@
 This lets the streaming Qdrant builder run against benchmark v2 directly
 instead of always using the older default benchmark.
 
-## Qdrant Build
+### Qdrant Build
 
 Run directory:
 
@@ -72,7 +130,7 @@ LLM chunking cache/fallback:
 
 All 378 file-strategy rows completed, with 0 failed file rows.
 
-## Retrieval Eval
+### Retrieval Eval
 
 Output directory:
 
@@ -107,7 +165,7 @@ Verification counts:
 | Case metric rows | 900 |
 | Retrieval rows | 4,500 |
 
-## Ranking
+### Ranking
 
 | Rank | Strategy | Primary hit@5 | MRR@5 | Required source recall@5 | Line overlap recall@5 |
 | ---: | --- | ---: | ---: | ---: | ---: |
@@ -121,7 +179,7 @@ Verification counts:
 | 8 | `llamaindex_markdown_element` | 0.4600 | 0.3133 | 0.4600 | 0.1400 |
 | 9 | `insurance_contract_hybrid_late` | 0.4500 | 0.3030 | 0.4500 | 0.0383 |
 
-## Case-Type Notes
+### Case-Type Notes
 
 Best line-overlap recall by case type:
 
@@ -132,7 +190,7 @@ Best line-overlap recall by case type:
 | `three_context` | `semantic_embedding` | 0.1111 | 0.5667 |
 | `table_context` | `table_as_one_hybrid` | 0.2000 | 0.7000 |
 
-## Interpretation
+### Interpretation
 
 - Default pick for this benchmark: `hierarchical_header_recursive`. It has the
   best required-source recall@5 and the best line-overlap recall@5 overall.
@@ -145,7 +203,7 @@ Best line-overlap recall by case type:
   line-overlap recall on this benchmark, so it is not a good default for this
   v2 dataset without further tuning.
 
-## Verification
+### Verification
 
 Commands run:
 

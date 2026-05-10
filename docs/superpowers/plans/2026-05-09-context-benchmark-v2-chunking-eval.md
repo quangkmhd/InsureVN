@@ -43,8 +43,8 @@
 ### Task 4: Report Results
 
 **Files:**
-- Create: `docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-report.md`
-- Modify: `docs/work_log/data_pipeline_processing_log.md`
+- Create: `docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md`
+- Modify: `docs/work_log/2026-05-09-data-pipeline-processing-technical-report.md`
 
 - [ ] Write a compact report with run paths, strategy rankings, and verification commands.
 - [ ] Add the report link to the Phase 5 eval report table.

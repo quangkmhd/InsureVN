@@ -240,7 +240,7 @@ them.
 ## 6. Data Pipeline And Evidence Foundation
 
 InsureVN's data flow follows the 6-phase processing lifecycle documented in
-`docs/work_log/data_pipeline_processing_log.md`.
+`docs/work_log/2026-05-09-data-pipeline-processing-technical-report.md`.
 
 1. **Acquisition**: scrape PDF/web sources from Vietnamese insurers.
 2. **Preprocessing & QA**: classify PDFs, filter non-health-insurance content,

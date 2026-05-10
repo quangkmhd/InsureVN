@@ -164,7 +164,7 @@ Expected: PASS.
 
 **Files:**
 - Create: `scripts/05_training_eval/06_generate_health_rag_context_benchmark_v2.py`
-- Create: `docs/work_log/2026-05-08-health-rag-context-benchmark-v2-report.md`
+- Create: `docs/work_log/2026-05-08-health-rag-context-benchmark-v2-technical-report.md`
 
 - [ ] **Step 1: Add CLI wrapper**
 
@@ -215,5 +215,5 @@ Expected: JSONL has 100 lines and verification reports 30/30/30/10 distribution.
 
 - [ ] **Step 5: Write report**
 
-Write `docs/work_log/2026-05-08-health-rag-context-benchmark-v2-report.md`
+Write `docs/work_log/2026-05-08-health-rag-context-benchmark-v2-technical-report.md`
 with command, counts, paths, failures, and verification results.

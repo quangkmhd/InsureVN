@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563" />
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+    <linearGradient id="llmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#eff6ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#dbeafe;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="960" height="720" fill="#ffffff" />
+  <text x="480" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#1f2937">InsureVN Benchmark V2 Generation Pipeline</text>
+  <g transform="translate(400, 80)" filter="url(#shadow)">
+    <rect width="160" height="60" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+    <text x="80" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#334155">Corpus Markdown</text>
+    <text x="80" y="52" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#64748b">Insurance Documents</text>
+  </g>
+  <g transform="translate(140, 190)">
+    <rect width="320" height="100" rx="12" fill="#f0f9ff" stroke="#bae6fd" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="160" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#0369a1">1. Context Sampling</text>
+    <text x="160" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#0c4a6e">~1500 tokens / sampling</text>
+    <text x="160" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#0c4a6e">(Single, Multi, Table Contexts)</text>
+  </g>
+  <g transform="translate(500, 190)">
+    <rect width="320" height="100" rx="12" fill="#fdf2f8" stroke="#fbcfe8" stroke-width="2" stroke-dasharray="4,4"/>
+    <text x="160" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#be185d">3. Multi-Context Reasoning</text>
+    <text x="160" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#831843">Join 2-3 Context blocks</text>
+    <text x="160" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#831843">Comparison &amp; Synthesis questions</text>
+  </g>
+  <g transform="translate(240, 340)" filter="url(#shadow)">
+    <rect width="480" height="120" rx="15" fill="url(#llmGrad)" stroke="#3b82f6" stroke-width="2"/>
+    <text x="240" y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#1d4ed8">2. LLM Synthesis (Provider Pool)</text>
+    <g transform="translate(40, 50)">
+      <rect width="120" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+      <text x="60" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#1e40af">Gemini Slot</text>
+    </g>
+    <g transform="translate(180, 50)">
+      <rect width="120" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+      <text x="60" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#1e40af">Ollama Slot</text>
+    </g>
+    <g transform="translate(320, 50)">
+      <rect width="120" height="40" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+      <text x="60" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#1e40af">NVIDIA Slot</text>
+    </g>
+    <text x="240" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1d4ed8">Outputs: Questions, Gold Answers, Quotes</text>
+  </g>
+  <g transform="translate(300, 500)" filter="url(#shadow)">
+    <rect width="360" height="80" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+    <text x="180" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#15803d">4. Evidence Grounding</text>
+    <text x="180" y="55" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#166534">Storage: chunk_id, line_range, raw_quote</text>
+    <text x="180" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#166534">Ensures transparency &amp; verification</text>
+  </g>
+  <g transform="translate(300, 620)">
+    <rect width="360" height="80" rx="10" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+    <text x="180" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#c2410c">5. 10-Point Scoring Schema</text>
+    <text x="180" y="45" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#9a3412">Recall(3) • Faithfulness(3) • Integrity(2)</text>
+    <text x="180" y="60" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#9a3412">Citation(1) • Adherence(1)</text>
+  </g>
+  <path d="M 480 140 L 300 190" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 480 140 L 660 190" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 300 290 L 400 340" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 660 290 L 560 340" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 480 460 L 480 500" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+  <path d="M 480 580 L 480 620" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+</svg>

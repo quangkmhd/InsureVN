@@ -3,8 +3,8 @@ from typing import Any
 
 from qdrant_client import models
 
+from src.services.document_retrieval.retrieval_readiness import RetrievalReadinessReport
 from src.services.observability import service_observe
-from src.services.retrieval_readiness import RetrievalReadinessReport
 
 QDRANT_FILTER_PAYLOAD_INDEX_FIELDS = (
     "metadata.company_code",

@@ -1,7 +1,7 @@
 import pytest
 
 from src.models.evidence import SourceType
-from src.services.qdrant_evidence import QdrantEvidenceMapper
+from src.services.evidence.qdrant_evidence import QdrantEvidenceMapper
 
 
 def test_qdrant_evidence_mapper_preserves_required_citations() -> None:

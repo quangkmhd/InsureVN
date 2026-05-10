@@ -1,4 +1,4 @@
-from src.services import qdrant_retriever
+from src.services.document_retrieval import qdrant_retriever
 
 
 def test_google_genai_embedding_provider_uses_configured_vector_size(

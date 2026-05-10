@@ -3,7 +3,7 @@ from langchain_core.cross_encoders import BaseCrossEncoder
 from langchain_core.documents import Document
 
 from src.models.evidence import Evidence, SourceType
-from src.services.evidence_merger import EvidenceMerger, EvidenceReranker
+from src.services.evidence.evidence_merger import EvidenceMerger, EvidenceReranker
 
 
 class StaticInsuranceCrossEncoder(BaseCrossEncoder):

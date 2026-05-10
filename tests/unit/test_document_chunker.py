@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.services.document_chunker import DocumentChunker
+from src.services.chunking.document_chunker import DocumentChunker
 
 
 def _metadata() -> dict:

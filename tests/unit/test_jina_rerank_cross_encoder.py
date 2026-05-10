@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from src.services.jina_rerank_cross_encoder import JinaRerankCrossEncoder
+from src.services.document_retrieval.jina_rerank_cross_encoder import JinaRerankCrossEncoder
 
 
 def test_jina_rerank_cross_encoder_maps_scores_to_input_order() -> None:
@@ -68,7 +68,7 @@ def test_jina_rerank_cross_encoder_adds_safe_langfuse_metadata(monkeypatch) -> N
         )
 
     monkeypatch.setattr(
-        "src.services.jina_rerank_cross_encoder.add_current_service_metadata",
+        "src.services.document_retrieval.jina_rerank_cross_encoder.add_current_service_metadata",
         capture_metadata,
     )
     client = httpx.Client(transport=httpx.MockTransport(handler))

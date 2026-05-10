@@ -1,6 +1,6 @@
 from qdrant_client import models
 
-from src.services.qdrant_collection_manager import (
+from src.services.document_retrieval.qdrant_collection_manager import (
     QDRANT_FILTER_PAYLOAD_INDEX_FIELDS,
     QdrantCollectionConfig,
     QdrantCollectionManager,

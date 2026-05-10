@@ -4,7 +4,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_qdrant import SparseEmbeddings
 from langchain_qdrant.sparse_embeddings import SparseVector
 
-from src.services.qdrant_retriever import QdrantRetriever
+from src.services.document_retrieval.qdrant_retriever import QdrantRetriever
 
 
 class FakeEmbeddingProvider(Embeddings):

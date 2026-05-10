@@ -6,8 +6,8 @@ from qdrant_client import QdrantClient
 
 from src.core.config import settings
 from src.models.evidence import HardFilters, RetrievalMode, RetrievalPlan, SourceType
-from src.services.document_chunker import DocumentChunker
-from src.services.qdrant_retriever import (
+from src.services.chunking.document_chunker import DocumentChunker
+from src.services.document_retrieval.qdrant_retriever import (
     GoogleGenAIEmbeddingProvider,
     QdrantRetriever,
     RetrievalReadinessError,

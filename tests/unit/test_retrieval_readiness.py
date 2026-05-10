@@ -1,6 +1,6 @@
 import pytest
 
-from src.services.retrieval_readiness import (
+from src.services.document_retrieval.retrieval_readiness import (
     ProductionReadinessError,
     RetrievalReadinessReport,
 )

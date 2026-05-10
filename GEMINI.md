@@ -19,18 +19,18 @@ a shared evidence foundation.
 
 ## 2. Tech Stack
 
-| Layer                   | Technology                                                                 |
-| :---------------------- | :------------------------------------------------------------------------- |
-| Language                | Python 3.12.3                                                              |
-| API Runtime             | FastAPI, Uvicorn                                                           |
+| Layer                   | Technology                                                                                           |
+| :---------------------- | :--------------------------------------------------------------------------------------------------- |
+| Language                | Python 3.12.3                                                                                        |
+| API Runtime             | FastAPI, Uvicorn                                                                                     |
 | Agent & Workflow Layer  | LangChain agents/tools/retrievers, LangGraph StateGraph/checkpoints/HITL, Deep Agents operator shell |
-| LLM/Embedding Providers | Ollama, Google Gemini/GenAI, OpenRouter, NVIDIA, Jina rerank via typed config |
-| Structured Data         | SQLite plus FastMCP SQLite server                                          |
-| Vector Retrieval        | Qdrant dense + sparse/BM25 hybrid search via `langchain-qdrant`            |
-| Graph Retrieval         | Neo4j via `langchain-neo4j`; NetworkX for diagnostics and unit fixtures     |
-| Observability           | Langfuse tracing, prompt management, eval metadata, structured JSON logs    |
-| PDF/OCR/Data Prep       | Marker, Datalab, Gemma4/VLM extraction, table-to-narrative conversion      |
-| Testing & Quality       | pytest, ruff, retrieval readiness gates, synthetic benchmark fixtures       |
+| LLM/Embedding Providers | Ollama, Google Gemini/GenAI, OpenRouter, NVIDIA, Jina rerank via typed config                        |
+| Structured Data         | SQLite plus FastMCP SQLite server                                                                    |
+| Vector Retrieval        | Qdrant dense + sparse/BM25 hybrid search via `langchain-qdrant`                                    |
+| Graph Retrieval         | Neo4j via `langchain-neo4j`; NetworkX for diagnostics and unit fixtures                            |
+| Observability           | Langfuse tracing, prompt management, eval metadata, structured JSON logs                             |
+| PDF/OCR/Data Prep       | Marker, Datalab, Gemma4/VLM extraction, table-to-narrative conversion                                |
+| Testing & Quality       | pytest, ruff, retrieval readiness gates, synthetic benchmark fixtures                                |
 
 ---
 
@@ -270,7 +270,6 @@ InsureVN's data flow follows the 6-phase processing lifecycle documented in
   the workflow to human review instead of hiding the disagreement.
 
 ---
-
 
 ## 7. Behavioral Guidelines
 

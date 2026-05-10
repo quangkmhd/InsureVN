@@ -20,12 +20,15 @@ from qdrant_client import QdrantClient
 
 from src.core.config import settings
 from src.core.logger import get_logger
-from src.services.document_chunker import (
+from src.services.chunking.document_chunker import (
     ChildChunk,
     ChunkingStrategy,
     DocumentChunker,
 )
-from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRetriever
+from src.services.document_retrieval.qdrant_retriever import (
+    GoogleGenAIEmbeddingProvider,
+    QdrantRetriever,
+)
 
 logger = get_logger("qdrant_indexer")
 

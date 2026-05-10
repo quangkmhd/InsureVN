@@ -1,9 +1,9 @@
 import logging
 from unittest.mock import MagicMock, patch
 
-from src.services.citation_formatter import CitationFormatter
-from src.services.document_chunker import DocumentChunker
-from src.services.evidence_merger import EvidenceMerger
+from src.services.evidence.citation_formatter import CitationFormatter
+from src.services.chunking.document_chunker import DocumentChunker
+from src.services.evidence.evidence_merger import EvidenceMerger
 from src.services.knowledge_graph.graph_json_serializer import GraphJsonSerializer
 from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
 from src.services.knowledge_graph.insurance_graph_schema import (
@@ -18,12 +18,12 @@ from src.services.knowledge_graph.llm_graph_document_extractor import (
 from src.services.knowledge_graph.neo4j_cypher_qa import Neo4jCypherQAService
 from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
 from src.services.knowledge_graph.networkx_graph_builder import NetworkxGraphBuilder
-from src.services.qdrant_collection_manager import QdrantCollectionManager
-from src.services.qdrant_evidence import QdrantEvidenceMapper
-from src.services.qdrant_retriever import QdrantRetriever
-from src.services.qdrant_vector_store import QdrantVectorStoreFactory
-from src.services.retrieval_readiness import RetrievalReadinessReport
-from src.services.sqlite_evidence import SqliteEvidenceMapper, SqliteProfileMapper
+from src.services.document_retrieval.qdrant_collection_manager import QdrantCollectionManager
+from src.services.evidence.qdrant_evidence import QdrantEvidenceMapper
+from src.services.document_retrieval.qdrant_retriever import QdrantRetriever
+from src.services.document_retrieval.qdrant_vector_store import QdrantVectorStoreFactory
+from src.services.document_retrieval.retrieval_readiness import RetrievalReadinessReport
+from src.services.evidence.sqlite_evidence import SqliteEvidenceMapper, SqliteProfileMapper
 
 SERVICE_ENTRYPOINTS = (
     CitationFormatter.format,

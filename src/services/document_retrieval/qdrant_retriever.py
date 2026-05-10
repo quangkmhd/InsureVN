@@ -19,14 +19,14 @@ from src.core.config import settings
 from src.core.logger import get_logger
 from src.core.vietnamese_text import transliterate_vietnamese
 from src.models.evidence import Evidence, HardFilters, RetrievalMode, RetrievalPlan
-from src.services.document_chunker import ChildChunk
-from src.services.observability import service_observe
-from src.services.qdrant_collection_manager import (
+from src.services.chunking.document_chunker import ChildChunk
+from src.services.document_retrieval.qdrant_collection_manager import (
     QdrantCollectionConfig,
     QdrantCollectionManager,
 )
-from src.services.qdrant_evidence import QdrantEvidenceMapper
-from src.services.qdrant_vector_store import QdrantVectorStoreFactory
+from src.services.document_retrieval.qdrant_vector_store import QdrantVectorStoreFactory
+from src.services.evidence.qdrant_evidence import QdrantEvidenceMapper
+from src.services.observability import service_observe
 
 logger = get_logger("qdrant_retriever")
 

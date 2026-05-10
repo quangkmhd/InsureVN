@@ -55,6 +55,11 @@ a shared evidence foundation.
 - **Type hints**: Required on all function signatures
 - **Docstrings**: Google style, required on all public functions/classes
 - **Imports**: Group by stdlib → third-party → local, sorted alphabetically
+- **Function and file focus**: Keep functions small and cohesive, and keep files focused on one clear responsibility. Extract helpers before modules become tangled.
+- **Boundary validation**: Validate inputs at system boundaries. Prefer schema-based validation or typed models where available, and never trust external data by default.
+- **Error handling**: Handle errors explicitly, log meaningful context, and never silently swallow exceptions.
+- **Configuration over hardcoding**: Avoid hardcoded operational values when a named constant or typed config entry is more appropriate.
+- **Immutability by default where practical**: Prefer side-effect-light transformations and immutable DTO-style structures when they improve safety and clarity, but do not force immutability when it makes straightforward Python code worse.
 
 ---
 
@@ -100,18 +105,12 @@ InsureVN/
 │   │   ├── database.py        # SQLite connection utilities
 │   │   └── vietnamese_text.py # Vietnamese normalization helpers
 │   │
-│   ├── services/              # Stateless retrieval/evidence/graph services
-│   │   ├── document_chunker.py
-│   │   ├── qdrant_collection_manager.py
-│   │   ├── qdrant_vector_store.py
-│   │   ├── qdrant_retriever.py
-│   │   ├── qdrant_evidence.py
-│   │   ├── sqlite_evidence.py
-│   │   ├── evidence_merger.py
-│   │   ├── citation_formatter.py
-│   │   ├── retrieval_readiness.py
-│   │   ├── observability.py
-│   │   └── knowledge_graph/    # Neo4j, NetworkX, GraphRAG, schema services
+│   ├── services/              # Stateless chunking/evidence/retrieval/graph services
+│   │   ├── chunking/           # Document chunking and retrieval indexing utilities
+│   │   ├── evidence/           # Evidence normalization, citations, merge, rerank
+│   │   ├── document_retrieval/ # Qdrant hybrid retrieval and readiness utilities
+│   │   ├── knowledge_graph/    # Neo4j, NetworkX, GraphRAG, schema services
+│   │   └── observability.py
 │   │
 │   └── prompts/               # System prompts for agents
 │
@@ -342,6 +341,7 @@ These guidelines are working if:
 - **Mandatory Type Safety**: Configuration parameters must be explicitly cast to their functional types (e.g., `float`, `int`, `bool`) at the configuration layer. No raw string-based logic is allowed for numeric or boolean controls.
 - **Tool-Specific Encapsulation**: If a tool is used by an agent, its specific parameters (API keys, base URLs, retry limits) must be encapsulated within that agent's configuration block to allow independent tuning.
 - **Mandatory `.env` Registration**: Every agent-specific parameter must be explicitly added to the `.env` file with clear comments. This ensures that the environment is self-documenting and easy to configure for local development.
+- **Coding-Agent `.env` Access**: For repository work, the coding agent may read the local `.env` file whenever configuration context is needed for debugging, setup, verification, or implementation. This permission is for agent workflow only; runtime code in `src/` must still use the centralized configuration layer instead of reading `.env` directly. Never echo raw secrets, tokens, or full credential values into assistant output, logs, tests, or committed files unless the user explicitly asks for that exact value.
 
 ---
 

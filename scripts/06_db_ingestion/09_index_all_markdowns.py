@@ -23,13 +23,17 @@ from qdrant_client import QdrantClient
 from src.core.config import settings
 from src.core.logger import get_logger
 from src.core.vietnamese_text import slugify_vietnamese, transliterate_vietnamese
-from src.services.document_chunker import (
+from src.services.chunking.document_chunker import (
     HIERARCHICAL_NON_EMPTY_QDRANT_PAYLOAD_FIELDS,
     HIERARCHICAL_QDRANT_PAYLOAD_FIELDS,
     NON_EMPTY_QDRANT_PAYLOAD_FIELDS,
     REQUIRED_QDRANT_PAYLOAD_FIELDS,
     ChildChunk,
     DocumentChunker,
+)
+from src.services.document_retrieval.qdrant_retriever import (
+    GoogleGenAIEmbeddingProvider,
+    QdrantRetriever,
 )
 from src.services.knowledge_graph.graph_json_serializer import GraphJsonSerializer
 from src.services.knowledge_graph.graph_quality_validator import GraphQualityValidator
@@ -39,7 +43,6 @@ from src.services.knowledge_graph.llm_graph_document_extractor import (
 )
 from src.services.knowledge_graph.neo4j_store import Neo4jKnowledgeGraphStore
 from src.services.knowledge_graph.networkx_graph_builder import NetworkxGraphBuilder
-from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider, QdrantRetriever
 
 logger = get_logger("health_markdown_rag_indexer")
 

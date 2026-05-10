@@ -1,7 +1,7 @@
 from typing import Any
 
 from src.models.evidence import Evidence, SourceType
-from src.services.document_chunker import REQUIRED_QDRANT_PAYLOAD_FIELDS
+from src.services.chunking.document_chunker import REQUIRED_QDRANT_PAYLOAD_FIELDS
 from src.services.observability import service_observe
 
 

@@ -35,7 +35,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.services.document_chunker import DocumentChunker  # noqa: E402
+from src.services.chunking.document_chunker import DocumentChunker  # noqa: E402
 
 DEFAULT_SOURCE_ROOT = next(
     (parent.parent for parent in REPO_ROOT.parents if parent.name == ".worktrees"),

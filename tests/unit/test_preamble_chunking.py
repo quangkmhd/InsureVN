@@ -1,4 +1,4 @@
-from src.services.document_chunker import DocumentChunker
+from src.services.chunking.document_chunker import DocumentChunker
 
 def test_document_chunker_captures_pre_heading_preamble() -> None:
     markdown_text = """AIA logo featuring a stylized mountain.

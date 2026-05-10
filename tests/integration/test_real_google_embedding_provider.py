@@ -1,7 +1,7 @@
 import pytest
 
 from src.core.config import settings
-from src.services.qdrant_retriever import GoogleGenAIEmbeddingProvider
+from src.services.document_retrieval.qdrant_retriever import GoogleGenAIEmbeddingProvider
 
 
 @pytest.mark.real_api

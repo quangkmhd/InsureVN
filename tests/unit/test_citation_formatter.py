@@ -1,5 +1,5 @@
 import pytest
-from src.services.citation_formatter import CitationFormatter
+from src.services.evidence.citation_formatter import CitationFormatter
 from src.models.evidence import Evidence, SourceType
 
 def test_citation_formatter():

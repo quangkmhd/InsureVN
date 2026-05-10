@@ -9,7 +9,9 @@ from pydantic import BaseModel, ConfigDict
 
 from src.core.logger import get_logger
 from src.models.evidence import Evidence
-from src.services.jina_rerank_cross_encoder import build_default_rerank_cross_encoder
+from src.services.document_retrieval.jina_rerank_cross_encoder import (
+    build_default_rerank_cross_encoder,
+)
 from src.services.observability import add_current_service_metadata, service_observe
 
 logger = get_logger("evidence_merger")

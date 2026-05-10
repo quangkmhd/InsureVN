@@ -1,5 +1,5 @@
 import pytest
-from src.services.sqlite_evidence import SqliteEvidenceMapper, SqliteProfileMapper
+from src.services.evidence.sqlite_evidence import SqliteEvidenceMapper, SqliteProfileMapper
 from src.models.evidence import SourceType
 
 def test_sqlite_evidence_mapper(mcp_result_fixture):

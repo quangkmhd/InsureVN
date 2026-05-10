@@ -4,7 +4,7 @@ from langchain_qdrant.sparse_embeddings import SparseVector
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models import Distance, SparseVectorParams, VectorParams
 
-from src.services.qdrant_vector_store import QdrantVectorStoreFactory
+from src.services.document_retrieval.qdrant_vector_store import QdrantVectorStoreFactory
 
 
 class FakeEmbeddings(Embeddings):

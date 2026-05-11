@@ -166,3 +166,4 @@ unsloth_compiled_cache/
 .crush/
 .goose/
 database/
+gemma4_fintuned/

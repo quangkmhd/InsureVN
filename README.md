@@ -23,7 +23,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Agents-9-7952b3" alt="Agents Count">
-  <img src="https://img.shields.io/badge/Work_Logs-26-4c1" alt="Work Logs Count">
+  <img src="https://img.shields.io/badge/Work_Logs-27-4c1" alt="Work Logs Count">
   <img src="https://img.shields.io/badge/Pipeline_Phases-7-blue" alt="Pipeline Phases">
   <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
 </p>
@@ -211,7 +211,7 @@ Evidence and retrieval infrastructure ready for agent integration:
 Planned agents (SupervisorAgent, PolicyAgent, ComparisonAdvisorAgent, ClaimAgent, ValidationAgent, VerifierAgent) are designed in the [architecture spec](docs/architecture/2026-05-03-multi-agent-platform-design.md) and will be built on LangGraph StateGraph.
 
 ## Work Log
-
+- **[Gemma 4 Vision Fine-tune & Evaluation](docs/work_log/2026-05-06-gemma4-vision-finetune-technical-report.md)** — Fine-tuned Gemma 4 Vision E2B with Unsloth/LoRA on 1,314 insurance document samples; achieved 64.9% Ma
 - **[Rerank Protocol Diagnostic](docs/work_log/2026-05-10-rerank-protocol-diagnostic-technical-report.md)** — Fixed rerank evaluation protocol separating candidate retrieval (top 30) from final rerank (top 10); confirmed HYBRID + hard filters + ViRanker as best configuration.
 - **[Qwen Production Embedding Migration](docs/work_log/2026-05-10-qwen-production-embedding-migration-technical-report.md)** — Migrated production embedding to Qwen/Qwen3-Embedding-8B with official transformers usage, 4-bit quantization, and MRL dimension truncation.
 - **[Qwen Full-Folder Production Retrieval](docs/work_log/2026-05-10-qwen-full-folder-production-retrieval-technical-report.md)** — Evaluated Qwen embeddings on full 107-document corpus (9,933 Qdrant points); HYBRID outperformed VECTOR with source_hit@10 increasing from 63/89 to 77/89.
@@ -238,6 +238,7 @@ Planned agents (SupervisorAgent, PolicyAgent, ComparisonAdvisorAgent, ClaimAgent
 - **[All-Source Streaming Chunking Eval](docs/work_log/2026-05-08-all-expected-source-streaming-chunking-embedding-qdrant-technical-report.md)** — Streaming evaluation of chunking with expected-source validation across the full document corpus.
 - **[Health Chunking Benchmark Evaluation Guide](docs/work_log/2026-05-07-health-chunking-benchmark-evaluation-guide-technical-report.md)** — Comprehensive guide for running and interpreting chunking benchmark evaluations on health insurance data.
 - **[Health Chunking Benchmark E2E Process](docs/work_log/2026-05-07-health-chunking-benchmark-end-to-end-process-technical-report.md)** — End-to-end process for the health chunking benchmark from dataset preparation to result analysis.
+rkdown accuracy and 80.1% JSON validity on 146-sample test set.
 
 ## Documentation
 
@@ -247,7 +248,7 @@ Planned agents (SupervisorAgent, PolicyAgent, ComparisonAdvisorAgent, ClaimAgent
 | Database           | [docs/database/](docs/database/)           | SQLite schema specification, MCP reference, DatabaseAgent docs, JSON schema analysis             |
 | Pipeline Runbooks  | [docs/pipeline/](docs/pipeline/)           | Script capability runbooks organized by operational capability                                   |
 | Blueprints         | [docs/blueprints/](docs/blueprints/)       | Phase-by-phase build plans (Phase 00–07) with dependency matrix                                 |
-| Evaluation Results | [docs/eval_results/](docs/eval_results/)   | Embedding, reranker, retrieval, and answer+citation evaluation results                           |
+| Evaluation Results | [docs/eval_results/](docs/eval_results/)   | Embedding, reranker, retrieval, answer+citation, and VLM fine-tuning evaluation results          |
 | Observability      | [docs/observability/](docs/observability/) | Langfuse integration and database observability guides                                           |
 | Product            | [docs/product/](docs/product/)             | 100 customer intent scenarios and insurance lifecycle mapping                                    |
 | Specs & Plans      | [docs/superpowers/](docs/superpowers/)     | Design specs and implementation plans for each feature                                           |

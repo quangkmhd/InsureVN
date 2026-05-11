@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 940" width="1400" height="940">
+  <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; letter-spacing: 0; }
+    .title { font-size: 28px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 13px; fill: #6b7280; }
+    .section { font-size: 12px; font-weight: 700; fill: #374151; }
+    .box-title { font-size: 15px; font-weight: 700; fill: #111827; }
+    .body { font-size: 12px; fill: #374151; }
+    .small { font-size: 11px; fill: #6b7280; }
+    .metric { font-size: 16px; font-weight: 700; fill: #111827; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0f766e"/>
+    </marker>
+    <filter id="soft-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#111827" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  <rect width="1400" height="940" fill="#ffffff"/>
+  <text x="50" y="48" text-anchor="start" class="title">Nhóm 1 — Retrieval Pipeline Decisions</text>
+  <text x="50" y="72" text-anchor="start" class="subtitle">Chuỗi thực nghiệm dẫn đến policy HYBRID + hard filters + ViRanker và kết quả source@10=0.9551, MRR@10=0.8725</text>
+  <text x="50" y="108" text-anchor="start" class="section">Decision flow</text>
+  <rect x="50" y="125" width="230" height="138" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="224" y="137" width="44.0" height="22" rx="11" fill="#bfdbfe" opacity="0.85"/>
+  <text x="246.0" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">1</text>
+  <text x="66" y="151" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Embedding Eval</text>
+  <text x="66" y="177" font-size="12" fill="#374151" text-anchor="start">Freeze chunking 900/150</text>
+  <text x="66" y="194" font-size="12" fill="#374151" text-anchor="start">Dense model benchmark</text>
+  <text x="66" y="211" font-size="12" fill="#374151" text-anchor="start">Qwen MRR@10 0.6031</text>
+  <text x="66" y="228" font-size="12" fill="#374151" text-anchor="start">Qwen source@10 0.8800</text>
+  <text x="66" y="245" font-size="12" fill="#374151" text-anchor="start">bge-m3 = ops default</text>
+  <rect x="330" y="125" width="245" height="138" rx="8" fill="#faf5ff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="519" y="137" width="44.0" height="22" rx="11" fill="#ddd6fe" opacity="0.85"/>
+  <text x="541.0" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">2</text>
+  <text x="346" y="151" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Qwen Full-Folder</text>
+  <text x="346" y="177" font-size="12" fill="#374151" text-anchor="start">107 docs -&gt; 9,933 points</text>
+  <text x="346" y="194" font-size="12" fill="#374151" text-anchor="start">89 benchmark cases</text>
+  <text x="346" y="211" font-size="12" fill="#374151" text-anchor="start">VECTOR: 63/89, MRR 0.4426</text>
+  <text x="346" y="228" font-size="12" fill="#374151" text-anchor="start">HYBRID: 77/89, MRR 0.5257</text>
+  <rect x="625" y="125" width="220" height="138" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="789" y="137" width="44.0" height="22" rx="11" fill="#fed7aa" opacity="0.85"/>
+  <text x="811.0" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">3</text>
+  <text x="641" y="151" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Hard Filters</text>
+  <text x="641" y="177" font-size="12" fill="#374151" text-anchor="start">Filter: company_code</text>
+  <text x="641" y="194" font-size="12" fill="#374151" text-anchor="start">Remove wrong-company hits</text>
+  <text x="641" y="211" font-size="12" fill="#374151" text-anchor="start">source@10 0.9438</text>
+  <text x="641" y="228" font-size="12" fill="#374151" text-anchor="start">MRR@10 0.8453</text>
+  <rect x="895" y="125" width="220" height="138" rx="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="1059" y="137" width="44.0" height="22" rx="11" fill="#99f6e4" opacity="0.85"/>
+  <text x="1081.0" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">4</text>
+  <text x="911" y="151" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Rerank Protocol</text>
+  <text x="911" y="177" font-size="12" fill="#374151" text-anchor="start">Fix benchmark bug</text>
+  <text x="911" y="194" font-size="12" fill="#374151" text-anchor="start">retrieve_top_k = 30</text>
+  <text x="911" y="211" font-size="12" fill="#374151" text-anchor="start">rerank_top_k = 10</text>
+  <text x="911" y="228" font-size="12" fill="#374151" text-anchor="start">pre/post audit rows</text>
+  <rect x="1165" y="125" width="185" height="138" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="1294" y="137" width="44.0" height="22" rx="11" fill="#bbf7d0" opacity="0.85"/>
+  <text x="1316.0" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">5</text>
+  <text x="1181" y="151" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Open-source</text>
+  <text x="1181" y="169" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Reranker</text>
+  <text x="1181" y="195" font-size="12" fill="#374151" text-anchor="start">ViRanker only safe winner</text>
+  <text x="1181" y="212" font-size="12" fill="#374151" text-anchor="start">source@10 0.9551</text>
+  <text x="1181" y="229" font-size="12" fill="#374151" text-anchor="start">MRR@10 0.8725</text>
+  <text x="1181" y="246" font-size="12" fill="#374151" text-anchor="start">quote@10 0.9221</text>
+  <path d="M 280,194 L 330,194" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <path d="M 575,194 L 625,194" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <path d="M 845,194 L 895,194" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <path d="M 1115,194 L 1165,194" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <text x="50" y="313" text-anchor="start" class="section">Metric checkpoints</text>
+  <rect x="50" y="332" width="290" height="130" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.4"/>
+  <text x="64" y="356" text-anchor="start" font-size="12" font-weight="700" fill="#374151">Embedding shortlist</text>
+  <text x="64" y="384" text-anchor="start" font-size="20" font-weight="800" fill="#2563eb">Qwen = quality ref</text>
+  <text x="64" y="409" font-size="11" fill="#6b7280" text-anchor="start">Top10 MRR 0.6031</text>
+  <text x="64" y="424" font-size="11" fill="#6b7280" text-anchor="start">Top10 source recall 0.8800</text>
+  <text x="64" y="439" font-size="11" fill="#6b7280" text-anchor="start">bge-m3 kept for simpler ops</text>
+  <rect x="370" y="332" width="290" height="130" rx="8" fill="#faf5ff" stroke="#ddd6fe" stroke-width="1.4"/>
+  <text x="384" y="356" text-anchor="start" font-size="12" font-weight="700" fill="#374151">Retrieval mode</text>
+  <text x="384" y="384" text-anchor="start" font-size="20" font-weight="800" fill="#7c3aed">VECTOR -&gt; HYBRID</text>
+  <text x="384" y="409" font-size="11" fill="#6b7280" text-anchor="start">source@10: 63/89 -&gt; 77/89</text>
+  <text x="384" y="424" font-size="11" fill="#6b7280" text-anchor="start">quote@10: 37/77 -&gt; 53/77</text>
+  <text x="384" y="439" font-size="11" fill="#6b7280" text-anchor="start">MRR@10: 0.4426 -&gt; 0.5257</text>
+  <rect x="690" y="332" width="290" height="130" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.4"/>
+  <text x="704" y="356" text-anchor="start" font-size="12" font-weight="700" fill="#374151">Filter + rerank</text>
+  <text x="704" y="384" text-anchor="start" font-size="20" font-weight="800" fill="#059669">+0.0272 MRR@10</text>
+  <text x="704" y="409" font-size="11" fill="#6b7280" text-anchor="start">Hard-filter baseline: 0.8453</text>
+  <text x="704" y="424" font-size="11" fill="#6b7280" text-anchor="start">ViRanker final: 0.8725</text>
+  <text x="704" y="439" font-size="11" fill="#6b7280" text-anchor="start">source@10: 0.9438 -&gt; 0.9551</text>
+  <rect x="1010" y="332" width="290" height="130" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.4"/>
+  <text x="1024" y="356" text-anchor="start" font-size="12" font-weight="700" fill="#374151">Latency tradeoff</text>
+  <text x="1024" y="384" text-anchor="start" font-size="20" font-weight="800" fill="#ea580c">362 ms -&gt; 1211 ms</text>
+  <text x="1024" y="409" font-size="11" fill="#6b7280" text-anchor="start">Rerank adds ~848 ms avg</text>
+  <text x="1024" y="424" font-size="11" fill="#6b7280" text-anchor="start">Use conditionally for quality</text>
+  <text x="1024" y="439" font-size="11" fill="#6b7280" text-anchor="start">Keep raw HYBRID for fast path</text>
+  <text x="50" y="512" text-anchor="start" class="section">Production interpretation</text>
+  <rect x="50" y="535" width="390" height="165" rx="8" fill="#fef2f2" stroke="#fecaca" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="379.0" y="547" width="49.0" height="22" rx="11" fill="#fecaca" opacity="0.85"/>
+  <text x="403.5" y="562" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">avoid</text>
+  <text x="66" y="561" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Anti-pattern</text>
+  <text x="66" y="587" font-size="12" fill="#374151" text-anchor="start">Do not rerank raw HYBRID blindly</text>
+  <text x="66" y="604" font-size="12" fill="#374151" text-anchor="start">HYBRID + rerank without filters:</text>
+  <text x="66" y="621" font-size="12" fill="#374151" text-anchor="start">source@10 0.8427 -&gt; 0.8090</text>
+  <text x="66" y="638" font-size="12" fill="#374151" text-anchor="start">Cause: similar clause, wrong company</text>
+  <rect x="505" y="535" width="360" height="165" rx="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="785.4" y="547" width="67.6" height="22" rx="11" fill="#99f6e4" opacity="0.85"/>
+  <text x="819.2" y="562" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">protocol</text>
+  <text x="521" y="561" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Critical fix</text>
+  <text x="521" y="587" font-size="12" fill="#374151" text-anchor="start">Rerank must see a wider candidate pool</text>
+  <text x="521" y="604" font-size="12" fill="#374151" text-anchor="start">Candidate retrieval: top 30</text>
+  <text x="521" y="621" font-size="12" fill="#374151" text-anchor="start">Final output: top 10</text>
+  <text x="521" y="638" font-size="12" fill="#374151" text-anchor="start">Score content + metadata text</text>
+  <text x="521" y="655" font-size="12" fill="#374151" text-anchor="start">Preserve citation lineage</text>
+  <rect x="930" y="535" width="420" height="165" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="1282.8" y="547" width="55.2" height="22" rx="11" fill="#bbf7d0" opacity="0.85"/>
+  <text x="1310.4" y="562" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">winner</text>
+  <text x="946" y="561" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Default policy</text>
+  <text x="946" y="587" font-size="12" fill="#374151" text-anchor="start">1. Extract hard filters first</text>
+  <text x="946" y="604" font-size="12" fill="#374151" text-anchor="start">2. Retrieve with HYBRID in filtered scope</text>
+  <text x="946" y="621" font-size="12" fill="#374151" text-anchor="start">3. Apply ViRanker only after filters</text>
+  <text x="946" y="638" font-size="12" fill="#374151" text-anchor="start">4. Return evidence with metadata/citations</text>
+  <text x="946" y="655" font-size="12" fill="#374151" text-anchor="start">5. Route conflicts to review</text>
+  <path d="M 440,617 L 505,617" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-orange)"/>
+  <rect x="439.0" y="591" width="66.0" height="18" rx="4" fill="#ffffff" opacity="0.96"/>
+  <text x="472" y="604" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">diagnose</text>
+  <path d="M 865,617 L 930,617" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-green)"/>
+  <rect x="873.8" y="591" width="46.5" height="18" rx="4" fill="#ffffff" opacity="0.96"/>
+  <text x="897" y="604" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">adopt</text>
+  <rect x="50" y="742" width="1300" height="80" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="72" y="770" text-anchor="start" font-size="13" font-weight="700" fill="#374151">End-state evidence lane</text>
+  <text x="72" y="794" font-size="12" fill="#4b5563" text-anchor="start">Query -&gt; Supervisor extracts company/document filters -&gt; HYBRID Qdrant retrieval -&gt; ViRanker reranks top-30 to top-10 -&gt; Evidence merger keeps source path, page/section, table id, and graph path where available.</text>
+  <g transform="translate(1050,848)">
+    <rect x="-12" y="-14" width="300" height="74" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="0" y="0" text-anchor="start" font-size="11" font-weight="700" fill="#374151">Legend</text>
+    <line x1="0" y1="20" x2="34" y2="20" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-blue)"/>
+    <text x="44" y="24" font-size="11" fill="#6b7280">Decision/data flow</text>
+    <line x1="0" y1="38" x2="34" y2="38" stroke="#059669" stroke-width="2" marker-end="url(#arrow-green)"/>
+    <text x="44" y="42" font-size="11" fill="#6b7280">Policy adoption</text>
+    <line x1="0" y1="56" x2="34" y2="56" stroke="#ea580c" stroke-width="2" marker-end="url(#arrow-orange)"/>
+    <text x="44" y="60" font-size="11" fill="#6b7280">Diagnostic caution</text>
+  </g>
+</svg>

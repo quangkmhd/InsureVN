@@ -2,10 +2,11 @@
 
 All notable changes to the InsureVN project will be documented in this file.
 
-## [Unreleased] - 2026-05-09
+## [Unreleased] - 2026-05-10
 
 ### ✨ New Features
 
+- **Hierarchical Header Chunking**: Defaulted to hierarchical header chunking for all document processing to improve structural retrieval accuracy.
 - **Adaptive Semantic Density Chunking**: Implemented a new chunking strategy with an associated benchmark suite and comparison API for optimizing document retrieval.
 - **RAG Evaluation Framework**: Launched a core evaluation framework and LLM infrastructure, including the Health RAG Context Benchmark v2 and specialized benchmarks for health insurance.
 - **Databricks Chunking Integration**: Integrated Databricks chunking strategies to enhance document processing and retrieval quality.
@@ -15,11 +16,14 @@ All notable changes to the InsureVN project will be documented in this file.
 - **Evidence Management System**: Built an end-to-end evidence architecture including adapters, mergers, citation formatters, and document chunk contracts.
 - **Knowledge Graph Foundation**: Implemented a SQLite-based builder and foundation for the application's document knowledge graph.
 - **Synthetic Schema Expansion**: Expanded the database schema with synthetic tables to enhance testing and simulation environments.
+- **Benchmark Visualization Assets**: Added visual representations of retrieval performance to the documentation for intuitive performance monitoring.
 
 ### 🔧 Improvements
 
+- **Centralized Configuration Layer**: Established a robust, prefix-based configuration architecture with standardized environment variable management, API key pooling, and hierarchical LLM settings.
+- **Retrieval Strategy Finalization**: Formally adopted the 900/150 chunking density as the core retrieval configuration based on comprehensive benchmark results.
 - **Knowledge Graph Pipeline Refactor**: Reorganized the knowledge graph schema discovery and build pipeline to improve efficiency and maintainability.
-- **Standardized Agent Configuration**: Established a robust, prefix-based configuration architecture with dedicated, isolated parameters managed through a centralized `Settings` registry.
+- **Documentation Pipeline Reorganization**: Reorganized internal work logs into standardized technical reports and consolidated the project's documentation structure for better discoverability.
 - **Parameter Standardization**: Renamed `RAG_CHILD_CHUNK_TOKENS` to `RAG_CHILD_CHUNK_MAX_CHARS` across the configuration and ingestion logic for better clarity.
 - **Meaningful Naming Refactor**: Systematically renamed internal agent identifiers to align with domain-specific naming standards.
 - **Advanced Text Normalization**: Improved chunking accuracy and slug generation by switching to NFKD text normalization.
@@ -28,6 +32,7 @@ All notable changes to the InsureVN project will be documented in this file.
 ### 🐛 Fixes
 
 - **Security Hardening**: Removed hardcoded NVIDIA AI API keys and sanitized the codebase to prevent credential leakage.
+- **Repository Hygiene**: Cleaned up the repository by removing and explicitly ignoring the local database directory from git tracking.
 - **Logic & Validation**: Corrected linting and validation checks within the SQLite MCP server and resolved formatting issues in the Phase 01 evidence generation system.
 
 ### 📝 Documentation & Testing

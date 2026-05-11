@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+  <style>
+    text { font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Microsoft YaHei', 'Microsoft JhengHei', 'SimHei', sans-serif; letter-spacing: 0; }
+    .title { font-size: 28px; font-weight: 700; fill: #111827; }
+    .subtitle { font-size: 13px; fill: #6b7280; }
+    .section { font-size: 12px; font-weight: 700; fill: #374151; }
+    .box-title { font-size: 15px; font-weight: 700; fill: #111827; }
+    .body { font-size: 12px; fill: #374151; }
+    .small { font-size: 11px; fill: #6b7280; }
+    .metric { font-size: 16px; font-weight: 700; fill: #111827; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#059669"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ea580c"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+    </marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0f766e"/>
+    </marker>
+    <filter id="soft-shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#111827" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+  <rect width="1400" height="900" fill="#ffffff"/>
+  <text x="50" y="48" text-anchor="start" class="title">Nhóm 2 — Chunking Strategy Selection</text>
+  <text x="50" y="72" text-anchor="start" class="subtitle">Benchmark chọn hierarchical_header_recursive với DEFAULT_CHUNK_SIZE=900 và DEFAULT_CHUNK_OVERLAP=150</text>
+  <text x="50" y="108" text-anchor="start" class="section">Context Benchmark V2 — required source recall@5</text>
+  <rect x="50" y="116" width="705" height="445" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="70" y="153" text-anchor="start" font-size="11" font-weight="700" fill="#111827">1. hierarchical_header_recursive</text>
+  <rect x="315" y="140" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="140" width="372.0" height="20" rx="5" fill="#059669" opacity="0.88"/>
+  <text x="697.0" y="155" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.6200</text>
+  <text x="315" y="176" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3973  |  line overlap@5 0.2183</text>
+  <text x="70" y="196" text-anchor="start" font-size="11" font-weight="500" fill="#111827">2. table_as_one_hybrid</text>
+  <rect x="315" y="183" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="183" width="360.0" height="20" rx="5" fill="#0f766e" opacity="0.88"/>
+  <text x="685.0" y="198" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.6000</text>
+  <text x="315" y="219" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.4222  |  line overlap@5 0.1900</text>
+  <text x="70" y="239" text-anchor="start" font-size="11" font-weight="500" fill="#111827">3. markdown_then_semantic</text>
+  <rect x="315" y="226" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="226" width="342.0" height="20" rx="5" fill="#2563eb" opacity="0.88"/>
+  <text x="667.0" y="241" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.5700</text>
+  <text x="315" y="262" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.4148  |  line overlap@5 0.1050</text>
+  <text x="70" y="282" text-anchor="start" font-size="11" font-weight="500" fill="#111827">4. markdown_header_recursive_table</text>
+  <rect x="315" y="269" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="269" width="318.0" height="20" rx="5" fill="#4f46e5" opacity="0.88"/>
+  <text x="643.0" y="284" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.5300</text>
+  <text x="315" y="305" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3602  |  line overlap@5 0.1350</text>
+  <text x="70" y="325" text-anchor="start" font-size="11" font-weight="500" fill="#111827">5. semantic_embedding</text>
+  <rect x="315" y="312" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="312" width="318.0" height="20" rx="5" fill="#6366f1" opacity="0.88"/>
+  <text x="643.0" y="327" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.5300</text>
+  <text x="315" y="348" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3365  |  line overlap@5 0.1183</text>
+  <text x="70" y="368" text-anchor="start" font-size="11" font-weight="500" fill="#111827">6. llm_markdown_optimal</text>
+  <rect x="315" y="355" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="355" width="306.0" height="20" rx="5" fill="#8b5cf6" opacity="0.88"/>
+  <text x="631.0" y="370" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.5100</text>
+  <text x="315" y="391" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3362  |  line overlap@5 0.1800</text>
+  <text x="70" y="411" text-anchor="start" font-size="11" font-weight="500" fill="#111827">7. heading_level_table_safe</text>
+  <rect x="315" y="398" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="398" width="288.0" height="20" rx="5" fill="#64748b" opacity="0.88"/>
+  <text x="613.0" y="413" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.4800</text>
+  <text x="315" y="434" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3240  |  line overlap@5 0.1600</text>
+  <text x="70" y="454" text-anchor="start" font-size="11" font-weight="500" fill="#111827">8. llamaindex_markdown_element</text>
+  <rect x="315" y="441" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="441" width="276.0" height="20" rx="5" fill="#94a3b8" opacity="0.88"/>
+  <text x="601.0" y="456" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.4600</text>
+  <text x="315" y="477" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3133  |  line overlap@5 0.1400</text>
+  <text x="70" y="497" text-anchor="start" font-size="11" font-weight="500" fill="#111827">9. insurance_contract_hybrid_late</text>
+  <rect x="315" y="484" width="390" height="20" rx="5" fill="#f3f4f6"/>
+  <rect x="315" y="484" width="270.0" height="20" rx="5" fill="#a3a3a3" opacity="0.88"/>
+  <text x="595.0" y="499" text-anchor="start" font-size="11" font-weight="700" fill="#374151">0.4500</text>
+  <text x="315" y="520" text-anchor="start" font-size="10" fill="#6b7280">MRR@5 0.3030  |  line overlap@5 0.0383</text>
+  <text x="815" y="108" text-anchor="start" class="section">Final parameter decision</text>
+  <rect x="800" y="130" width="535" height="210" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="1261.6" y="142" width="61.4" height="22" rx="11" fill="#bbf7d0" opacity="0.85"/>
+  <text x="1292.3" y="157" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">default</text>
+  <text x="816" y="156" font-size="15" fill="#111827" text-anchor="start" font-weight="700">Decision: keep 900/150</text>
+  <text x="816" y="182" font-size="12" fill="#374151" text-anchor="start">DEFAULT_CHUNK_SIZE = 900</text>
+  <text x="816" y="199" font-size="12" fill="#374151" text-anchor="start">DEFAULT_CHUNK_OVERLAP = 150</text>
+  <text x="816" y="216" font-size="12" fill="#374151" text-anchor="start">strategy = hierarchical_header_recursive</text>
+  <text x="816" y="233" font-size="12" fill="#374151" text-anchor="start">Do not replace current default with 512/50</text>
+  <rect x="820" y="266" width="495" height="56" rx="6" fill="#ffffff" stroke="#d1fae5" stroke-width="1"/>
+  <text x="842" y="288" text-anchor="start" font-size="12" font-weight="700" fill="#047857">Reason</text>
+  <text x="842" y="307" font-size="11" fill="#374151" text-anchor="start">900/150 preserves broader evidence context with fewer fragments;</text>
+  <text x="842" y="322" font-size="11" fill="#374151" text-anchor="start">512/50 raises point count but lowers broad source recall.</text>
+  <text x="815" y="377" text-anchor="start" class="section">900/150 vs 512/50 evidence</text>
+  <rect x="800" y="400" width="535" height="150" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="822" y="426" text-anchor="start" font-size="11" font-weight="700" fill="#374151">Param</text>
+  <text x="960" y="426" text-anchor="start" font-size="11" font-weight="700" fill="#374151">Points</text>
+  <text x="1060" y="426" text-anchor="start" font-size="11" font-weight="700" fill="#374151">MRR@5</text>
+  <text x="1160" y="426" text-anchor="start" font-size="11" font-weight="700" fill="#374151">Source@5</text>
+  <text x="1265" y="426" text-anchor="start" font-size="11" font-weight="700" fill="#374151">Source@10</text>
+  <rect x="814" y="427" width="505" height="35" rx="5" fill="#f0fdf4" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="822" y="449" text-anchor="start" font-size="11" font-weight="700" fill="#111827">900/150 HHR</text>
+  <text x="960" y="449" text-anchor="start" font-size="11" font-weight="700" fill="#111827">9,518</text>
+  <text x="1060" y="449" text-anchor="start" font-size="11" font-weight="700" fill="#111827">0.3973</text>
+  <text x="1160" y="449" text-anchor="start" font-size="11" font-weight="700" fill="#111827">0.6200</text>
+  <text x="1265" y="449" text-anchor="start" font-size="11" font-weight="700" fill="#111827">0.7300</text>
+  <rect x="814" y="472" width="505" height="35" rx="5" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="822" y="494" text-anchor="start" font-size="11" font-weight="500" fill="#111827">512/50 HHR</text>
+  <text x="960" y="494" text-anchor="start" font-size="11" font-weight="500" fill="#111827">16,354</text>
+  <text x="1060" y="494" text-anchor="start" font-size="11" font-weight="500" fill="#111827">0.3668</text>
+  <text x="1160" y="494" text-anchor="start" font-size="11" font-weight="500" fill="#111827">0.5300</text>
+  <text x="1265" y="494" text-anchor="start" font-size="11" font-weight="500" fill="#111827">0.7000</text>
+  <path d="M 1045,550 L 1045,626" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-green)"/>
+  <rect x="1057.5" y="590" width="53.0" height="18" rx="4" fill="#ffffff" opacity="0.96"/>
+  <text x="1084" y="603" text-anchor="middle" font-size="11" font-weight="700" fill="#374151">choose</text>
+  <text x="50" y="610" text-anchor="start" class="section">Decision pipeline</text>
+  <rect x="50" y="635" width="300" height="145" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="294" y="647" width="44.0" height="22" rx="11" fill="#bfdbfe" opacity="0.85"/>
+  <text x="316.0" y="662" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">eval</text>
+  <text x="66" y="661" font-size="15" fill="#111827" text-anchor="start" font-weight="700">1. Benchmark all strategies</text>
+  <text x="66" y="687" font-size="12" fill="#374151" text-anchor="start">9 active chunking strategies</text>
+  <text x="66" y="704" font-size="12" fill="#374151" text-anchor="start">378 file-strategy rows</text>
+  <text x="66" y="721" font-size="12" fill="#374151" text-anchor="start">900 case metric rows</text>
+  <text x="66" y="738" font-size="12" fill="#374151" text-anchor="start">4,500 retrieval rows</text>
+  <rect x="400" y="635" width="300" height="145" rx="8" fill="#faf5ff" stroke="#ddd6fe" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="626.6" y="647" width="61.4" height="22" rx="11" fill="#ddd6fe" opacity="0.85"/>
+  <text x="657.3" y="662" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">compare</text>
+  <text x="416" y="661" font-size="15" fill="#111827" text-anchor="start" font-weight="700">2. Compare parameter sets</text>
+  <text x="416" y="687" font-size="12" fill="#374151" text-anchor="start">900/150 vs 512/50</text>
+  <text x="416" y="704" font-size="12" fill="#374151" text-anchor="start">Top-k=5 and top-k=10</text>
+  <text x="416" y="721" font-size="12" fill="#374151" text-anchor="start">Primary criterion: source recall</text>
+  <text x="416" y="738" font-size="12" fill="#374151" text-anchor="start">Secondary: MRR and line overlap</text>
+  <rect x="750" y="635" width="300" height="145" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="994" y="647" width="44.0" height="22" rx="11" fill="#bbf7d0" opacity="0.85"/>
+  <text x="1016.0" y="662" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">ship</text>
+  <text x="766" y="661" font-size="15" fill="#111827" text-anchor="start" font-weight="700">3. Promote default</text>
+  <text x="766" y="687" font-size="12" fill="#374151" text-anchor="start">RAG_CHUNKING_STRATEGY set</text>
+  <text x="766" y="704" font-size="12" fill="#374151" text-anchor="start">hierarchical_header_recursive</text>
+  <text x="766" y="721" font-size="12" fill="#374151" text-anchor="start">Markdown-aware header lineage</text>
+  <text x="766" y="738" font-size="12" fill="#374151" text-anchor="start">Stable metadata for retrieval</text>
+  <rect x="1100" y="635" width="240" height="145" rx="8" fill="#f0fdfa" stroke="#99f6e4" stroke-width="1.5" filter="url(#soft-shadow)"/>
+  <rect x="1284" y="647" width="44.0" height="22" rx="11" fill="#99f6e4" opacity="0.85"/>
+  <text x="1306.0" y="662" text-anchor="middle" font-size="10" font-weight="700" fill="#111827">QA</text>
+  <text x="1116" y="661" font-size="15" fill="#111827" text-anchor="start" font-weight="700">4. Verify indexing</text>
+  <text x="1116" y="687" font-size="12" fill="#374151" text-anchor="start">Dry-run: 107 docs</text>
+  <text x="1116" y="704" font-size="12" fill="#374151" text-anchor="start">9,933 chunks</text>
+  <text x="1116" y="721" font-size="12" fill="#374151" text-anchor="start">required metadata valid</text>
+  <text x="1116" y="738" font-size="12" fill="#374151" text-anchor="start">0 missing/null fields</text>
+  <path d="M 350,708 L 400,708" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <path d="M 700,708 L 750,708" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <path d="M 1050,708 L 1100,708" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+  <rect x="50" y="820" width="1290" height="45" rx="8" fill="#f9fafb" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="72" y="849" text-anchor="start" font-size="12" fill="#374151">AI-readable takeaway: choose HHR 900/150 as default because it maximizes broad source retrieval, keeps chunks less fragmented, and preserves header metadata for downstream evidence/citation review.</text>
+</svg>

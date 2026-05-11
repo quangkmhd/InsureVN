@@ -36,6 +36,10 @@ a shared evidence foundation.
 
 ## 2.1 Implementation Memory
 
+- For skill selection and local agent workflow, read `.agents/skills/README.md`
+  when a task involves skills, agent workflows, documentation workflows, or
+  there is uncertainty about which skill applies; then read the specific
+  `.agents/skills/<skill-name>/SKILL.md`.
 - In `src/`, all `import` and `from ... import ...` statements must stay at the top of the file. Do not place imports inside `def`, class methods, or runtime branches unless there is a documented unavoidable reason.
 - For architecture decisions, treat `docs/architecture/2026-05-03-multi-agent-platform-design.md`, `docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md`, and `asset/insurevn-Architecture.svg` as current. `docs/architecture/historical/2026-04-28-multi-agent-system-architecture-strategy.md` is historical brainstorming only.
 - Use framework primitives before custom code: LangGraph for workflow orchestration, checkpointing, and HITL; LangChain for tools, retrievers, provider adapters, and existing agents; Deep Agents for long-running operator/developer shells.

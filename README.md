@@ -1,231 +1,274 @@
 <p align="center">
-  <img src="asset/insurevn_logo.png" width="140" alt="InsureVN logo"/>
-</p>
-
-<h1 align="center">InsureVN</h1>
-
-<p align="center">
-  Nền tảng bằng chứng multi-agent cho nghiệp vụ bảo hiểm sức khỏe Việt Nam.
+  <b>English</b> | <a href="docs/README.md">Documentation Map</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12.3-3776AB?style=flat&logo=python&logoColor=white" alt="Python 3.12.3">
-  <img src="https://img.shields.io/badge/API-FastAPI-009688?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Workflow-LangGraph-orange?style=flat" alt="LangGraph">
-  <img src="https://img.shields.io/badge/Retrieval-Qdrant%20%2B%20SQLite%20%2B%20Graph-blue" alt="Retrieval">
+  <img src="asset/insurevn_logo.png" width="180" alt="InsureVN Logo">
 </p>
 
-InsureVN là nền tảng AI cho nghiệp vụ bảo hiểm sức khỏe Việt Nam. Dự án tập
-trung vào một nền tảng bằng chứng chung: dữ liệu có cấu trúc trong SQLite,
-ngữ cảnh văn bản trong Qdrant, quan hệ thực thể trong Knowledge Graph, và các
-agent LangGraph/LangChain sử dụng bằng chứng đó để giải thích điều khoản, so
-sánh quyền lợi và hỗ trợ quy trình claim.
-
-README này là bản đồ kỹ thuật cấp cao. Chi tiết triển khai, benchmark và nhật
-ký công việc nằm trong `docs/`.
-
-## Mục Lục
-
-- [Tổng Quan Kỹ Thuật](#technical-snapshot)
-- [Năng Lực Đã Triển Khai](#implemented-capabilities)
-- [Kiến Trúc](#architecture)
-- [Nền Tảng Dữ Liệu Và Bằng Chứng](#data-and-evidence-foundation)
-- [Data Pipeline](#data-pipeline)
-- [Tóm Tắt Đánh Giá](#evaluation-snapshot)
-- [Chạy Cục Bộ](#running-locally)
-- [Trạng Thái Hiện Tại](#current-status)
-- [Bản Đồ Tài Liệu](#documentation-map)
-
-## Tổng Quan Kỹ Thuật <a id="technical-snapshot"></a>
-
-| Khu vực | Trạng thái hiện tại | Bằng chứng |
-| :--- | :--- | :--- |
-| Runtime | FastAPI app factory, endpoint `/health`, structured request logging | [`src/main.py`](src/main.py), [`src/api/routes/health.py`](src/api/routes/health.py) |
-| Ngôn ngữ và dependency | Python `>=3.12.3`; FastAPI, LangChain, LangGraph, Deep Agents, Qdrant, Neo4j, Langfuse | [`pyproject.toml`](pyproject.toml), [`requirements.txt`](requirements.txt) |
-| Dữ liệu có cấu trúc | SQLite có 6 công ty, 83 tài liệu, 644 source tables, 3,766 benefit values, 1,771 premium rows, 7,004 bệnh viện/phòng khám | [`database/insurevn.db`](database/insurevn.db), [`docs/database/sqlite_database_schema_specification.md`](docs/database/sqlite_database_schema_specification.md) |
-| Agent truy cập dữ liệu | FastMCP SQLite server và `DatabaseAgent` wrapper trên LangChain tools | [`src/mcp_servers/sqlite/server.py`](src/mcp_servers/sqlite/server.py), [`src/agents/database_agent.py`](src/agents/database_agent.py) |
-| Evidence model | `Evidence`, `Citation`, retrieval plan, risk và workflow schemas dùng chung | [`src/models/evidence.py`](src/models/evidence.py) |
-| Retrieval services | Qdrant vector store/retriever, evidence adapters, merger, reranker, readiness checks | [`src/services/`](src/services/) |
-| Knowledge Graph | Graph schema, extraction, quality validation, NetworkX builder, Neo4j store/Cypher QA helpers | [`src/services/knowledge_graph/`](src/services/knowledge_graph/), [`docs/architecture/2026-05-09-knowledge-graph-schema-discovery-pipeline.md`](docs/architecture/2026-05-09-knowledge-graph-schema-discovery-pipeline.md) |
-| Evaluation | Chunking, Qdrant indexing, persisted retrieval eval, Benchmark V2, LLM judge runners | [`src/eval/`](src/eval/), [`scripts/05_training_eval/`](scripts/05_training_eval/) |
-| Hạ tầng local | Qdrant và Neo4j local qua Docker Compose | [`CICD/docker-compose.yml`](CICD/docker-compose.yml) |
-
-## Năng Lực Đã Triển Khai <a id="implemented-capabilities"></a>
-
-| Năng lực | Trạng thái | Bằng chứng |
-| :--- | :--- | :--- |
-| API bootstrap và health check | Đã triển khai | [`src/main.py`](src/main.py), [`tests/integration/test_health_api.py`](tests/integration/test_health_api.py) |
-| Typed settings và provider routing | Đã triển khai, có override theo component | [`src/core/config.py`](src/core/config.py), [`.env.example`](.env.example) |
-| SQLite insurance schema và MCP tools | Đã triển khai | [`src/models/schema.sql`](src/models/schema.sql), [`docs/database/mcp_insurevn_db_reference.md`](docs/database/mcp_insurevn_db_reference.md) |
-| `DatabaseAgent` trên SQLite MCP | Đã triển khai | [`src/agents/database_agent.py`](src/agents/database_agent.py), [`tests/unit/test_database_agent.py`](tests/unit/test_database_agent.py) |
-| Evidence merge và citation utilities | Đã triển khai | [`src/services/evidence_merger.py`](src/services/evidence_merger.py), [`src/services/citation_formatter.py`](src/services/citation_formatter.py) |
-| Qdrant retrieval và indexing services | Đã triển khai dạng service; chất lượng runtime phụ thuộc indexed collection và cấu hình embedding | [`src/services/qdrant_retriever.py`](src/services/qdrant_retriever.py), [`scripts/06_db_ingestion/04_index_qdrant_documents.py`](scripts/06_db_ingestion/04_index_qdrant_documents.py) |
-| Knowledge Graph discovery/build pipeline | Đã triển khai dạng scripts và services; workflow graph end-to-end vẫn đang được hoàn thiện | [`scripts/07_knowledge_graph/`](scripts/07_knowledge_graph/), [`tests/unit/test_knowledge_graph_builder.py`](tests/unit/test_knowledge_graph_builder.py) |
-| Chunking benchmark và retrieval evaluation | Đã triển khai và đã dùng cho Benchmark V2 | [`src/eval/README.md`](src/eval/README.md), [`docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md`](docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md) |
-| Hybrid full-agent swarm | Kiến trúc canonical đã có; specialist workflows end-to-end đang triển khai | [`docs/architecture/2026-05-03-multi-agent-platform-design.md`](docs/architecture/2026-05-03-multi-agent-platform-design.md), [`docs/blueprints/phase_05_specialist_workflows.md`](docs/blueprints/phase_05_specialist_workflows.md) |
-
-## Kiến Trúc <a id="architecture"></a>
-
-Thiết kế canonical là Hybrid Full Agent Swarm với ba lane xử lý:
-
-- Fast Q&A cho giải thích điều khoản rủi ro thấp.
-- Verified Advisor cho so sánh và tư vấn quyền lợi.
-- High-Risk Claim cho claim, payout, rejection, appeal và luồng cần human review.
-
-Mọi lane đều phải thu thập bằng chứng trước khi tổng hợp câu trả lời. Nền tảng
-tách SQLite, Qdrant và Knowledge Graph thành ba nguồn bằng chứng canonical thay
-vì dồn toàn bộ tri thức vào một vector database.
+<h1 align="center">InsureVN: AI Swarm Platform for Vietnamese Insurance</h1>
 
 <p align="center">
-  <img src="asset/insurevn-Architecture.png" alt="InsureVN architecture diagram" width="820"/>
+  <strong>One Shared Evidence Foundation to Empower Your Insurance Workflows</strong>
 </p>
 
-Tài liệu kiến trúc canonical:
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Agents-LangGraph-orange?logo=langchain&logoColor=white" alt="LangGraph">
+  <img src="https://img.shields.io/badge/Vector_DB-Qdrant-red?logo=qdrant&logoColor=white" alt="Qdrant">
+  <img src="https://img.shields.io/badge/Graph_DB-Neo4j-blue?logo=neo4j&logoColor=white" alt="Neo4j">
+  <img src="https://img.shields.io/badge/Observability-Langfuse-black" alt="Langfuse">
+</p>
 
-- [Multi-Agent Platform Design](docs/architecture/2026-05-03-multi-agent-platform-design.md)
-- [Quad-Retrieval RAG Architecture](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md)
-- [Knowledge Graph Schema Discovery Pipeline](docs/architecture/2026-05-09-knowledge-graph-schema-discovery-pipeline.md)
+<p align="center">
+  <img src="https://img.shields.io/badge/Agents-9-7952b3" alt="Agents Count">
+  <img src="https://img.shields.io/badge/Work_Logs-26-4c1" alt="Work Logs Count">
+  <img src="https://img.shields.io/badge/Pipeline_Phases-7-blue" alt="Pipeline Phases">
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License">
+</p>
 
-## Nền Tảng Dữ Liệu Và Bằng Chứng <a id="data-and-evidence-foundation"></a>
+<p align="center">
+  <a href="#overview">Overview</a> •
+  <a href="#key-features">Features</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#tech-stack">Stack</a> •
+  <a href="#project-structure">Structure</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#data-pipeline">Pipeline</a> •
+  <a href="#work-log">Work Log</a> •
+  <a href="#roadmap">Roadmap</a>
+</p>
 
-InsureVN dùng mô hình tri-canonical:
+<hr />
 
-| Nguồn | Vai trò | Triển khai hiện tại |
-| :--- | :--- | :--- |
-| SQLite | Structured facts: gói, phí, hạn mức, bệnh viện, thời gian chờ, tỷ lệ chi trả | `database/insurevn.db`, FastMCP tools, `DatabaseAgent` |
-| Qdrant | Document context: điều khoản, source text, chunk payload metadata | `src/services/qdrant_*`, ingestion scripts, benchmark indexes |
-| Knowledge Graph | Quan hệ thực thể và đường suy luận multi-hop | NetworkX/Neo4j services, schema discovery/build scripts |
+## Architecture
 
-Evidence layer giữ lineage qua các trường như company, document, source path,
-page/source table và retrieval source type. Xem [`src/models/evidence.py`](src/models/evidence.py)
-và database schema reference để biết các field cụ thể.
+![Master Architecture](asset/insurevn-Architecture.svg)
 
-## Data Pipeline <a id="data-pipeline"></a>
+InsureVN uses a **Hybrid Full Agent Swarm** architecture. The system is divided into three execution lanes based on intent risk and complexity:
 
-Data pipeline chuyển tài liệu bảo hiểm thô thành bằng chứng có cấu trúc và có
-thể truy xuất.
+- **Fast Lane (Q&A)** — Direct policy explanation using the Ensemble Retriever.
+- **Verified Lane (Advisor)** — Comparison and recommendations with profile-store grounding.
+- **High-Risk Lane (Claim)** — Complex claim/payout workflows with OCR and human review gates.
 
-| Phase | Output | Runbook |
-| :--- | :--- | :--- |
-| Acquisition and preprocessing | Raw PDFs, filtered health-insurance corpus | [`docs/pipeline/pdf_acquisition_and_preprocessing.md`](docs/pipeline/pdf_acquisition_and_preprocessing.md) |
-| Conversion and cleanup | Markdown documents và table narratives | [`docs/pipeline/document_conversion_and_markdown_cleanup.md`](docs/pipeline/document_conversion_and_markdown_cleanup.md) |
-| Visual extraction and JSON mapping | OCR/VLM JSON, good/trash classification, schema mapping | [`docs/pipeline/visual_extraction_and_json_mapping.md`](docs/pipeline/visual_extraction_and_json_mapping.md) |
-| Training and evaluation | VLM datasets, RAG benchmarks, retrieval eval artifacts | [`docs/pipeline/vlm_training_and_rag_evaluation.md`](docs/pipeline/vlm_training_and_rag_evaluation.md) |
-| Ingestion | SQLite rows, Qdrant indexes, Knowledge Graph artifacts | [`docs/pipeline/sqlite_qdrant_graph_ingestion.md`](docs/pipeline/sqlite_qdrant_graph_ingestion.md) |
-| Operations and review | Diagrams, trace review, smoke tools | [`docs/pipeline/operations_and_review_tools.md`](docs/pipeline/operations_and_review_tools.md) |
+### Retrieval Strategy: Quad-Retrieval
 
-Pipeline index: [`docs/pipeline/README.md`](docs/pipeline/README.md).
+![Ensemble Retriever](asset/Ensemble-Retriever.svg)
 
-## Tóm Tắt Đánh Giá <a id="evaluation-snapshot"></a>
+The system employs an **Ensemble Retriever** that combines four canonical evidence sources:
 
-Benchmark V2 đánh giá retrieval trên 100 health-insurance cases và 9 chunking
-strategies. Quyết định mặc định hiện tại:
+1. **Semantic Vector Search** (Qdrant) — Captures contextual meaning.
+2. **BM25 Keyword Search** (Qdrant) — Ensures exact term matching (e.g., specific drug names or policy IDs).
+3. **Graph Traversal** (Neo4j) — Resolves multi-hop entity relationships (e.g., "Which products cover this specific surgery?").
+4. **Structured SQL Lookup** (SQLite) — Retrieves deterministic facts like premiums, limits, and waiting periods.
 
-```text
-strategy = hierarchical_header_recursive
-chunk size = 900
-overlap = 150
+All retrieved evidence is merged, deduplicated, and optionally reranked using **ViRanker** before being passed to the drafting agents.
+
+![Retrieval Pipeline Decisions](asset/retrieval_pipeline_decisions.png)
+
+> **Decision chain**: Embedding benchmark (Qwen = quality ref) → HYBRID mode outperforms VECTOR (63→77/89 source hits) → Hard filters remove wrong-company contamination → ViRanker rerank on top-30 candidates → top-10 final output. Final policy: `HYBRID + hard filters + ViRanker` with **source@10=0.9551**, **MRR@10=0.8725**. Rerank adds ~848ms latency; raw HYBRID is kept as a fast-path fallback.
+
+| Agent                  | Role                                                        | Status         |
+| ---------------------- | ----------------------------------------------------------- | -------------- |
+| SupervisorAgent        | Intent classification, risk routing, hard filter extraction | Designed       |
+| DatabaseAgent          | Structured data queries over SQLite MCP                     | ✅ Implemented |
+| PolicyAgent            | Policy clause explanation from evidence                     | Designed       |
+| ComparisonAdvisorAgent | Plan comparison and recommendations                         | Designed       |
+| ClaimAgent             | Claim decision drafting with evidence                       | Designed       |
+| ValidationAgent        | Blind review judge, self-correction trigger                 | Designed       |
+| CalculationAgent       | Deterministic premium/payout computation                    | Designed       |
+| VerifierAgent          | Evidence sufficiency and citation checks                    | Designed       |
+| OCR DocumentAgent      | User-uploaded document processing                           | Designed       |
+
+For full architecture details, see [Multi-Agent Platform Design](docs/architecture/2026-05-03-multi-agent-platform-design.md) and [Quad-Retrieval RAG Architecture](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md).
+
+## Overview
+
+InsureVN is a **Hybrid Full Agent Swarm** platform designed to solve pain points for employees, customers, and stakeholders in the Vietnamese health insurance ecosystem. Instead of a single monolithic chatbot, the system uses specialized AI agents — each with defined boundaries, evidence contracts, and human review gates — orchestrated through LangGraph workflows.
+
+The platform is architected to process real Vietnamese insurance documents (PDFs, policy tables, benefit schedules) through a **7-phase data pipeline**, indexing them into a **tri-canonical evidence foundation** (SQLite for structured facts, Qdrant for document text, Neo4j Knowledge Graph for entity relationships). It uses **Quad-Retrieval** (semantic vector + BM25 keyword + graph traversal + structured SQL lookup) to ground agent responses in verified evidence.
+
+High-risk workflows (claims, payouts, rejections) are fully orchestrated with evidence contracts, calculation verification, and two-step human review (customer confirms facts → employee approves decision).
+
+## Key Features
+
+- **Quad-Retrieval RAG Engine** — Hybrid dense vector + sparse BM25 search on Qdrant with mandatory hard filters (company, document, plan) to prevent cross-company contamination
+- **Filtered Hybrid Rerank Pipeline** — Production retrieval using `HYBRID + hard filters + ViRanker rerank`, achieving source@10=0.9551 and MRR@10=0.8725 on the health insurance benchmark
+- **DatabaseAgent** — LangChain agent over SQLite via FastMCP server with 12 specialized tools (search_benefits, compare_benefits, get_premium_quotes, etc.)
+- **Knowledge Graph** — Neo4j-backed entity relationship graph with LLM-assisted schema discovery and canonicalization pipeline
+- **Evidence Models** — Pydantic-based Evidence, Citation, RetrievalPlan, and HardFilters schemas with full source lineage
+- **7-Phase Data Pipeline** — Acquisition → Preprocessing & QA → Conversion & Interpretation → Extraction & Good/Trash filtering → Training & Eval → Database Ingestion → Knowledge Graph construction
+- **Production Embeddings** — Qwen/Qwen3-Embedding-8B with 4-bit quantization, last-token pooling, and MRL dimension truncation
+- **Langfuse Observability** — Full tracing of agent reasoning, tool calls, HTTP spans, prompt versioning, and evaluation scores
+- **Vietnamese NLP** — Diacritics normalization, ASCII transliteration, and Vietnamese-optimized reranking with namdp-ptit/ViRanker
+
+![Chunking Strategy Selection](asset/chunking_strategy_selection.png)
+
+> **Decision**: `hierarchical_header_recursive` ranks #1 across 9 strategies with **source@5=0.6200** and MRR@5=0.3973. Parameters set to `DEFAULT_CHUNK_SIZE=900`, `DEFAULT_CHUNK_OVERLAP=150` over the 512/50 alternative — 900/150 produces 9,518 chunks (vs 16,354) while preserving broader evidence context and header lineage for citation tracing.
+
+### Evaluation & Benchmarking
+
+![Benchmark Generation](asset/benchmark_v2_generation.svg)
+
+The system is evaluated using a **V2 Benchmark Dataset** (89 cases) generated through an automated LLM-synthesis pipeline. Each benchmark case includes:
+
+- **Context Sampling**: Multi-context reasoning across tables and text.
+- **Gold Answers**: Ground-truth answers verified by LLM experts.
+- **Evidence Grounding**: Exact `chunk_id` and line-range citations.
+- **10-Point Scoring**: Weighted evaluation of Recall, Faithfulness, Integrity, Citation, and Adherence.
+
+## Tech Stack
+
+| Layer           | Technology                                                             |
+| --------------- | ---------------------------------------------------------------------- |
+| Language        | Python 3.12.3                                                          |
+| API Runtime     | FastAPI, Uvicorn                                                       |
+| Agent Framework | LangChain, LangGraph, Deep Agents                                      |
+| LLM Providers   | Google Gemini, Ollama, OpenRouter, NVIDIA NIM                          |
+| Embeddings      | Qwen/Qwen3-Embedding-8B (production), FastEmbed, Sentence-Transformers |
+| Reranking       | namdp-ptit/ViRanker (HuggingFace CrossEncoder)                         |
+| Vector Database | Qdrant (dense + sparse/BM25 hybrid)                                    |
+| Structured Data | SQLite + FastMCP server                                                |
+| Graph Database  | Neo4j (via langchain-neo4j), NetworkX (diagnostics/fixtures)           |
+| Observability   | Langfuse (tracing, prompt management, eval)                            |
+| PDF/OCR         | Marker                                                                 |
+| VLM Finetune    | Unsloth                                                                |
+| Evaluation      | DeepEval, LlamaIndex (LLM judge)                                       |
+| Vietnamese NLP  | Normalization & Transliteration                                        |
+| Testing         | pytest, ruff                                                           |
+
+## Project Structure
+
 ```
-
-Bằng chứng chính:
-
-- Context Benchmark V2 có 100 benchmark cases, 42 unique source files, 9
-  strategies và 4,500 retrieval rows.
-- `hierarchical_header_recursive` đứng đầu primary hit@5 và required source
-  recall@5 trong report đó.
-- Cấu hình `900/150` tốt hơn `512/50` trong benchmark top-k hiện tại.
-
-Đọc các report này trước khi đổi retrieval defaults:
-
-- [Context Benchmark V2 all chunking eval](docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md)
-- [Final chunking 900/150 vs 512/50 decision](docs/work_log/2026-05-09-final-chunking-900-150-vs-512-50-decision-technical-report.md)
-- [Benchmark V2 generation logic](docs/architecture/2026-05-09-benchmark-v2-generation-logic.md)
-
-## Chạy Cục Bộ <a id="running-locally"></a>
-
-Tạo Python environment và cài dependencies:
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Copy file cấu hình mẫu và chỉ điền provider cần dùng:
-
-```bash
-cp .env.example .env
-```
-
-Khởi động hạ tầng local cho Qdrant và Neo4j:
-
-```bash
-docker compose -f CICD/docker-compose.yml up -d
-```
-
-Chạy API:
-
-```bash
-uvicorn src.main:app --reload
-curl http://127.0.0.1:8000/health
-```
-
-Chạy test và lint sau khi cài dev dependencies từ `pyproject.toml`:
-
-```bash
-pip install -e ".[dev]"
-pytest
-ruff check .
-ruff format --check .
-```
-
-Chạy smoke test retrieval-eval nhỏ, không dùng LLM judge:
-
-```bash
-python -m src.eval run \
-  --strategies markdown_header_recursive_table,table_as_one_hybrid \
-  --limit-documents 1 \
-  --limit-cases 1 \
-  --output-dir /tmp/insurevn_chunking_eval \
-  --skip-deepeval
-```
-
-Các agent/provider-backed, embeddings, Langfuse tracing, Tavily search và Jina
-rerank cần key hoặc local service tương ứng trong `.env`.
-
-## Cấu Trúc Dự Án
-
-```text
 InsureVN/
-├── src/                 # API, agents, MCP clients/servers, services, models, eval package
-├── scripts/             # Acquisition, conversion, extraction, training/eval, ingestion, KG scripts
-├── docs/                # Architecture docs, blueprints, database refs, pipeline runbooks, work logs
-├── tests/               # Unit, integration and e2e coverage
-├── database/            # Local SQLite DB and local vector/graph storage
-├── data/                # Raw/processed insurance data and benchmark artifacts
-├── asset/               # Architecture diagrams and generated visuals
-├── CICD/                # Local Qdrant/Neo4j and Langfuse compose files
-└── config/              # Training/evaluation configuration
+├── src/                          # Core application source code
+│   ├── main.py                    # FastAPI entry point
+│   ├── agents/                    # AI agents (DatabaseAgent)
+│   ├── core/                      # Config, logger, database, Vietnamese text utils
+│   ├── models/                    # Pydantic schemas (Evidence, Citation, RetrievalPlan)
+│   ├── services/                  # Stateless service modules
+│   │   ├── chunking/              # Document chunking strategies
+│   │   ├── document_retrieval/    # Qdrant retriever, embedding, reranking
+│   │   ├── evidence/              # Evidence merger, citation formatter
+│   │   └── knowledge_graph/       # Neo4j store, graph schema, NetworkX builder
+│   ├── eval/                      # Evaluation framework (chunking, embedding, retrieval, reranking)
+│   ├── tools/                     # MCP client, Tavily search tool
+│   ├── mcp_servers/sqlite/        # FastMCP SQLite server
+│   └── prompts/                   # Agent system prompts
+├── scripts/                      # Data pipeline scripts (7 phases) + research tools
+│   ├── 01_acquisition/            # PDF/web scraping
+│   ├── 02_preprocessing/          # PDF classification and organization
+│   ├── 03_conversion/             # PDF → Markdown, table-to-text
+│   ├── 04_extraction/             # OCR, JSON extraction, content classification
+│   ├── 05_training_eval/          # VLM training, benchmark generation, eval runners
+│   ├── 06_db_ingestion/           # SQLite, Qdrant, Graph ingestion
+│   ├── 07_knowledge_graph/        # KG schema discovery and construction
+│   ├── 08_chunking_compare/       # Research: chunking strategy comparison tool
+│   └── 09_databricks_chunking_strategies/  # Research: advanced chunking experiments
+├── tests/                        # Test suite (unit, integration, e2e)
+├── docs/                         # Documentation
+├── CICD/                         # Docker Compose (Qdrant, Neo4j, Langfuse)
+├── database/                     # SQLite DB, Qdrant storage, Neo4j data
+├── config/                       # Fine-tuning dataset configs
+└── asset/                        # Architecture diagrams and images
 ```
 
-## Trạng Thái Hiện Tại <a id="current-status"></a>
+## Agent System
 
-| Khu vực | Trạng thái |
-| :--- | :--- |
-| API foundation | Đã triển khai |
-| SQLite evidence và `DatabaseAgent` | Đã triển khai |
-| Qdrant retrieval services | Đã triển khai; live run cần indexed collection và provider config |
-| Knowledge Graph services | Đã triển khai ở tầng schema/build/service; workflow graph end-to-end vẫn đang hoàn thiện |
-| Evaluation harness | Đã triển khai và đã dùng cho quyết định chunking/retrieval |
-| Supervisor và specialist agent workflows | Đã thiết kế; full LangGraph workflow đang triển khai |
-| Human review gates cho claim/payout workflows | Được lên kế hoạch trong HITL blueprint |
+Currently implemented:
 
-## Bản Đồ Tài Liệu <a id="documentation-map"></a>
+- **DatabaseAgent** (`src/agents/database_agent.py`) — LangChain `create_agent` over SQLite MCP with Langfuse prompt management, thinking-mode support (`<|think|>`), and structured observability
 
-- [Docs index](docs/README.md)
-- [Architecture docs](docs/architecture/)
-- [Build blueprints](docs/blueprints/)
-- [Pipeline runbooks](docs/pipeline/)
-- [Database docs](docs/database/)
-- [Work logs and technical reports](docs/work_log/)
-- [Changelog](CHANGELOG.md)
+### Evidence Foundation: Tri-Canonical Storage
+
+![Knowledge Graph Schema](asset/Defining%20Entities-Relationships.svg)
+
+InsureVN maintains a **tri-canonical evidence foundation** to ensure data integrity and traceability:
+
+- **SQLite** — Structured facts, numbers, premiums, limits, and product metadata.
+- **Qdrant** — Unstructured document text, legal clauses, and contextual citations.
+- **Neo4j** — Entity relationships and multi-hop reasoning paths discovered through LLM-guided schema extraction.
+
+![Data Pipeline Foundation](asset/data_pipeline_foundation.png)
+
+> **6-phase pipeline**: Raw PDFs from 9+ insurers → Preprocess & QA (classify, filter non-health) → Conversion (PDF→Markdown, table-to-narrative) → Extraction (JSON/table/image, Good/Trash filtering) → Training & Eval (Gemma4/Oumi benchmark gates) → Ingestion (SQLite facts, Qdrant chunks, Neo4j graph). The **Knowledge Graph sidecar** runs schema discovery → canonicalization → contract → build → import in parallel, feeding Neo4j for multi-hop reasoning.
+
+- **FilteredHybridRerankRetriever** — Production retrieval: HYBRID mode + hard filters + ViRanker rerank
+- **QdrantRetriever** — Dense + sparse vector search with hard filter support
+- **EvidenceMerger** — Deduplication, conflict detection, citation preservation
+- **Knowledge Graph services** — Neo4j store, graph schema, LLM document extractor, quality validator
+
+Planned agents (SupervisorAgent, PolicyAgent, ComparisonAdvisorAgent, ClaimAgent, ValidationAgent, VerifierAgent) are designed in the [architecture spec](docs/architecture/2026-05-03-multi-agent-platform-design.md) and will be built on LangGraph StateGraph.
+
+## Work Log
+
+- **[Rerank Protocol Diagnostic](docs/work_log/2026-05-10-rerank-protocol-diagnostic-technical-report.md)** — Fixed rerank evaluation protocol separating candidate retrieval (top 30) from final rerank (top 10); confirmed HYBRID + hard filters + ViRanker as best configuration.
+- **[Qwen Production Embedding Migration](docs/work_log/2026-05-10-qwen-production-embedding-migration-technical-report.md)** — Migrated production embedding to Qwen/Qwen3-Embedding-8B with official transformers usage, 4-bit quantization, and MRL dimension truncation.
+- **[Qwen Full-Folder Production Retrieval](docs/work_log/2026-05-10-qwen-full-folder-production-retrieval-technical-report.md)** — Evaluated Qwen embeddings on full 107-document corpus (9,933 Qdrant points); HYBRID outperformed VECTOR with source_hit@10 increasing from 63/89 to 77/89.
+- **[Open-Source Reranker Evaluation](docs/work_log/2026-05-10-opensource-reranker-evaluation-technical-report.md)** — Benchmarked multilingual rerankers on Vietnamese health insurance corpus; selected namdp-ptit/ViRanker as default local reranker.
+- **[Hard Filter &amp; Rerank Comparison](docs/work_log/2026-05-10-hard-filter-rerank-comparison-technical-report.md)** — Compared HYBRID + hard filters vs. HYBRID + hard filters + ViRanker; rerank improved source@10, MRR@10, and quote@10 with increased latency.
+- **[Embedding Evaluation End-to-End](docs/work_log/2026-05-10-embedding-evaluation-end-to-end-process-technical-report.md)** — Documented the standardized process for evaluating embedding models on Vietnamese insurance corpus with reproducible metrics and decision gates.
+- **[Answer &amp; Citation Evaluation](docs/work_log/2026-05-10-answer-citation-evaluation-technical-report.md)** — First answer-level evaluation of the finalized pipeline; achieved success_rate=0.7640 and answer_quality_score=0.7741 on 89 benchmark cases.
+- **[Answer &amp; Citation Code Review Fix](docs/work_log/2026-05-10-answer-citation-code-review-fix-technical-report.md)** — Fixed critical evaluator bug where success=True could pass with non-existent citations like [S99]; tightened validation to require valid_citation_rate=1.0.
+- **[Data Pipeline Processing](docs/work_log/2026-05-09-data-pipeline-processing-technical-report.md)** — Comprehensive 6-phase data pipeline from PDF acquisition through Qdrant/SQLite/Neo4j ingestion with quality gates at each stage.
+- **[Ensemble Retriever Flow](docs/work_log/2026-05-09-ensemble-retriever-flow-technical-report.md)** — Documented the complete Quad-Retrieval ensemble flow: semantic + BM25 + graph + SQLite with evidence merge and citation preservation.
+- **[Final Chunking Decision: 900/150 vs 512/50](docs/work_log/2026-05-09-final-chunking-900-150-vs-512-50-decision-technical-report.md)** — Decided on 900-token chunks with 150-token overlap over 512/50 based on benchmark evaluation results.
+- **[Hierarchical Default Chunking](docs/work_log/2026-05-09-hierarchical-default-chunking-indexing-run-technical-report.md)** — Replaced default chunking strategy with hierarchical_header_recursive for Markdown-aware header-based splitting.
+- **[Context Benchmark V2 All-Chunking Eval](docs/work_log/2026-05-09-context-benchmark-v2-all-chunking-eval-technical-report.md)** — Comprehensive evaluation of all chunking strategies using Context Benchmark V2 with 89 health insurance questions.
+- **[Benchmark V2 Generation Logic](docs/work_log/2026-05-09-benchmark-v2-generation-logic-technical-report.md)** — Documented the generation logic for the V2 benchmark dataset with grounded source references and multi-file coverage.
+- **[Source Code Inventory](docs/work_log/2026-05-09-src-code-inventory-technical-report.md)** — Complete inventory of all modules in `src/` with dependency mapping and responsibility classification.
+- **[Work History](docs/work_log/2026-05-09-work-history-technical-report.md)** — Chronological development history from project inception through evidence foundation completion.
+- **[Knowledge Graph Construction](docs/work_log/2026-05-08-knowledge-graph-construction-technical-report.md)** — Built Knowledge Graph from SQLite entities with LLM-assisted schema discovery, NetworkX construction, and Neo4j import.
+- **[Health RAG Context Benchmark V2](docs/work_log/2026-05-08-health-rag-context-benchmark-v2-technical-report.md)** — Created V2 benchmark with 89 grounded health insurance questions covering single-source and multi-file scenarios.
+- **[LLM Chunking + Qdrant Run](docs/work_log/2026-05-08-llm-chunking-cache-qdrant-run-technical-report.md)** — Evaluated LLM-guided Markdown boundary chunking with caching and Qdrant indexing performance.
+- **[Persisted Qdrant Retrieval Eval](docs/work_log/2026-05-08-persisted-qdrant-retrieval-eval-technical-report.md)** — Retrieval evaluation on persisted Qdrant collections with multiple chunking strategy comparisons.
+- **[Streaming Chunking + Embedding + Qdrant](docs/work_log/2026-05-08-streaming-chunking-embedding-qdrant-technical-report.md)** — Streaming pipeline combining chunking, embedding, and Qdrant indexing in a single pass for evaluation efficiency.
+- **[All-Techniques Full Retrieval Eval](docs/work_log/2026-05-08-all-techniques-full-retrieval-eval-technical-report.md)** — Full retrieval evaluation across all chunking techniques on the health insurance benchmark.
+- **[All-Techniques Full LLM Judge Eval](docs/work_log/2026-05-08-all-techniques-full-llm-judge-technical-report.md)** — LLM-as-judge evaluation for answer quality across all chunking and retrieval configurations.
+- **[All-Source Streaming Chunking Eval](docs/work_log/2026-05-08-all-expected-source-streaming-chunking-embedding-qdrant-technical-report.md)** — Streaming evaluation of chunking with expected-source validation across the full document corpus.
+- **[Health Chunking Benchmark Evaluation Guide](docs/work_log/2026-05-07-health-chunking-benchmark-evaluation-guide-technical-report.md)** — Comprehensive guide for running and interpreting chunking benchmark evaluations on health insurance data.
+- **[Health Chunking Benchmark E2E Process](docs/work_log/2026-05-07-health-chunking-benchmark-end-to-end-process-technical-report.md)** — End-to-end process for the health chunking benchmark from dataset preparation to result analysis.
+
+## Documentation
+
+| Section            | Path                                    | Description                                                                                      |
+| ------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Architecture       | [docs/architecture/](docs/architecture/)   | Multi-agent platform design, Quad-Retrieval RAG, KG schema discovery, benchmark generation logic |
+| Database           | [docs/database/](docs/database/)           | SQLite schema specification, MCP reference, DatabaseAgent docs, JSON schema analysis             |
+| Pipeline Runbooks  | [docs/pipeline/](docs/pipeline/)           | Script capability runbooks organized by operational capability                                   |
+| Blueprints         | [docs/blueprints/](docs/blueprints/)       | Phase-by-phase build plans (Phase 00–07) with dependency matrix                                 |
+| Evaluation Results | [docs/eval_results/](docs/eval_results/)   | Embedding, reranker, retrieval, and answer+citation evaluation results                           |
+| Observability      | [docs/observability/](docs/observability/) | Langfuse integration and database observability guides                                           |
+| Product            | [docs/product/](docs/product/)             | 100 customer intent scenarios and insurance lifecycle mapping                                    |
+| Specs & Plans      | [docs/superpowers/](docs/superpowers/)     | Design specs and implementation plans for each feature                                           |
+| Work Logs          | [docs/work_log/](docs/work_log/)           | Technical reports for completed work sessions                                                    |
+| Documentation Map  | [docs/README.md](docs/README.md)           | Navigation index for all documentation                                                           |
+
+## Roadmap
+
+- [X] Project bootstrap and FastAPI foundation
+- [X] DatabaseAgent with SQLite MCP integration
+- [X] Langfuse observability integration
+- [X] 7-phase data pipeline end-to-end automation — *Core scripts implemented, full run blocked by embedding quota and KG model auth*
+- [X] VLM fine-tuning (Gemma4) for table/image extraction
+- [X] Health insurance benchmark dataset (V2, 89 questions)
+- [X] Chunking strategy evaluation and decision (hierarchical header, 900/150)
+- [X] Embedding evaluation and migration (Qwen/Qwen3-Embedding-8B)
+- [X] Qdrant hybrid retrieval (dense + sparse/BM25) with hard filters
+- [X] Local reranker evaluation and integration (ViRanker)
+- [X] Knowledge Graph schema discovery and construction pipeline
+- [X] Evidence models (Evidence, Citation, RetrievalPlan, HardFilters)
+- [X] Evidence merger with deduplication and conflict detection
+- [X] Answer + citation evaluation framework
+- [X] Centralized typed configuration system
+- [ ] SupervisorAgent (intent classification, risk routing)
+- [ ] PolicyAgent (policy explanation from evidence)
+- [ ] ComparisonAdvisorAgent (plan comparison and recommendation)
+- [ ] ClaimAgent (claim decision drafting)
+- [ ] ValidationAgent and CalculationAgent (verification loop)
+- [ ] VerifierAgent (evidence sufficiency and safety checks)
+- [ ] LangGraph StateGraph orchestration with checkpointing
+- [ ] Human-in-the-loop (customer confirm → employee approve)
+- [ ] Synthetic user data generation
+- [ ] Production deployment

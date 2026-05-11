@@ -30,44 +30,34 @@
 
 <p align="center">
   <a href="#overview">Overview</a> •
-  <a href="#key-features">Features</a> •
   <a href="#architecture">Architecture</a> •
+  <a href="#system-diagrams">Diagrams</a> •
+  <a href="#key-features">Features</a> •
   <a href="#tech-stack">Stack</a> •
   <a href="#project-structure">Structure</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#data-pipeline">Pipeline</a> •
   <a href="#work-log">Work Log</a> •
   <a href="#roadmap">Roadmap</a>
 </p>
 
 <hr />
 
+## Overview
+
+InsureVN is a **Hybrid Full Agent Swarm** platform designed to solve pain points for employees, customers, and stakeholders in the Vietnamese health insurance ecosystem. Instead of a single monolithic chatbot, the system uses specialized AI agents — each with defined boundaries, evidence contracts, and human review gates — orchestrated through LangGraph workflows.
+
+The platform processes real Vietnamese insurance documents (PDFs, policy tables, benefit schedules) through a **7-phase data pipeline**, indexing them into a **tri-canonical evidence foundation** (SQLite for structured facts, Qdrant for document text, Neo4j for entity relationships). It uses **Quad-Retrieval** (semantic vector + BM25 keyword + graph traversal + structured SQL lookup) to ground agent responses in verified evidence.
+
+High-risk workflows (claims, payouts, rejections) are fully orchestrated with evidence contracts, calculation verification, and two-step human review (customer confirms facts → employee approves decision).
+
 ## Architecture
 
 ![Master Architecture](asset/insurevn-Architecture.svg)
 
-InsureVN uses a **Hybrid Full Agent Swarm** architecture. The system is divided into three execution lanes based on intent risk and complexity:
+InsureVN uses a **Hybrid Full Agent Swarm** with three execution lanes based on intent risk:
 
 - **Fast Lane (Q&A)** — Direct policy explanation using the Ensemble Retriever.
 - **Verified Lane (Advisor)** — Comparison and recommendations with profile-store grounding.
 - **High-Risk Lane (Claim)** — Complex claim/payout workflows with OCR and human review gates.
-
-### Retrieval Strategy: Quad-Retrieval
-
-![Ensemble Retriever](asset/Ensemble-Retriever.svg)
-
-The system employs an **Ensemble Retriever** that combines four canonical evidence sources:
-
-1. **Semantic Vector Search** (Qdrant) — Captures contextual meaning.
-2. **BM25 Keyword Search** (Qdrant) — Ensures exact term matching (e.g., specific drug names or policy IDs).
-3. **Graph Traversal** (Neo4j) — Resolves multi-hop entity relationships (e.g., "Which products cover this specific surgery?").
-4. **Structured SQL Lookup** (SQLite) — Retrieves deterministic facts like premiums, limits, and waiting periods.
-
-All retrieved evidence is merged, deduplicated, and optionally reranked using **ViRanker** before being passed to the drafting agents.
-
-![Retrieval Pipeline Decisions](asset/retrieval_pipeline_decisions.png)
-
-> **Decision chain**: Embedding benchmark (Qwen = quality ref) → HYBRID mode outperforms VECTOR (63→77/89 source hits) → Hard filters remove wrong-company contamination → ViRanker rerank on top-30 candidates → top-10 final output. Final policy: `HYBRID + hard filters + ViRanker` with **source@10=0.9551**, **MRR@10=0.8725**. Rerank adds ~848ms latency; raw HYBRID is kept as a fast-path fallback.
 
 | Agent                  | Role                                                        | Status         |
 | ---------------------- | ----------------------------------------------------------- | -------------- |
@@ -81,15 +71,61 @@ All retrieved evidence is merged, deduplicated, and optionally reranked using **
 | VerifierAgent          | Evidence sufficiency and citation checks                    | Designed       |
 | OCR DocumentAgent      | User-uploaded document processing                           | Designed       |
 
-For full architecture details, see [Multi-Agent Platform Design](docs/architecture/2026-05-03-multi-agent-platform-design.md) and [Quad-Retrieval RAG Architecture](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md).
+For full details, see [Multi-Agent Platform Design](docs/architecture/2026-05-03-multi-agent-platform-design.md) and [Quad-Retrieval RAG Architecture](docs/architecture/2026-05-04-quad-retrieval-rag-architecture.md).
 
-## Overview
+## System Diagrams
 
-InsureVN is a **Hybrid Full Agent Swarm** platform designed to solve pain points for employees, customers, and stakeholders in the Vietnamese health insurance ecosystem. Instead of a single monolithic chatbot, the system uses specialized AI agents — each with defined boundaries, evidence contracts, and human review gates — orchestrated through LangGraph workflows.
+Visual reference for the core subsystems. Each diagram corresponds to an implemented or benchmarked component.
 
-The platform is architected to process real Vietnamese insurance documents (PDFs, policy tables, benefit schedules) through a **7-phase data pipeline**, indexing them into a **tri-canonical evidence foundation** (SQLite for structured facts, Qdrant for document text, Neo4j Knowledge Graph for entity relationships). It uses **Quad-Retrieval** (semantic vector + BM25 keyword + graph traversal + structured SQL lookup) to ground agent responses in verified evidence.
+---
 
-High-risk workflows (claims, payouts, rejections) are fully orchestrated with evidence contracts, calculation verification, and two-step human review (customer confirms facts → employee approves decision).
+### Ensemble Retriever — Quad-Retrieval Architecture
+
+![Ensemble Retriever](asset/Ensemble-Retriever.svg)
+
+> Ingestion (Phase 1) chunks documents into a **Hybrid Qdrant Index** (dense + sparse/BM25) and a **Neo4j Graph Store**. At query time, the EnsembleRetriever orchestrator runs parallel retrieval across Hybrid Qdrant, Graph Evidence (Cypher), and DatabaseAgent (SQLite), then merges → neural reranks via ViRanker → formats citations.
+
+---
+
+### Retrieval Pipeline Decisions — From Embedding to Production Policy
+
+![Retrieval Pipeline Decisions](asset/retrieval_pipeline_decisions.png)
+
+> **Decision chain**: Embedding benchmark (Qwen = quality ref) → HYBRID outperforms VECTOR (63→77/89 source hits on 107-doc corpus) → Hard filters eliminate wrong-company contamination → ViRanker rerank on top-30 candidates → top-10 final output. **Final policy**: `HYBRID + hard filters + ViRanker` achieving **source@10=0.9551**, **MRR@10=0.8725**. Rerank adds ~848ms latency; raw HYBRID kept as fast-path fallback.
+
+---
+
+### Chunking Strategy Selection — Benchmark-Driven Decision
+
+![Chunking Strategy Selection](asset/chunking_strategy_selection.png)
+
+> **Result**: `hierarchical_header_recursive` ranks #1 across 9 strategies with **source@5=0.6200**, MRR@5=0.3973. Final parameters: `DEFAULT_CHUNK_SIZE=900`, `DEFAULT_CHUNK_OVERLAP=150` — producing 9,518 chunks (vs 16,354 for 512/50) while preserving broader evidence context and Markdown header lineage for citation tracing.
+
+---
+
+### Data Pipeline Foundation — Raw PDF to Tri-Canonical Storage
+
+![Data Pipeline Foundation](asset/data_pipeline_foundation.png)
+
+> **6-phase pipeline**: Acquisition (9+ insurers) → Preprocess & QA (classify, filter non-health) → Conversion (PDF→Markdown, table-to-narrative) → Extraction (JSON/table/image, Good/Trash filtering) → Training & Eval (Gemma4/Oumi benchmark gates) → Ingestion (SQLite facts, Qdrant chunks, Neo4j graph). The **KG sidecar** runs schema discovery → canonicalization → contract → build → import in parallel.
+
+---
+
+### Knowledge Graph Schema — Entity & Relationship Discovery
+
+![Knowledge Graph Schema](asset/Defining%20Entities-Relationships.svg)
+
+> LLM-guided pipeline extracts candidate entity types and relationships from the Markdown corpus (01_discover_schema.py), merges duplicates into a governed schema contract (02-03 scripts), then builds real entities and relationships (04_build_knowledge_graph.py), outputting `insurevn_graph.json` and a quality report for Neo4j/GraphRAG import.
+
+---
+
+### Benchmark V2 Generation Pipeline
+
+![Benchmark Generation](asset/benchmark_v2_generation.svg)
+
+> Automated generation of 89 benchmark cases from the insurance corpus. Context sampling (single + multi-context blocks) feeds LLM Synthesis (Gemini, Ollama, NVIDIA slots) to produce questions, gold answers, and raw quotes. Evidence grounding preserves `chunk_id` + line ranges. Cases scored on a **10-point schema**: Recall(3) · Faithfulness(3) · Integrity(2) · Citation(1) · Adherence(1).
+
+---
 
 ## Key Features
 
@@ -102,21 +138,6 @@ High-risk workflows (claims, payouts, rejections) are fully orchestrated with ev
 - **Production Embeddings** — Qwen/Qwen3-Embedding-8B with 4-bit quantization, last-token pooling, and MRL dimension truncation
 - **Langfuse Observability** — Full tracing of agent reasoning, tool calls, HTTP spans, prompt versioning, and evaluation scores
 - **Vietnamese NLP** — Diacritics normalization, ASCII transliteration, and Vietnamese-optimized reranking with namdp-ptit/ViRanker
-
-![Chunking Strategy Selection](asset/chunking_strategy_selection.png)
-
-> **Decision**: `hierarchical_header_recursive` ranks #1 across 9 strategies with **source@5=0.6200** and MRR@5=0.3973. Parameters set to `DEFAULT_CHUNK_SIZE=900`, `DEFAULT_CHUNK_OVERLAP=150` over the 512/50 alternative — 900/150 produces 9,518 chunks (vs 16,354) while preserving broader evidence context and header lineage for citation tracing.
-
-### Evaluation & Benchmarking
-
-![Benchmark Generation](asset/benchmark_v2_generation.svg)
-
-The system is evaluated using a **V2 Benchmark Dataset** (89 cases) generated through an automated LLM-synthesis pipeline. Each benchmark case includes:
-
-- **Context Sampling**: Multi-context reasoning across tables and text.
-- **Gold Answers**: Ground-truth answers verified by LLM experts.
-- **Evidence Grounding**: Exact `chunk_id` and line-range citations.
-- **10-Point Scoring**: Weighted evaluation of Recall, Faithfulness, Integrity, Citation, and Adherence.
 
 ## Tech Stack
 
@@ -180,19 +201,7 @@ Currently implemented:
 
 - **DatabaseAgent** (`src/agents/database_agent.py`) — LangChain `create_agent` over SQLite MCP with Langfuse prompt management, thinking-mode support (`<|think|>`), and structured observability
 
-### Evidence Foundation: Tri-Canonical Storage
-
-![Knowledge Graph Schema](asset/Defining%20Entities-Relationships.svg)
-
-InsureVN maintains a **tri-canonical evidence foundation** to ensure data integrity and traceability:
-
-- **SQLite** — Structured facts, numbers, premiums, limits, and product metadata.
-- **Qdrant** — Unstructured document text, legal clauses, and contextual citations.
-- **Neo4j** — Entity relationships and multi-hop reasoning paths discovered through LLM-guided schema extraction.
-
-![Data Pipeline Foundation](asset/data_pipeline_foundation.png)
-
-> **6-phase pipeline**: Raw PDFs from 9+ insurers → Preprocess & QA (classify, filter non-health) → Conversion (PDF→Markdown, table-to-narrative) → Extraction (JSON/table/image, Good/Trash filtering) → Training & Eval (Gemma4/Oumi benchmark gates) → Ingestion (SQLite facts, Qdrant chunks, Neo4j graph). The **Knowledge Graph sidecar** runs schema discovery → canonicalization → contract → build → import in parallel, feeding Neo4j for multi-hop reasoning.
+Evidence and retrieval infrastructure ready for agent integration:
 
 - **FilteredHybridRerankRetriever** — Production retrieval: HYBRID mode + hard filters + ViRanker rerank
 - **QdrantRetriever** — Dense + sparse vector search with hard filter support
@@ -207,10 +216,10 @@ Planned agents (SupervisorAgent, PolicyAgent, ComparisonAdvisorAgent, ClaimAgent
 - **[Qwen Production Embedding Migration](docs/work_log/2026-05-10-qwen-production-embedding-migration-technical-report.md)** — Migrated production embedding to Qwen/Qwen3-Embedding-8B with official transformers usage, 4-bit quantization, and MRL dimension truncation.
 - **[Qwen Full-Folder Production Retrieval](docs/work_log/2026-05-10-qwen-full-folder-production-retrieval-technical-report.md)** — Evaluated Qwen embeddings on full 107-document corpus (9,933 Qdrant points); HYBRID outperformed VECTOR with source_hit@10 increasing from 63/89 to 77/89.
 - **[Open-Source Reranker Evaluation](docs/work_log/2026-05-10-opensource-reranker-evaluation-technical-report.md)** — Benchmarked multilingual rerankers on Vietnamese health insurance corpus; selected namdp-ptit/ViRanker as default local reranker.
-- **[Hard Filter &amp; Rerank Comparison](docs/work_log/2026-05-10-hard-filter-rerank-comparison-technical-report.md)** — Compared HYBRID + hard filters vs. HYBRID + hard filters + ViRanker; rerank improved source@10, MRR@10, and quote@10 with increased latency.
+- **[Hard Filter & Rerank Comparison](docs/work_log/2026-05-10-hard-filter-rerank-comparison-technical-report.md)** — Compared HYBRID + hard filters vs. HYBRID + hard filters + ViRanker; rerank improved source@10, MRR@10, and quote@10 with increased latency.
 - **[Embedding Evaluation End-to-End](docs/work_log/2026-05-10-embedding-evaluation-end-to-end-process-technical-report.md)** — Documented the standardized process for evaluating embedding models on Vietnamese insurance corpus with reproducible metrics and decision gates.
-- **[Answer &amp; Citation Evaluation](docs/work_log/2026-05-10-answer-citation-evaluation-technical-report.md)** — First answer-level evaluation of the finalized pipeline; achieved success_rate=0.7640 and answer_quality_score=0.7741 on 89 benchmark cases.
-- **[Answer &amp; Citation Code Review Fix](docs/work_log/2026-05-10-answer-citation-code-review-fix-technical-report.md)** — Fixed critical evaluator bug where success=True could pass with non-existent citations like [S99]; tightened validation to require valid_citation_rate=1.0.
+- **[Answer & Citation Evaluation](docs/work_log/2026-05-10-answer-citation-evaluation-technical-report.md)** — First answer-level evaluation of the finalized pipeline; achieved success_rate=0.7640 and answer_quality_score=0.7741 on 89 benchmark cases.
+- **[Answer & Citation Code Review Fix](docs/work_log/2026-05-10-answer-citation-code-review-fix-technical-report.md)** — Fixed critical evaluator bug where success=True could pass with non-existent citations like [S99]; tightened validation to require valid_citation_rate=1.0.
 - **[Data Pipeline Processing](docs/work_log/2026-05-09-data-pipeline-processing-technical-report.md)** — Comprehensive 6-phase data pipeline from PDF acquisition through Qdrant/SQLite/Neo4j ingestion with quality gates at each stage.
 - **[Ensemble Retriever Flow](docs/work_log/2026-05-09-ensemble-retriever-flow-technical-report.md)** — Documented the complete Quad-Retrieval ensemble flow: semantic + BM25 + graph + SQLite with evidence merge and citation preservation.
 - **[Final Chunking Decision: 900/150 vs 512/50](docs/work_log/2026-05-09-final-chunking-900-150-vs-512-50-decision-technical-report.md)** — Decided on 900-token chunks with 150-token overlap over 512/50 based on benchmark evaluation results.

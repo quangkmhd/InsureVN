@@ -1,49 +1,57 @@
-"""Document retrieval services backed by Qdrant and reranking adapters."""
+"""Document retrieval services backed by Qdrant and reranking adapters.
 
-from src.services.document_retrieval.filtered_hybrid_rerank_retriever import (
-    FilteredHybridRerankRetriever,
-    HardFilterRequiredError,
-    build_default_filtered_hybrid_rerank_retriever,
-)
-from src.services.document_retrieval.huggingface_rerank_cross_encoder import (
-    HuggingFaceRerankCrossEncoder,
-)
-from src.services.document_retrieval.qdrant_collection_manager import (
-    QdrantCollectionConfig,
-    QdrantCollectionManager,
-)
-from src.services.document_retrieval.qdrant_retriever import (
-    QdrantRetriever,
-    build_dense_embedding_provider,
-)
-from src.services.document_retrieval.qdrant_vector_store import (
-    QdrantVectorStoreFactory,
-)
-from src.services.document_retrieval.qwen_embedding_provider import (
-    Qwen3EmbeddingProvider,
-)
-from src.services.document_retrieval.rerank_cross_encoder import (
-    build_default_rerank_cross_encoder,
-    build_rerank_cross_encoder,
-)
-from src.services.document_retrieval.retrieval_readiness import (
-    ProductionReadinessError,
-    RetrievalReadinessReport,
-)
+Import concrete services from their submodules to avoid package-level import
+cycles between retrieval and evidence services.
+"""
 
-__all__ = [
-    "HuggingFaceRerankCrossEncoder",
-    "FilteredHybridRerankRetriever",
-    "HardFilterRequiredError",
-    "ProductionReadinessError",
-    "QdrantCollectionConfig",
-    "QdrantCollectionManager",
-    "QdrantRetriever",
-    "QdrantVectorStoreFactory",
-    "Qwen3EmbeddingProvider",
-    "RetrievalReadinessReport",
-    "build_default_rerank_cross_encoder",
-    "build_default_filtered_hybrid_rerank_retriever",
-    "build_dense_embedding_provider",
-    "build_rerank_cross_encoder",
-]
+from importlib import import_module
+from typing import Any
+
+_EXPORTS = {
+    "FilteredHybridRerankRetriever": (
+        "src.services.document_retrieval.filtered_hybrid_rerank_retriever"
+    ),
+    "HardFilterRequiredError": (
+        "src.services.document_retrieval.filtered_hybrid_rerank_retriever"
+    ),
+    "HuggingFaceRerankCrossEncoder": (
+        "src.services.document_retrieval.huggingface_rerank_cross_encoder"
+    ),
+    "ProductionReadinessError": ("src.services.document_retrieval.retrieval_readiness"),
+    "QdrantCollectionConfig": (
+        "src.services.document_retrieval.qdrant_collection_manager"
+    ),
+    "QdrantCollectionManager": (
+        "src.services.document_retrieval.qdrant_collection_manager"
+    ),
+    "QdrantRetriever": "src.services.document_retrieval.qdrant_retriever",
+    "QdrantVectorStoreFactory": ("src.services.document_retrieval.qdrant_vector_store"),
+    "Qwen3EmbeddingProvider": (
+        "src.services.document_retrieval.qwen_embedding_provider"
+    ),
+    "RetrievalReadinessReport": ("src.services.document_retrieval.retrieval_readiness"),
+    "build_default_filtered_hybrid_rerank_retriever": (
+        "src.services.document_retrieval.filtered_hybrid_rerank_retriever"
+    ),
+    "build_default_rerank_cross_encoder": (
+        "src.services.document_retrieval.rerank_cross_encoder"
+    ),
+    "build_dense_embedding_provider": (
+        "src.services.document_retrieval.qdrant_retriever"
+    ),
+    "build_rerank_cross_encoder": (
+        "src.services.document_retrieval.rerank_cross_encoder"
+    ),
+}
+
+__all__ = sorted(_EXPORTS)
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily expose legacy package-level retrieval exports."""
+    if name not in _EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = import_module(_EXPORTS[name])
+    value = getattr(module, name)
+    globals()[name] = value
+    return value

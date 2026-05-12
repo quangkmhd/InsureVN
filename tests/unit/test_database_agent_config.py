@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import src.agents.database_agent as database_agent
 from src.agents.database_agent import DatabaseAgent
 from src.core.config import settings
 
@@ -56,13 +57,46 @@ async def test_database_agent_config_parameters(
         # Check init_chat_model call
         _, kwargs = mock_init_chat.call_args
         assert kwargs["temperature"] == settings.DATABASE_LLM_TEMPERATURE
-        assert kwargs["top_p"] == settings.DATABASE_LLM_TOP_P
-        assert kwargs["top_k"] == settings.DATABASE_LLM_TOP_K
+        assert "top_p" not in kwargs
+        assert "top_k" not in kwargs
 
         # Check create_agent call for system_prompt
         _, agent_kwargs = mock_create_agent.call_args
         assert agent_kwargs["system_prompt"].startswith("<|think|>")
         assert "System prompt from Langfuse" in agent_kwargs["system_prompt"]
+
+
+@pytest.mark.asyncio
+@patch("src.agents.database_agent.get_sqlite_mcp_tools")
+@patch("src.agents.database_agent.init_chat_model")
+@patch("src.agents.database_agent.get_client")
+async def test_database_agent_uses_auth_header_for_uppercase_ollama_provider(
+    mock_langfuse_client,
+    mock_init_chat,
+    mock_get_tools,
+    monkeypatch,
+) -> None:
+    """Verify uppercase OLLAMA provider still gets Ollama auth headers."""
+    mock_get_tools.return_value = []
+    mock_init_chat.return_value = MagicMock()
+    mock_langfuse_client.return_value.get_prompt.side_effect = RuntimeError(
+        "skip langfuse"
+    )
+    monkeypatch.setattr(database_agent.settings, "SQL_AGENT_PROVIDER", "OLLAMA")
+    monkeypatch.setattr(database_agent.settings, "SQL_AGENT_MODEL", "gemma4:31b-cloud")
+    monkeypatch.setattr(
+        database_agent.settings,
+        "SQL_AGENT_API_KEY",
+        "resolved-ollama-key",
+    )
+
+    with patch("src.agents.database_agent.create_agent"):
+        await DatabaseAgent.create()
+
+    _, kwargs = mock_init_chat.call_args
+    assert kwargs["client_kwargs"] == {
+        "headers": {"Authorization": "Bearer resolved-ollama-key"}
+    }
 
 
 @pytest.mark.asyncio

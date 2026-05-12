@@ -1,3 +1,4 @@
+import pytest
 from pydantic_settings import BaseSettings
 
 import src.eval.config as eval_config
@@ -8,6 +9,54 @@ def test_settings_uses_pydantic_base_settings() -> None:
     assert issubclass(Settings, BaseSettings)
     assert Settings.model_config["env_ignore_empty"] is True
     assert Settings.model_config["extra"] == "ignore"
+
+
+def test_settings_schema_prefers_env_registered_names() -> None:
+    model_fields = Settings.model_fields
+
+    for field_name in (
+        "SQL_AGENT_PROVIDER",
+        "SQL_AGENT_MODEL",
+        "SQL_AGENT_API_KEY",
+        "SEARCH_AGENT_PROVIDER",
+        "SEARCH_AGENT_MODEL",
+        "SEARCH_AGENT_API_KEY",
+        "TAVILY_API_KEY",
+        "OLLAMA_BASE_URL",
+        "OLLAMA_LLM_MODEL",
+        "OPENROUTER_BASE_URL",
+        "OPENROUTER_LLM_MODEL",
+        "NVIDIA_BASE_URL",
+        "NVIDIA_LLM_MODEL",
+    ):
+        assert field_name in model_fields
+
+    for derived_name in (
+        "DATABASE_LLM_PROVIDER",
+        "DATABASE_LLM_MODEL",
+        "DATABASE_LLM_API_KEY",
+        "DATABASE_LLM_BASE_URL",
+        "SEARCH_LLM_PROVIDER",
+        "SEARCH_LLM_MODEL",
+        "SEARCH_LLM_API_KEY",
+        "SEARCH_LLM_BASE_URL",
+        "GOOGLE_API_KEYS",
+        "OPENROUTER_API_KEYS",
+        "NVIDIA_API_KEYS",
+        "OLLAMA_BASE_URLS",
+        "PROJECT_NAME",
+        "GRAPH_EAGER_K",
+        "RAG_PARENT_SECTION_MAX_CHARS",
+        "KG_SCHEMA_DISCOVERY_OUTPUT_DIR",
+    ):
+        assert derived_name not in model_fields
+
+
+def test_settings_rejects_invalid_derived_numeric_env_at_startup(monkeypatch) -> None:
+    monkeypatch.setenv("RAG_CHILD_CHUNK_MAX_CHARS", "not-an-int")
+
+    with pytest.raises(ValueError, match="RAG_CHILD_CHUNK_MAX_CHARS"):
+        Settings(_env_file=None)
 
 
 def test_settings_loads_explicit_env_file(tmp_path, monkeypatch) -> None:
@@ -63,45 +112,46 @@ def test_settings_init_kwargs_override_env_file_for_custom_resolvers(
     assert settings.DATABASE_LLM_PROVIDER == "NVIDIA"
 
 
-def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
-    monkeypatch.delenv("RAG_QDRANT_URL", raising=False)
-    monkeypatch.delenv("RAG_QDRANT_API_KEY", raising=False)
-    monkeypatch.delenv("RAG_QDRANT_COLLECTION", raising=False)
-    monkeypatch.delenv("RAG_DENSE_VECTOR_NAME", raising=False)
-    monkeypatch.delenv("RAG_SPARSE_VECTOR_NAME", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_PROVIDER", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_MODEL", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_API_KEY", raising=False)
-    monkeypatch.delenv("RAG_DENSE_VECTOR_SIZE", raising=False)
-    monkeypatch.delenv("RAG_SPARSE_MODEL", raising=False)
-    monkeypatch.delenv("RAG_CHILD_CHUNK_MAX_CHARS", raising=False)
-    monkeypatch.delenv("RAG_CHILD_CHUNK_OVERLAP", raising=False)
-    monkeypatch.delenv("RAG_CHUNKING_STRATEGY", raising=False)
-    monkeypatch.delenv("RAG_PARENT_SECTION_MAX_CHARS", raising=False)
-    monkeypatch.delenv("RAG_RETRIEVAL_TOP_K", raising=False)
-    monkeypatch.delenv("RAG_RERANK_CANDIDATE_TOP_K", raising=False)
-    monkeypatch.delenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", raising=False)
-    monkeypatch.delenv("RAG_RERANK_PROVIDER", raising=False)
-    monkeypatch.delenv("RAG_RERANK_MODEL", raising=False)
-    monkeypatch.delenv("RAG_RERANK_BATCH_SIZE", raising=False)
-    monkeypatch.delenv("RAG_RERANK_MAX_LENGTH", raising=False)
-    monkeypatch.delenv("RAG_RERANK_DEVICE", raising=False)
-    monkeypatch.delenv("RAG_RERANK_TRUST_REMOTE_CODE", raising=False)
-    monkeypatch.delenv("RAG_RERANK_BACKEND", raising=False)
-    monkeypatch.delenv("RAG_RERANK_LOAD_IN_4BIT", raising=False)
-    monkeypatch.delenv("RAG_RERANK_DEVICE_MAP", raising=False)
-    monkeypatch.delenv("RAG_RERANK_ATTN_IMPLEMENTATION", raising=False)
-    monkeypatch.delenv("RAG_RERANK_TORCH_DTYPE", raising=False)
-    monkeypatch.delenv("RAG_REQUIRE_HYBRID_SEARCH", raising=False)
-    monkeypatch.delenv("RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE", raising=False)
-    monkeypatch.delenv("RAG_REQUIRE_HARD_FILTERS", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_BATCH_SIZE", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_MAX_LENGTH", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_LOAD_IN_4BIT", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_DEVICE_MAP", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_ATTN_IMPLEMENTATION", raising=False)
-    monkeypatch.delenv("RAG_EMBEDDING_QUERY_TASK_DESCRIPTION", raising=False)
-    monkeypatch.delenv("QWEN_EMBEDDING_MODEL", raising=False)
+def test_rag_settings_have_typed_defaults(monkeypatch) -> None:
+    for env_name in (
+        "RAG_QDRANT_URL",
+        "RAG_QDRANT_API_KEY",
+        "RAG_QDRANT_COLLECTION",
+        "RAG_DENSE_VECTOR_NAME",
+        "RAG_SPARSE_VECTOR_NAME",
+        "RAG_EMBEDDING_PROVIDER",
+        "RAG_EMBEDDING_MODEL",
+        "RAG_EMBEDDING_API_KEY",
+        "RAG_DENSE_VECTOR_SIZE",
+        "RAG_SPARSE_MODEL",
+        "RAG_CHILD_CHUNK_MAX_CHARS",
+        "RAG_CHILD_CHUNK_OVERLAP",
+        "RAG_CHUNKING_STRATEGY",
+        "RAG_RETRIEVAL_TOP_K",
+        "RAG_RERANK_CANDIDATE_TOP_K",
+        "RAG_RERANK_PROVIDER",
+        "RAG_RERANK_MODEL",
+        "RAG_RERANK_BATCH_SIZE",
+        "RAG_RERANK_MAX_LENGTH",
+        "RAG_RERANK_DEVICE",
+        "RAG_RERANK_TRUST_REMOTE_CODE",
+        "RAG_RERANK_BACKEND",
+        "RAG_RERANK_LOAD_IN_4BIT",
+        "RAG_RERANK_DEVICE_MAP",
+        "RAG_RERANK_ATTN_IMPLEMENTATION",
+        "RAG_RERANK_TORCH_DTYPE",
+        "RAG_REQUIRE_HYBRID_SEARCH",
+        "RAG_ALLOW_DENSE_ONLY_DEGRADED_MODE",
+        "RAG_REQUIRE_HARD_FILTERS",
+        "RAG_EMBEDDING_BATCH_SIZE",
+        "RAG_EMBEDDING_MAX_LENGTH",
+        "RAG_EMBEDDING_LOAD_IN_4BIT",
+        "RAG_EMBEDDING_DEVICE_MAP",
+        "RAG_EMBEDDING_ATTN_IMPLEMENTATION",
+        "RAG_EMBEDDING_QUERY_TASK_DESCRIPTION",
+        "QWEN_EMBEDDING_MODEL",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
 
     settings = Settings(_env_file=None)
 
@@ -115,14 +165,11 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.RAG_EMBEDDING_API_KEY == ""
     assert settings.RAG_DENSE_VECTOR_SIZE == 4096
     assert settings.RAG_SPARSE_MODEL == "Qdrant/bm25"
-    assert isinstance(settings.RAG_CHILD_CHUNK_MAX_CHARS, int)
     assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 1200
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 150
     assert settings.RAG_CHUNKING_STRATEGY == "hierarchical_header_recursive"
-    assert settings.RAG_PARENT_SECTION_MAX_CHARS == 6000
     assert settings.RAG_RETRIEVAL_TOP_K == 10
     assert settings.RAG_RERANK_CANDIDATE_TOP_K == 30
-    assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 30.0
     assert settings.RAG_RERANK_PROVIDER == "HUGGINGFACE"
     assert settings.RAG_RERANK_MODEL == "namdp-ptit/ViRanker"
     assert settings.RAG_RERANK_BATCH_SIZE == 8
@@ -148,14 +195,12 @@ def test_phase_02_rag_settings_have_typed_defaults(monkeypatch) -> None:
     )
 
 
-def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
+def test_rag_settings_cast_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("RAG_CHILD_CHUNK_MAX_CHARS", "900")
     monkeypatch.setenv("RAG_CHILD_CHUNK_OVERLAP", "90")
-    monkeypatch.setenv("RAG_PARENT_SECTION_MAX_CHARS", "4500")
     monkeypatch.setenv("RAG_DENSE_VECTOR_SIZE", "1024")
     monkeypatch.setenv("RAG_RETRIEVAL_TOP_K", "8")
     monkeypatch.setenv("RAG_RERANK_CANDIDATE_TOP_K", "24")
-    monkeypatch.setenv("RAG_RETRIEVAL_TIMEOUT_SECONDS", "12.5")
     monkeypatch.setenv("RAG_RERANK_PROVIDER", "HUGGINGFACE")
     monkeypatch.setenv("RAG_RERANK_MODEL", "Qwen/Qwen3-Reranker-0.6B")
     monkeypatch.setenv("RAG_RERANK_BATCH_SIZE", "3")
@@ -184,11 +229,9 @@ def test_phase_02_rag_settings_cast_environment_values(monkeypatch) -> None:
 
     assert settings.RAG_CHILD_CHUNK_MAX_CHARS == 900
     assert settings.RAG_CHILD_CHUNK_OVERLAP == 90
-    assert settings.RAG_PARENT_SECTION_MAX_CHARS == 4500
     assert settings.RAG_DENSE_VECTOR_SIZE == 1024
     assert settings.RAG_RETRIEVAL_TOP_K == 8
     assert settings.RAG_RERANK_CANDIDATE_TOP_K == 24
-    assert settings.RAG_RETRIEVAL_TIMEOUT_SECONDS == 12.5
     assert settings.RAG_RERANK_PROVIDER == "HUGGINGFACE"
     assert settings.RAG_RERANK_MODEL == "Qwen/Qwen3-Reranker-0.6B"
     assert settings.RAG_RERANK_BATCH_SIZE == 3
@@ -223,29 +266,28 @@ def test_rag_embedding_api_key_supports_indirect_env_alias(monkeypatch) -> None:
     assert settings.RAG_EMBEDDING_API_KEY == "resolved-qwen-key"
 
 
-def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
-    monkeypatch.delenv("LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("LLM_MODEL", raising=False)
-    monkeypatch.delenv("LLM_API_KEY", raising=False)
-    monkeypatch.delenv("LLM_BASE_URL", raising=False)
-    monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
-    monkeypatch.delenv("OLLAMA_BASE_URLS", raising=False)
-    monkeypatch.delenv("NEO4J_URI", raising=False)
-    monkeypatch.delenv("NEO4J_USERNAME", raising=False)
-    monkeypatch.delenv("NEO4J_PASSWORD", raising=False)
-    monkeypatch.delenv("NEO4J_DATABASE", raising=False)
-    monkeypatch.delenv("GRAPH_EAGER_K", raising=False)
-    monkeypatch.delenv("GRAPH_EAGER_START_K", raising=False)
-    monkeypatch.delenv("GRAPH_EAGER_MAX_DEPTH", raising=False)
-    monkeypatch.delenv("GRAPH_MIN_CONFIDENCE", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_MODEL", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_API_KEY", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_BASE_URL", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_TEMPERATURE", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_MAX_RETRIES", raising=False)
-    monkeypatch.delenv("KG_CYPHER_QA_LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("KG_CYPHER_QA_LLM_MODEL", raising=False)
+def test_graph_settings_have_typed_defaults(monkeypatch) -> None:
+    for env_name in (
+        "LLM_PROVIDER",
+        "LLM_MODEL",
+        "LLM_API_KEY",
+        "LLM_BASE_URL",
+        "OLLAMA_BASE_URL",
+        "OLLAMA_LLM_MODEL",
+        "NEO4J_URI",
+        "NEO4J_USERNAME",
+        "NEO4J_PASSWORD",
+        "NEO4J_DATABASE",
+        "KG_EXTRACTION_LLM_PROVIDER",
+        "KG_EXTRACTION_LLM_MODEL",
+        "KG_EXTRACTION_LLM_API_KEY",
+        "KG_EXTRACTION_LLM_BASE_URL",
+        "KG_EXTRACTION_LLM_TEMPERATURE",
+        "KG_EXTRACTION_MAX_RETRIES",
+        "KG_CYPHER_QA_LLM_PROVIDER",
+        "KG_CYPHER_QA_LLM_MODEL",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
 
     settings = Settings(_env_file=None)
 
@@ -253,10 +295,6 @@ def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.NEO4J_USERNAME == "neo4j"
     assert settings.NEO4J_PASSWORD == ""
     assert settings.NEO4J_DATABASE == "neo4j"
-    assert settings.GRAPH_EAGER_K == 5
-    assert settings.GRAPH_EAGER_START_K == 1
-    assert settings.GRAPH_EAGER_MAX_DEPTH == 2
-    assert settings.GRAPH_MIN_CONFIDENCE == 0.75
     assert settings.KG_EXTRACTION_LLM_PROVIDER == ""
     assert settings.KG_EXTRACTION_LLM_MODEL == ""
     assert settings.KG_EXTRACTION_LLM_API_KEY == ""
@@ -267,20 +305,12 @@ def test_phase_03_graph_settings_have_typed_defaults(monkeypatch) -> None:
     assert settings.KG_CYPHER_QA_LLM_MODEL == ""
 
 
-def test_phase_03_graph_settings_cast_environment_values(monkeypatch) -> None:
-    monkeypatch.setenv("GRAPH_EAGER_K", "8")
-    monkeypatch.setenv("GRAPH_EAGER_START_K", "2")
-    monkeypatch.setenv("GRAPH_EAGER_MAX_DEPTH", "3")
-    monkeypatch.setenv("GRAPH_MIN_CONFIDENCE", "0.82")
+def test_graph_settings_cast_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("KG_EXTRACTION_LLM_TEMPERATURE", "0.2")
     monkeypatch.setenv("KG_EXTRACTION_MAX_RETRIES", "4")
 
     settings = Settings(_env_file=None)
 
-    assert settings.GRAPH_EAGER_K == 8
-    assert settings.GRAPH_EAGER_START_K == 2
-    assert settings.GRAPH_EAGER_MAX_DEPTH == 3
-    assert settings.GRAPH_MIN_CONFIDENCE == 0.82
     assert settings.KG_EXTRACTION_LLM_TEMPERATURE == 0.2
     assert settings.KG_EXTRACTION_MAX_RETRIES == 4
 
@@ -396,19 +426,19 @@ def test_eval_config_collects_all_google_keys_from_aliases_and_numbered_env(
     monkeypatch.setenv("GOOGLE_API_KEY_1", "google-key-1")
     monkeypatch.setenv("GOOGLE_API_KEY_3", "google-key-3")
     monkeypatch.setenv("GOOGLE_API_KEY_5", "google-key-5")
-    monkeypatch.setattr(
-        eval_config.settings,
-        "GOOGLE_API_KEYS",
-        ["google-key-1", "settings-google-key-9"],
-    )
+    original_raw_env = eval_config.settings._raw_env
+    eval_config.settings._raw_env = {"GOOGLE_API_KEY_9": "settings-google-key-9"}
 
-    assert eval_config._collect_eval_google_api_keys() == (
-        "google-key-1",
-        "inline-google-key",
-        "google-key-3",
-        "google-key-5",
-        "settings-google-key-9",
-    )
+    try:
+        assert eval_config._collect_eval_google_api_keys() == (
+            "google-key-1",
+            "inline-google-key",
+            "google-key-3",
+            "google-key-5",
+            "settings-google-key-9",
+        )
+    finally:
+        eval_config.settings._raw_env = original_raw_env
 
 
 def test_agent_llm_settings_inherit_global_llm_config(monkeypatch) -> None:
@@ -417,30 +447,33 @@ def test_agent_llm_settings_inherit_global_llm_config(monkeypatch) -> None:
     monkeypatch.setenv("LLM_MODEL", "global-model")
     monkeypatch.setenv("LLM_API_KEY", "global-key")
     monkeypatch.setenv("LLM_BASE_URL", "https://global.example")
-    monkeypatch.delenv("SQL_AGENT_PROVIDER", raising=False)
-    monkeypatch.delenv("SQL_AGENT_MODEL", raising=False)
-    monkeypatch.delenv("SQL_AGENT_API_KEY", raising=False)
-    monkeypatch.delenv("SQL_AGENT_BASE_URL", raising=False)
-    monkeypatch.delenv("DATABASE_LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("DATABASE_LLM_MODEL", raising=False)
-    monkeypatch.delenv("DATABASE_LLM_API_KEY", raising=False)
-    monkeypatch.delenv("DATABASE_LLM_BASE_URL", raising=False)
-    monkeypatch.delenv("SEARCH_AGENT_PROVIDER", raising=False)
-    monkeypatch.delenv("SEARCH_AGENT_MODEL", raising=False)
-    monkeypatch.delenv("SEARCH_AGENT_API_KEY", raising=False)
-    monkeypatch.delenv("SEARCH_AGENT_BASE_URL", raising=False)
-    monkeypatch.delenv("SEARCH_LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("SEARCH_LLM_MODEL", raising=False)
-    monkeypatch.delenv("SEARCH_LLM_API_KEY", raising=False)
-    monkeypatch.delenv("SEARCH_LLM_BASE_URL", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_MODEL", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_API_KEY", raising=False)
-    monkeypatch.delenv("KG_EXTRACTION_LLM_BASE_URL", raising=False)
-    monkeypatch.delenv("KG_CYPHER_QA_LLM_PROVIDER", raising=False)
-    monkeypatch.delenv("KG_CYPHER_QA_LLM_MODEL", raising=False)
-    monkeypatch.delenv("KG_CYPHER_QA_LLM_API_KEY", raising=False)
-    monkeypatch.delenv("KG_CYPHER_QA_LLM_BASE_URL", raising=False)
+    for env_name in (
+        "SQL_AGENT_PROVIDER",
+        "SQL_AGENT_MODEL",
+        "SQL_AGENT_API_KEY",
+        "SQL_AGENT_BASE_URL",
+        "DATABASE_LLM_PROVIDER",
+        "DATABASE_LLM_MODEL",
+        "DATABASE_LLM_API_KEY",
+        "DATABASE_LLM_BASE_URL",
+        "SEARCH_AGENT_PROVIDER",
+        "SEARCH_AGENT_MODEL",
+        "SEARCH_AGENT_API_KEY",
+        "SEARCH_AGENT_BASE_URL",
+        "SEARCH_LLM_PROVIDER",
+        "SEARCH_LLM_MODEL",
+        "SEARCH_LLM_API_KEY",
+        "SEARCH_LLM_BASE_URL",
+        "KG_EXTRACTION_LLM_PROVIDER",
+        "KG_EXTRACTION_LLM_MODEL",
+        "KG_EXTRACTION_LLM_API_KEY",
+        "KG_EXTRACTION_LLM_BASE_URL",
+        "KG_CYPHER_QA_LLM_PROVIDER",
+        "KG_CYPHER_QA_LLM_MODEL",
+        "KG_CYPHER_QA_LLM_API_KEY",
+        "KG_CYPHER_QA_LLM_BASE_URL",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
 
     settings = Settings(_env_file=None)
 
@@ -462,12 +495,23 @@ def test_agent_llm_settings_inherit_global_llm_config(monkeypatch) -> None:
     assert settings.KG_CYPHER_QA_LLM_BASE_URL == "https://global.example"
 
 
+def test_sql_agent_api_key_supports_indirect_alias(monkeypatch) -> None:
+    monkeypatch.setenv("SQL_AGENT_PROVIDER", "OLLAMA")
+    monkeypatch.setenv("SQL_AGENT_API_KEY", "OLLAMA_API_KEY_1")
+    monkeypatch.setenv("OLLAMA_API_KEY_1", "resolved-ollama-key")
+
+    settings = Settings(_env_file=None)
+
+    assert settings.DATABASE_LLM_API_KEY == "resolved-ollama-key"
+
+
 def test_sql_agent_provider_alias_resolves_provider_global_key_and_base_url(
     monkeypatch,
 ) -> None:
     monkeypatch.setenv("SQL_AGENT_PROVIDER", "OPENROUTER")
     monkeypatch.setenv("OPENROUTER_API_KEY", "OPENROUTER_KEY_ALIAS")
     monkeypatch.setenv("OPENROUTER_KEY_ALIAS", "resolved-openrouter-key")
+    monkeypatch.setenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     monkeypatch.delenv("SQL_AGENT_API_KEY", raising=False)

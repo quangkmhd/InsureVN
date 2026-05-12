@@ -173,8 +173,6 @@ def build_knowledge_graph_extraction_llm() -> Any:
     """Build the configured LangChain chat model for KG extraction."""
     model_config: dict[str, Any] = {
         "temperature": settings.KG_EXTRACTION_LLM_TEMPERATURE,
-        "top_p": settings.KG_EXTRACTION_LLM_TOP_P,
-        "top_k": settings.KG_EXTRACTION_LLM_TOP_K,
     }
     if settings.KG_EXTRACTION_LLM_API_KEY:
         model_config["api_key"] = settings.KG_EXTRACTION_LLM_API_KEY

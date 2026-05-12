@@ -17,6 +17,11 @@ from tools.mcp_client import get_sqlite_mcp_tools
 logger = get_logger(__name__)
 
 
+def _uses_ollama(provider: str, model: str) -> bool:
+    """Return whether a configured LangChain model should use Ollama headers."""
+    return provider.lower() == "ollama" or "ollama" in model.lower()
+
+
 class DatabaseAgent:
     """Database query agent backed by LangChain and SQLite MCP tools."""
 
@@ -43,8 +48,6 @@ class DatabaseAgent:
 
         database_agent_model_config: dict[str, Any] = {
             "temperature": settings.DATABASE_LLM_TEMPERATURE,
-            "top_p": settings.DATABASE_LLM_TOP_P,
-            "top_k": settings.DATABASE_LLM_TOP_K,
         }
 
         if settings.DATABASE_LLM_API_KEY:
@@ -52,9 +55,9 @@ class DatabaseAgent:
         if settings.DATABASE_LLM_BASE_URL:
             database_agent_model_config["base_url"] = settings.DATABASE_LLM_BASE_URL
 
-        database_agent_uses_ollama = (settings.DATABASE_LLM_PROVIDER == "ollama") or (
-            settings.DATABASE_LLM_MODEL
-            and "ollama" in settings.DATABASE_LLM_MODEL.lower()
+        database_agent_uses_ollama = _uses_ollama(
+            settings.DATABASE_LLM_PROVIDER,
+            settings.DATABASE_LLM_MODEL,
         )
         if database_agent_uses_ollama and settings.DATABASE_LLM_API_KEY:
             database_agent_model_config["client_kwargs"] = {
